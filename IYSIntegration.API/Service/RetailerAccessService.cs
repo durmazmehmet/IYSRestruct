@@ -1,0 +1,86 @@
+﻿using IYSIntegration.API.Interface;
+using IYSIntegration.Common.Base;
+using IYSIntegration.Common.Request.RetailerAccess;
+using IYSIntegration.Common.Response.RetailerAccess;
+
+namespace IYSIntegration.API.Service
+{
+    public class RetailerAccessService : IRetailerAccessService
+    {
+        private readonly IConfiguration _config;
+        private readonly IRestClientHelper _clientHelper;
+        private readonly string _baseUrl;
+        public RetailerAccessService(IConfiguration config, IRestClientHelper clientHelper)
+        {
+            _config = config;
+            _clientHelper = clientHelper;
+            _baseUrl = _config.GetValue<string>($"BaseUrl");
+        }
+
+        public async Task<ResponseBase<AddRetailerAccessResult>> AddRetailerAccess(AddRetailerAccessRequest request)
+        {
+            var iysRequest = new Common.Base.IysRequest<RetailerRecipientAccess>
+            {
+                IysCode = request.IysCode,
+                Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/retailers/access",
+                Body = request.RetailerRecipientAccess,
+                Action = "Add Retailer Access"
+            };
+
+            return await _clientHelper.Execute<AddRetailerAccessResult, RetailerRecipientAccess>(iysRequest);
+        }
+
+        public async Task<ResponseBase<DeleteAllRetailersAccessResult>> DeleteAllRetailersAccess(DeleteAllRetailersAccessRequest request)
+        {
+            var iysRequest = new Common.Base.IysRequest<RetailerRecipientAccess>
+            {
+                IysCode = request.IysCode,
+                Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/retailers/access/remove/all",
+                Body = request.RetailerRecipientAccess,
+                Action = "Delete All Retailers Access"
+            };
+
+            return await _clientHelper.Execute<DeleteAllRetailersAccessResult, RetailerRecipientAccess>(iysRequest);
+        }
+
+        public async Task<ResponseBase<UpdateRetailerAccessResult>> UpdateRetailerAccess(UpdateRetailerAccessRequest request)
+        {
+            var iysRequest = new Common.Base.IysRequest<RetailerRecipientAccess>
+            {
+                IysCode = request.IysCode,
+                Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/retailers/access",
+                Body = request.RetailerRecipientAccess,
+                Action = "Update Retailer Access"
+            };
+
+            return await _clientHelper.Execute<UpdateRetailerAccessResult, RetailerRecipientAccess>(iysRequest);
+        }
+
+        public async Task<ResponseBase<DeleteRetailerAccessResult>> DeleteRetailerAccess(DeleteRetailerAccessRequest request)
+        {
+            var iysRequest = new Common.Base.IysRequest<RetailerRecipientAccess>
+            {
+                IysCode = request.IysCode,
+                Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/retailers/access/remove",
+                Body = request.RetailerRecipientAccess,
+                Action = "Delete Retailer Access"
+            };
+
+            return await _clientHelper.Execute<DeleteRetailerAccessResult, RetailerRecipientAccess>(iysRequest);
+        }
+
+        public async Task<ResponseBase<QueryRetailerAccessResult>> QueryRetailerAccess(QueryRetailerAccessRequest request)
+        {
+            // TODO: Query parametrelerinde pagesize olacak mı sorulacak
+            var iysRequest = new Common.Base.IysRequest<Common.Base.RecipientKey>
+            {
+                IysCode = request.IysCode,
+                Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consent/retailers/access/list",
+                Body = request.RecipientKey,
+                Action = "Query Retailer Access"
+            };
+
+            return await _clientHelper.Execute<QueryRetailerAccessResult, Common.Base.RecipientKey>(iysRequest);
+        }
+    }
+}
