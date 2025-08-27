@@ -1,3 +1,4 @@
+using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Worker.Models;
 using Microsoft.Extensions.Configuration;
@@ -23,10 +24,12 @@ namespace IYSIntegration.Common.Worker.Services
             _integrationHelper = integrationHelper;
         }
 
-        public async Task ProcessAsync()
+        public async Task<ResponseBase<ProcessResult>> ProcessAsync()
         {
+            var response = new ResponseBase<ProcessResult>();
             bool errorFlag = false;
             List<string> failedCompanyCodes = new();
+            int successCount = 0;
             string companyCodeInProc = string.Empty;
             try
             {
@@ -73,6 +76,7 @@ namespace IYSIntegration.Common.Worker.Services
                                         Consent = consent
                                     };
                                     await _dbHelper.InsertPullConsent(addConsentRequest);
+                                    successCount++;
                                 }
 
                                 await _dbHelper.UpdatePullRequestLog(new PullRequestLog
@@ -106,13 +110,26 @@ namespace IYSIntegration.Common.Worker.Services
             }
             catch (Exception ex)
             {
+                errorFlag = true;
                 _logger.LogError("PullConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+            }
+
+            response.Data = new ProcessResult { SuccessCount = successCount, FailedCount = failedCompanyCodes.Count };
+
+            if (failedCompanyCodes.Count > 0)
+            {
+                response.AddMessage("FailedCompanies", string.Join(",", failedCompanyCodes));
+                response.Error("FailedCount", failedCompanyCodes.Count.ToString());
             }
 
             if (errorFlag)
             {
-                _logger.LogError("PullConsentService {companies} firmaları için hata aldı", string.Join(",", failedCompanyCodes));
+                // already marked with Error above if failedCompanyCodes > 0, but ensure status is error
+                if (failedCompanyCodes.Count == 0)
+                    response.Error("Error", "Unknown error");
             }
+
+            return response;
         }
     }
 }

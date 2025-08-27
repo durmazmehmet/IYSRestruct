@@ -1,9 +1,11 @@
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
+using IYSIntegration.Common.Worker.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace IYSIntegration.Common.Worker.Services
@@ -23,9 +25,13 @@ namespace IYSIntegration.Common.Worker.Services
             _integrationHelper = integrationHelper;
         }
 
-        public async Task ProcessAsync()
+        public async Task<ResponseBase<ProcessResult>> ProcessAsync()
         {
+            var response = new ResponseBase<ProcessResult>();
             bool errorFlag = false;
+            int successCount = 0;
+            int failedCount = 0;
+
             _logger.LogInformation("SingleConsentService running at: {time}", DateTimeOffset.Now);
 
             try
@@ -53,21 +59,26 @@ namespace IYSIntegration.Common.Worker.Services
                             }
                         };
 
-                        var response = await _integrationHelper.AddConsent(consentRequest);
+                        var serviceResponse = await _integrationHelper.AddConsent(consentRequest);
 
-                        if (response.HttpStatusCode == 0 || response.HttpStatusCode >= 500)
+                        if (serviceResponse.HttpStatusCode == 0 || serviceResponse.HttpStatusCode >= 500)
                         {
-                            // servis hatası durumunda işlemi durdur
-                            return;
+                            return; // servis hatası durumunda işlemi durdur
                         }
 
-                        response.Id = log.Id;
+                        serviceResponse.Id = log.Id;
 
-                        await _dbHelper.UpdateConsentResponse(response);
+                        await _dbHelper.UpdateConsentResponse(serviceResponse);
+
+                        if (serviceResponse.IsSuccessful())
+                            Interlocked.Increment(ref successCount);
+                        else
+                            Interlocked.Increment(ref failedCount);
                     }
                     catch (Exception ex)
                     {
                         errorFlag = true;
+                        Interlocked.Increment(ref failedCount);
                         _logger.LogError("SingleConsentService ID {Id} ve {Message} ile alınamadı", log.Id, ex.Message);
                     }
                 });
@@ -76,13 +87,18 @@ namespace IYSIntegration.Common.Worker.Services
             }
             catch (Exception ex)
             {
+                errorFlag = true;
                 _logger.LogError("SingleConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
             }
 
-            if (errorFlag)
+            response.Data = new ProcessResult { SuccessCount = successCount, FailedCount = failedCount };
+
+            if (errorFlag || failedCount > 0)
             {
-                _logger.LogError("SingleConsentService hata aldı, IYSConsentRequest tablosuna göz atın");
+                response.Error("FailedCount", failedCount.ToString());
             }
+
+            return response;
         }
     }
 }

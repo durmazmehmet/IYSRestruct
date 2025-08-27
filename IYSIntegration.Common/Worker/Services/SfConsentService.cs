@@ -24,8 +24,12 @@ namespace IYSIntegration.Common.Worker.Services
             _integrationHelper = integrationHelper;
         }
 
-        public async Task ProcessAsync()
+        public async Task<ResponseBase<ProcessResult>> ProcessAsync()
         {
+            var response = new ResponseBase<ProcessResult>();
+            int successCount = 0;
+            int failedCount = 0;
+
             _logger.LogInformation("SfConsentService running at: {time}", DateTimeOffset.Now);
             var rowCount = _configuration.GetValue<int>("SfConsentProcessRowCount");
 
@@ -65,14 +69,26 @@ namespace IYSIntegration.Common.Worker.Services
                             };
 
                             await _dbHelper.UpdateSfConsentResponse(result);
+
+                            if (result.IsSuccess)
+                                successCount++;
+                            else
+                                failedCount++;
                         }
                     }
                     catch (Exception ex)
                     {
+                        failedCount++;
                         _logger.LogError("SfConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
                     }
                 }
             }
+
+            response.Data = new ProcessResult { SuccessCount = successCount, FailedCount = failedCount };
+            if (failedCount > 0)
+                response.Error("FailedCount", failedCount.ToString());
+
+            return response;
         }
     }
 }

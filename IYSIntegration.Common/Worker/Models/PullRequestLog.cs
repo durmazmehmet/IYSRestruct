@@ -1,7 +1,7 @@
 ﻿using IYSIntegration.Common.Base;
 using System;
 
-namespace IYSIntegration.WorkerService.Models
+namespace IYSIntegration.Common.Worker.Models
 {
     public class PullRequestLog : ConsentParams
     {

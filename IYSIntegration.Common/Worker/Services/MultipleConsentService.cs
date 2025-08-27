@@ -26,8 +26,9 @@ namespace IYSIntegration.Common.Worker.Services
             _integrationHelper = integrationHelper;
         }
 
-        public async Task ProcessAsync()
+        public async Task<ResponseBase<ProcessResult>> ProcessAsync()
         {
+            var response = new ResponseBase<ProcessResult>();
             bool errorFlag = false;
             int successCount = 0;
             int failedCount = 0;
@@ -117,6 +118,7 @@ namespace IYSIntegration.Common.Worker.Services
                                     _dbHelper.ReorderBatch(batch.BatchId).Wait();
                                 }
                             }
+                            failedCount++;
                         }
                     }
                     catch (Exception)
@@ -128,11 +130,16 @@ namespace IYSIntegration.Common.Worker.Services
             }
             catch (Exception ex)
             {
+                errorFlag = true;
                 _logger.LogError("MultipleConsentService hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
             }
 
-            if (errorFlag)
-                _logger.LogError($"MultipleConsentService toplam {failedCount + successCount} içinden {failedCount} recipient için hata aldı. , IYSConsentRequest tablosuna göz atın");
+            response.Data = new ProcessResult { SuccessCount = successCount, FailedCount = failedCount };
+
+            if (errorFlag || failedCount > 0)
+                response.Error("FailedCount", failedCount.ToString());
+
+            return response;
         }
     }
 }

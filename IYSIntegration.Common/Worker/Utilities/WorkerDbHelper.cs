@@ -317,7 +317,7 @@ namespace IYSIntegration.Common.Worker
             }
         }
 
-        public async Task<List<Consent>> GetIYSConsentRequestErrors()
+        public async Task<List<Consent>> GetIYSConsentRequestErrors(DateTime createDate)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
@@ -326,7 +326,7 @@ namespace IYSIntegration.Common.Worker
                 var result = (await connection.QueryAsync<Consent>(QueryStrings.GetIYSConsentRequestErrors,
                     new
                     {
-                        CreateDate = DateTime.Today
+                        CreateDate = createDate
                     })).ToList();
 
                 connection.Close();
