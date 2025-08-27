@@ -1,6 +1,6 @@
 ﻿using IYSIntegration.Common.Base;
 
-namespace IYSIntegration.WorkerService.Models
+namespace IYSIntegration.Common.Worker.Models
 {
     public class BatchSummary : ConsentParams
     {

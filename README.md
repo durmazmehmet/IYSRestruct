@@ -8,9 +8,12 @@
 - `POST /api/scheduled/multiple-consent`
 - `POST /api/scheduled/pull-consent`
 - `POST /api/scheduled/sf-consent`
-- `POST /api/scheduled/send-consent-error`
+- `POST /api/scheduled/send-consent-error/excel`
+- `POST /api/scheduled/send-consent-error/json`
 
-Bu uç noktalar harici zamanlayıcılar tarafından tetiklenmelidir.
+`send-consent-error` uç noktaları `date` sorgu parametresi alır ve istenen tarih için hatalı kayıtları döndürür.
+
+Bu uç noktalar harici zamanlayıcılar tarafından tetiklenmelidir. Tüm uç noktalar `ResponseBase` tipinde cevap döndürür; başarı durumunda işlem sayılarını, hata durumunda ise mesajları içerir.
 
 ## Konfigürasyon
 
@@ -24,7 +27,6 @@ Bu uç noktalar harici zamanlayıcılar tarafından tetiklenmelidir.
 - `RunAsSingle`
 - `PullConsentBatchSize`
 - `SfConsentProcessRowCount`
-- `IYSErrorMail` (Subject, To, From, FromDisplayName, Url)
 
 ### Çalıştırma Aralıkları
 

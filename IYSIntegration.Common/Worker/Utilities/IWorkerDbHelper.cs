@@ -2,6 +2,7 @@
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
 using IYSIntegration.Common.Worker.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -25,6 +26,6 @@ namespace IYSIntegration.Common.Worker
         Task InsertPullConsent(AddConsentRequest request);
         Task<List<Consent>> GetPullConsentRequests(bool isProcessed, int rowCount);
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
-        Task<List<Consent>> GetIYSConsentRequestErrors();
+        Task<List<Consent>> GetIYSConsentRequestErrors(DateTime createDate);
     }
 }
