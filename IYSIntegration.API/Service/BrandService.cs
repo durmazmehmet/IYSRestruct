@@ -1,0 +1,33 @@
+﻿using IYSIntegration.API.Interface;
+using IYSIntegration.Common.Base;
+using IYSIntegration.Common.Request;
+using IYSIntegration.Common.Request.Brand;
+using IYSIntegration.Common.Response.Brand;
+
+namespace IYSIntegration.API.Service
+{
+    public class BrandService : IBrandService
+    {
+        private readonly IConfiguration _config;
+        private readonly IRestClientHelper _clientHelper;
+        private readonly string _baseUrl;
+        public BrandService(IConfiguration config, IRestClientHelper clientHelper)
+        {
+            _config = config;
+            _clientHelper = clientHelper;
+            _baseUrl = _config.GetValue<string>($"BaseUrl");
+        }
+
+        public async Task<ResponseBase<List<Brand>>> GetBrands(GetBrandRequest request)
+        {
+            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            {
+                IysCode = request.IysCode,
+                Url = $"{_baseUrl}/sps/{request.IysCode}/brands",
+                Action = "Get Brands"
+            };
+
+            return await _clientHelper.Execute<List<Brand>, DummyRequest>(iysRequest);
+        }
+    }
+}

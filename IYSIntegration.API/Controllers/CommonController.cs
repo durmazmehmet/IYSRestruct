@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Interface;
+﻿using IYSIntegration.API.Interface;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Error;
 using IYSIntegration.Common.Request.Consent;
@@ -199,11 +199,18 @@ namespace IYSIntegration.API.Controllers
         }
 
 
-        [Route("pullConsent/{companyCode}")]
-        [HttpGet]
-        public async Task<ResponseBase<PullConsentResult>> PullConsent(string companyCode)
+        [Route("pullConsent")]
+        [HttpPost]
+        public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
         {
-            return await _consentManager.PullConsent(companyCode);
+            if (request.IysCode == 0)
+            {
+                var consentParams = GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
+            }
+
+            return await _consentManager.PullConsent(request);
         }
 
         [Route("sfaddconsent")]

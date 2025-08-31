@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Interface;
+﻿using IYSIntegration.API.Interface;
 using IYSIntegration.Common.Request.Brand;
 using Microsoft.AspNetCore.Mvc;
 
