@@ -1,4 +1,4 @@
-﻿using IYSIntegration.API.Interface;
+﻿using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Error;
 using IYSIntegration.Common.Request.Consent;
