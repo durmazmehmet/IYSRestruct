@@ -1,32 +1,28 @@
 using IYSIntegration.Common.Worker.Services;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Threading.Tasks;
 
 namespace IYSIntegration.API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class ScheduledController : ControllerBase
+    [Route("api/consent-schedule")]
+    public class ConsentScheduleController : ControllerBase
     {
         private readonly SingleConsentService _singleConsentService;
         private readonly MultipleConsentService _multipleConsentService;
         private readonly PullConsentService _pullConsentService;
         private readonly SfConsentService _sfConsentService;
-        private readonly SendConsentErrorService _sendConsentErrorService;
 
-        public ScheduledController(
+        public ConsentScheduleController(
             SingleConsentService singleConsentService,
             MultipleConsentService multipleConsentService,
             PullConsentService pullConsentService,
-            SfConsentService sfConsentService,
-            SendConsentErrorService sendConsentErrorService)
+            SfConsentService sfConsentService)
         {
             _singleConsentService = singleConsentService;
             _multipleConsentService = multipleConsentService;
             _pullConsentService = pullConsentService;
             _sfConsentService = sfConsentService;
-            _sendConsentErrorService = sendConsentErrorService;
         }
 
         [HttpPost("single-consent")]
@@ -54,20 +50,6 @@ namespace IYSIntegration.API.Controllers
         public async Task<IActionResult> RunSfConsent()
         {
             var result = await _sfConsentService.ProcessAsync();
-            return Ok(result);
-        }
-
-        [HttpPost("send-consent-error/excel")]
-        public async Task<IActionResult> RunSendConsentErrorExcel([FromQuery] DateTime? date)
-        {
-            var result = await _sendConsentErrorService.GetReportExcelAsync(date ?? DateTime.Today);
-            return Ok(result);
-        }
-
-        [HttpPost("send-consent-error/json")]
-        public async Task<IActionResult> RunSendConsentErrorJson([FromQuery] DateTime? date)
-        {
-            var result = await _sendConsentErrorService.GetReportJsonAsync(date ?? DateTime.Today);
             return Ok(result);
         }
     }
