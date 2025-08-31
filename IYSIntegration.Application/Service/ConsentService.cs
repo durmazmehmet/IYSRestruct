@@ -78,26 +78,39 @@ namespace IYSIntegration.Application.Service
             return await _clientHelper.Execute<List<QueryMultipleConsentResult>, DummyRequest>(iysRequest);
         }
 
-        public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
+        public async Task<ResponseBase<PullConsentResult>> PullConsent(string companyCode)
         {
+            var consentParams = GetIysCode(companyCode);
+
             var iysRequest = new Common.Base.IysRequest<DummyRequest>
             {
-                IysCode = request.IysCode,
-                Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/changes?source={request.Source ?? "IYS"}",
+                IysCode = consentParams.IysCode,
+                Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/changes?source=IYS",
                 Action = "Pull Consent"
             };
 
-            if (request.Limit > 0)
+            var limit = _config.GetValue<int?>("PullConsentBatchSize");
+            if (limit.HasValue && limit.Value > 0)
             {
-                iysRequest.Url += $"&limit={request.Limit}";
+                iysRequest.Url += $"&limit={limit.Value}";
             }
 
-            if (!string.IsNullOrEmpty(request.After))
+            var after = _config.GetValue<string>("PullConsentAfter");
+            if (!string.IsNullOrEmpty(after))
             {
-                iysRequest.Url += $"&after={request.After}";
+                iysRequest.Url += $"&after={after}";
             }
 
-            return await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest); ;
+            return await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest);
+        }
+
+        private ConsentParams GetIysCode(string companyCode)
+        {
+            return new ConsentParams
+            {
+                IysCode = _config.GetValue<int>($"{companyCode}:IysCode"),
+                BrandCode = _config.GetValue<int>($"{companyCode}:BrandCode")
+            };
         }
     }
 }

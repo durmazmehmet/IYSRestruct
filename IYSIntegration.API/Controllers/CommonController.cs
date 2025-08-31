@@ -199,18 +199,11 @@ namespace IYSIntegration.API.Controllers
         }
 
 
-        [Route("pullConsent")]
-        [HttpPost]
-        public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
+        [Route("pullConsent/{companyCode}")]
+        [HttpGet]
+        public async Task<ResponseBase<PullConsentResult>> PullConsent(string companyCode)
         {
-            if (request.IysCode == 0)
-            {
-                var consentParams = GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
-
-            return await _consentManager.PullConsent(request);
+            return await _consentManager.PullConsent(companyCode);
         }
 
         [Route("sfaddconsent")]
