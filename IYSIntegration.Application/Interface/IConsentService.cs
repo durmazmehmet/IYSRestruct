@@ -10,7 +10,7 @@ namespace IYSIntegration.Application.Interface
         Task<ResponseBase<QueryConsentResult>> QueryConsent(QueryConsentRequest request);
         Task<ResponseBase<MultipleConsentResult>> AddMultipleConsent(MultipleConsentRequest request);
         Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(QueryMultipleConsentRequest request);
-        Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request);
+        Task<ResponseBase<PullConsentResult>> PullConsent(string companyCode);
     }
 }
 

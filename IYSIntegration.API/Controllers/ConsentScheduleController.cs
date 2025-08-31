@@ -10,19 +10,13 @@ namespace IYSIntegration.API.Controllers
     {
         private readonly SingleConsentService _singleConsentService;
         private readonly MultipleConsentService _multipleConsentService;
-        private readonly PullConsentService _pullConsentService;
-        private readonly SfConsentService _sfConsentService;
 
         public ConsentScheduleController(
             SingleConsentService singleConsentService,
-            MultipleConsentService multipleConsentService,
-            PullConsentService pullConsentService,
-            SfConsentService sfConsentService)
+            MultipleConsentService multipleConsentService)
         {
             _singleConsentService = singleConsentService;
             _multipleConsentService = multipleConsentService;
-            _pullConsentService = pullConsentService;
-            _sfConsentService = sfConsentService;
         }
 
         [HttpPost("single-consent")]
@@ -39,18 +33,5 @@ namespace IYSIntegration.API.Controllers
             return Ok(result);
         }
 
-        [HttpPost("pull-consent")]
-        public async Task<IActionResult> RunPullConsent()
-        {
-            var result = await _pullConsentService.ProcessAsync();
-            return Ok(result);
-        }
-
-        [HttpPost("sf-consent")]
-        public async Task<IActionResult> RunSfConsent()
-        {
-            var result = await _sfConsentService.ProcessAsync();
-            return Ok(result);
-        }
     }
 }
