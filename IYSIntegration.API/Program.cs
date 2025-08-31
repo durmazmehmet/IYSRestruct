@@ -1,10 +1,6 @@
-using IYSIntegration.Application.Helpers;
-using IYSIntegration.Application.Interface;
-using IYSIntegration.Application.Service;
-using IYSIntegration.Common.Worker;
-using IYSIntegration.Common.Worker.Services;
-using ApiSfConsentService = IYSIntegration.Application.Service.SfConsentService;
-using SfConsentWorkerService = IYSIntegration.Common.Worker.Services.SfConsentService;
+using IYSIntegration.API.Helpers;
+using IYSIntegration.API.Interface;
+using IYSIntegration.API.Service;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.LoggingService;
 using IYSIntegration.Common.LoggingService.Loggers;
@@ -38,15 +34,8 @@ internal class Program
         builder.Services.AddSingleton<IRetailerAccessService, RetailerAccessService>();
         builder.Services.AddSingleton<IDbHelper, DbHelper>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
-        builder.Services.AddSingleton<ISfConsentService, ApiSfConsentService>();
+        builder.Services.AddSingleton<ISfConsentService, SfConsentService>();
         builder.Services.AddSingleton<LoggerServiceBase>(provider => { return new GrayLogger(); });
-        builder.Services.AddSingleton<IIntegrationHelper, IntegrationHelper>();
-        builder.Services.AddSingleton<IWorkerDbHelper, WorkerDbHelper>();
-        builder.Services.AddSingleton<SingleConsentService>();
-        builder.Services.AddSingleton<MultipleConsentService>();
-        builder.Services.AddSingleton<PullConsentService>();
-        builder.Services.AddSingleton<SfConsentWorkerService>();
-        builder.Services.AddSingleton<SendConsentErrorService>();
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
