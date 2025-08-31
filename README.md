@@ -1,15 +1,20 @@
 # IYSRestruct
 
-## Scheduled Controller
+## Consent Schedule ve Error Report Controller'ları
 
-`IYSIntegration.WorkerService` fonksiyonları API içine taşınmıştır. Aşağıdaki uç noktalar `ScheduledController` altında yer alır:
+`IYSIntegration.WorkerService` fonksiyonları API içine taşınmıştır. Konsent işlemleri artık `ConsentScheduleController` ve `ConsentErrorReportController` altında gruplanmıştır:
 
-- `POST /api/scheduled/single-consent`
-- `POST /api/scheduled/multiple-consent`
-- `POST /api/scheduled/pull-consent`
-- `POST /api/scheduled/sf-consent`
-- `POST /api/scheduled/send-consent-error/excel`
-- `POST /api/scheduled/send-consent-error/json`
+### ConsentScheduleController uç noktaları
+
+- `POST /api/consent-schedule/single-consent`
+- `POST /api/consent-schedule/multiple-consent`
+- `POST /api/consent-schedule/pull-consent`
+- `POST /api/consent-schedule/sf-consent`
+
+### ConsentErrorReportController uç noktaları
+
+- `POST /api/consent-error-report/send-consent-error/excel`
+- `POST /api/consent-error-report/send-consent-error/json`
 
 `send-consent-error` uç noktaları `date` sorgu parametresi alır ve istenen tarih için hatalı kayıtları döndürür.
 
