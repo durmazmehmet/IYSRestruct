@@ -1,7 +1,7 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Request.Identity;
-using IYSIntegration.Common.Response.Identity;
-using IYSIntegration.Common.Services;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Request.Identity;
+using IYSIntegration.Application.Response.Identity;
+using IYSIntegration.Application.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;

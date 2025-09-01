@@ -1,10 +1,10 @@
-using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Error;
-using IYSIntegration.Common.Request;
-using IYSIntegration.Common.Request.Consent;
-using IYSIntegration.Common.Response.Consent;
-using IYSIntegration.Common.Services;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Error;
+using IYSIntegration.Application.Request;
+using IYSIntegration.Application.Request.Consent;
+using IYSIntegration.Application.Response.Consent;
+using IYSIntegration.Application.Services;
 using Microsoft.Extensions.Configuration;
 
 namespace IYSIntegration.Application.Services
@@ -26,32 +26,7 @@ namespace IYSIntegration.Application.Services
 
         public async Task<ResponseBase<AddConsentResult>> AddConsent(AddConsentRequest request)
         {
-            if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
-                DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
-                IsOlderThanBusinessDays(consentDate, 3))
-            {
-                var response = new ResponseBase<AddConsentResult>
-                {
-                    HttpStatusCode = 200,
-                    OriginalError = new GenericError
-                    {
-                        Message = "Consent older than three business days",
-                        Status = 400,
-                        Errors = new[]
-                        {
-                            new ErrorDetails
-                            {
-                                Code = "H174",
-                                Message = "Consent older than three business days"
-                            }
-                        }
-                    }
-                };
-
-                response.Error("ConsentDate", "Consent older than three business days");
-                return response;
-            }
-
+            
             var iysRequest = new IysRequest<Consent>
             {
                 IysCode = request.IysCode,
@@ -64,29 +39,7 @@ namespace IYSIntegration.Application.Services
             return await _clientHelper.Execute<AddConsentResult, Consent>(iysRequest);
         }
 
-        private static bool IsOlderThanBusinessDays(DateTime consentDate, int maxBusinessDays)
-        {
-            var date = consentDate.Date;
-            var today = DateTime.Now.Date;
-            int businessDays = 0;
-
-            while (date < today)
-            {
-                if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
-                {
-                    businessDays++;
-                }
-
-                if (businessDays >= maxBusinessDays)
-                {
-                    return true;
-                }
-
-                date = date.AddDays(1);
-            }
-
-            return false;
-        }
+        
 
         public async Task<ResponseBase<QueryConsentResult>> QueryConsent(QueryConsentRequest request)
         {

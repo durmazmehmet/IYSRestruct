@@ -1,29 +1,15 @@
-﻿using IYSIntegration.Application.Interface;
+﻿using IYSIntegration.API.Helpers;
 using IYSIntegration.Application.Services;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.LoggingService;
-using IYSIntegration.Common.LoggingService.Loggers;
-using IYSIntegration.Common.Middleware.Exceptions;
-using IYSIntegration.Common.Services;
-using Microsoft.Extensions.Options;
-using StackExchange.Redis;
-using IYSIntegration.Application.Interface;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Middleware.Exceptions;
+using IYSIntegration.Application.Middleware.LoggingService;
+using IYSIntegration.Application.Middleware.LoggingService.Loggers;
 using IYSIntegration.Application.Services;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.LoggingService;
-using IYSIntegration.Common.LoggingService.Loggers;
-using IYSIntegration.Common.Middleware.Exceptions;
-using IYSIntegration.Common.Services;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using Serilog;
 using StackExchange.Redis;
-using System;
-using System.IO;
 using System.Reflection;
-using IYSIntegration.API.Helpers;
 
 internal class Program
 {
@@ -55,6 +41,8 @@ internal class Program
         builder.Services.AddSingleton<IRestClientService, RestClientService>();
         builder.Services.AddSingleton<IConsentService, ConsentService>();
         builder.Services.AddSingleton<ISfConsentService, SfConsentService>();
+        builder.Services.AddSingleton<SalesforceClient>();
+        builder.Services.AddSingleton<IysClient>();
 
         // Scoped application workflows
         builder.Services.AddSingleton<IBrandService, BrandService>();

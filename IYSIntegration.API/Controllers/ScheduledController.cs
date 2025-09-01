@@ -1,5 +1,5 @@
 ﻿using IYSIntegration.Application.Services;
-using IYSIntegration.Common.Base;
+using IYSIntegration.Application.Base;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
@@ -16,22 +16,26 @@ namespace IYSIntegration.API.Controllers
         private readonly ScheduledPullConsentService _pullConsentService;
         private readonly ScheduledSfConsentService _sfConsentService;
         private readonly ScheduledSendConsentErrorService _sendConsentErrorService;
+        private readonly IConfiguration _configuration;
 
         public ScheduledController(ScheduledMultipleConsentQueryService multipleConsentQueryService,
                                    ScheduledSingleConsentAddService singleConsentAddService,
                                    ScheduledMultipleConsentAddService multipleConsentAddService,
                                    ScheduledPullConsentService pullConsentService,
                                    ScheduledSfConsentService sfConsentService,
-                                   ScheduledSendConsentErrorService sendConsentErrorService)
+                                   ScheduledSendConsentErrorService sendConsentErrorService,
+                                   IConfiguration configuration)
         {
-            _multipleConsentQueryService = multipleConsentQueryService;
+            /*_multipleConsentQueryService = multipleConsentQueryService;
             _singleConsentAddService = singleConsentAddService;
             _multipleConsentAddService = multipleConsentAddService;
             _pullConsentService = pullConsentService;
             _sfConsentService = sfConsentService;
-            _sendConsentErrorService = sendConsentErrorService;
+            _sendConsentErrorService = sendConsentErrorService;*/
+            _pullConsentService = pullConsentService;
+            _configuration = configuration;
         }
-
+        /*
         /// <summary>
         /// IYS'den toplu rıza sorgulama sonuçları çekilir ve DB'de güncellenir.
         /// </summary>
@@ -75,13 +79,13 @@ namespace IYSIntegration.API.Controllers
                 return StatusCode(500, result.Messages);
             return Ok(result.Data);
         }
-
+        */
         /// <summary>
         /// IYS'den rıza kayıtlarını çekilir ve SF'a aktarılır.
         /// </summary>
         /// <param name="batchSize"></param>
         /// <returns></returns>
-        [HttpPost("pull-consent")]
+        [HttpGet("pull-consent")]
         public async Task<IActionResult> PullConsent([FromQuery] int batchSize)
         {
             var result = await _pullConsentService.RunAsync(batchSize);
@@ -89,7 +93,7 @@ namespace IYSIntegration.API.Controllers
                 return StatusCode(500, result.Messages);
             return Ok(result.Data);
         }
-
+        /*
         /// <summary>
         /// SF'dan gelen consentler sıraya alınır
         /// </summary>
@@ -127,5 +131,6 @@ namespace IYSIntegration.API.Controllers
             var result = await _sendConsentErrorService.GetErrorsJsonAsync(date);
             return Ok(result);
         }
+        */
     }
 }

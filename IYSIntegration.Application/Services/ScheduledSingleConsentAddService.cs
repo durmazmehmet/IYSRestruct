@@ -1,47 +1,54 @@
-using IYSIntegration.Application.Interface;
-using IYSIntegration.Application.Models;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Request.Consent;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Request.Consent;
+using IYSIntegration.Application.Response.Consent;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Threading;
+using System.Collections.Concurrent;
 namespace IYSIntegration.Application.Services
 {
+
     public class ScheduledSingleConsentAddService
     {
         private readonly ILogger<ScheduledSingleConsentAddService> _logger;
         private readonly IDbService _dbService;
-        private readonly IConsentService _consentService;
+        private readonly IRestClientService _clientHelper;
+        private readonly IConfiguration _config;
+        private readonly string _baseProxyUrl;
 
-        public ScheduledSingleConsentAddService(ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IConsentService consentService)
+        public ScheduledSingleConsentAddService(IConfiguration config, ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IRestClientService clientHelper)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _consentService = consentService;
+            _clientHelper = clientHelper;
+            _baseProxyUrl = _config.GetValue<string>("BaseProxyUrl");
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
-            bool errorFlag = false;
             int failedCount = 0;
             int successCount = 0;
 
-            _logger.LogInformation("SingleConsentAddService running at: {time}", DateTimeOffset.Now);
+            var results = new ConcurrentBag<LogResult>();
+
+            _logger.LogInformation("SingleConsentAddService started at {Time}", DateTimeOffset.Now);
 
             try
             {
-                var consentRequestLogs = await _dbService.GetConsentRequests(false, rowCount);
+                var logs = await _dbService.GetConsentRequests(false, rowCount);
 
-                var tasks = consentRequestLogs.Select(async log =>
+                var tasks = logs.Select(async log =>
                 {
                     try
                     {
-                        var consentRequest = new AddConsentRequest
+                        var request = new AddConsentRequest
                         {
                             WithoutLogging = true,
                             IysCode = log.IysCode,
                             BrandCode = log.BrandCode,
-                            Consent = new Common.Base.Consent
+                            Consent = new Application.Base.Consent
                             {
                                 ConsentDate = log.ConsentDate,
                                 Recipient = log.Recipient,
@@ -52,20 +59,29 @@ namespace IYSIntegration.Application.Services
                             }
                         };
 
-                        var addResponse = new Common.Base.ResponseBase<Common.Response.Consent.AddConsentResult>();
-
-                        if (consentRequest.IysCode == 0)
+                        if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
+                            DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
+                            IsOlderThanBusinessDays(consentDate, 3))
                         {
-                            var consentParams = _consentService.GetIysCode(consentRequest.CompanyCode);
-                            consentRequest.IysCode = consentParams.IysCode;
-                            consentRequest.BrandCode = consentParams.BrandCode;
+                            results.Add(new LogResult { Id = log.Id, CompanyCode = request.CompanyCode, Status = "Skipped", Message = "Consent older than 3 business days" });
+                            Interlocked.Increment(ref failedCount);
+                            _logger.LogWarning("Consent ID {Id} skipped: older than 3 business days", log.Id);
+                            return;
                         }
 
-                        addResponse = await _consentService.AddConsent(consentRequest);
-
-                        if (!consentRequest.WithoutLogging)
+                        var proxyRequest = new IysRequest<Consent>
                         {
-                            var id = await _dbService.InsertConsentRequest(consentRequest);
+                            Url = $"{_baseProxyUrl}/{request.CompanyCode}",
+                            Body = request.Consent,
+                            Action = "Add Consent",
+                            Method = RestSharp.Method.Post
+                        };
+
+                        var addResponse = await _clientHelper.Execute<AddConsentResult, Consent>(proxyRequest);
+
+                        if (!request.WithoutLogging)
+                        {
+                            var id = await _dbService.InsertConsentRequest(request);
                             addResponse.Id = id;
                             await _dbService.UpdateConsentResponseFromCommon(addResponse);
                             addResponse.OriginalError = null;
@@ -73,20 +89,22 @@ namespace IYSIntegration.Application.Services
 
                         if (addResponse.HttpStatusCode == 0 || addResponse.HttpStatusCode >= 500)
                         {
+                            results.Add(new LogResult { Id = log.Id, Status = "Failed", Message = $"IYS error {addResponse.HttpStatusCode}" });
                             Interlocked.Increment(ref failedCount);
+                            _logger.LogError("AddConsent failed (status: {Status}) for log ID {Id}", addResponse.HttpStatusCode, log.Id);
                             return;
                         }
 
                         addResponse.Id = log.Id;
-
                         await _dbService.UpdateConsentResponse(addResponse);
                         Interlocked.Increment(ref successCount);
+                        results.Add(new LogResult { Id = log.Id, Status = "Success" });
                     }
                     catch (Exception ex)
                     {
-                        errorFlag = true;
+                        results.Add(new LogResult { Id = log.Id, Status = "Exception", Message = ex.Message });
                         Interlocked.Increment(ref failedCount);
-                        _logger.LogError($"SingleConsentAddService ID {log.Id} ve {ex.Message} ile alınamadı");
+                        _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
                     }
                 });
 
@@ -94,20 +112,55 @@ namespace IYSIntegration.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError("SingleConsentAddService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+                _logger.LogError(ex, "Fatal error in SingleConsentAddService");
+                response.Error("SINGLE_CONSENT_ADD_FATAL", "Service failed with an unexpected exception.");
             }
 
-            if (errorFlag)
+            if (failedCount > 0)
             {
-                _logger.LogError("SingleConsentAddService hata aldı, IYSConsentRequest tablosuna gözatın");
-            }
-
-            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
-            if (errorFlag || failedCount > 0)
-            {
+                _logger.LogWarning("SingleConsentAddService completed with {FailedCount} failures", failedCount);
                 response.Error("SINGLE_CONSENT_ADD", "Some consents failed to add.");
             }
+
+            response.Data = new ScheduledJobStatistics
+            {
+                SuccessCount = successCount,
+                FailedCount = failedCount
+            };
+
+            foreach (var result in results)
+            {
+                var msgKey = $"Consent_{result.Id}_{result.CompanyCode}";
+                var msg = $"{result.Status}{(string.IsNullOrWhiteSpace(result.Message) ? "" : $": {result.Message}")}";
+                response.AddMessage(msgKey, msg);
+            }
+
             return response;
+        }
+
+
+        private static bool IsOlderThanBusinessDays(DateTime consentDate, int maxBusinessDays)
+        {
+            var date = consentDate.Date;
+            var today = DateTime.Now.Date;
+            int businessDays = 0;
+
+            while (date < today)
+            {
+                if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    businessDays++;
+                }
+
+                if (businessDays >= maxBusinessDays)
+                {
+                    return true;
+                }
+
+                date = date.AddDays(1);
+            }
+
+            return false;
         }
     }
 }

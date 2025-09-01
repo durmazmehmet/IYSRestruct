@@ -1,33 +1,33 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Request;
-using IYSIntegration.Common.Request.Brand;
-using IYSIntegration.Common.Response.Brand;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Request;
+using IYSIntegration.Application.Request.Brand;
+using IYSIntegration.Application.Response.Brand;
 using Microsoft.Extensions.Configuration;
-namespace IYSIntegration.Application.Services
+
+namespace IYSIntegration.Application.Services;
+
+public class BrandService : IBrandService
 {
-    public class BrandService : IBrandService
+    private readonly IConfiguration _config;
+    private readonly IRestClientService _clientHelper;
+    private readonly string _baseUrl;
+    public BrandService(IConfiguration config, IRestClientService clientHelper)
     {
-        private readonly IConfiguration _config;
-        private readonly IRestClientService _clientHelper;
-        private readonly string _baseUrl;
-        public BrandService(IConfiguration config, IRestClientService clientHelper)
-        {
-            _config = config;
-            _clientHelper = clientHelper;
-            _baseUrl = _config.GetValue<string>($"BaseUrl");
-        }
+        _config = config;
+        _clientHelper = clientHelper;
+        _baseUrl = _config.GetValue<string>($"BaseUrl");
+    }
 
-        public async Task<ResponseBase<List<Brand>>> GetBrands(GetBrandRequest request)
+    public async Task<ResponseBase<List<Brand>>> GetBrands(GetBrandRequest request)
+    {
+        var iysRequest = new IysRequest<DummyRequest>
         {
-            var iysRequest = new IysRequest<DummyRequest>
-            {
-                IysCode = request.IysCode,
-                Url = $"{_baseUrl}/sps/{request.IysCode}/brands",
-                Action = "Get Brands"
-            };
+            IysCode = request.IysCode,
+            Url = $"{_baseUrl}/sps/{request.IysCode}/brands",
+            Action = "Get Brands"
+        };
 
-            return await _clientHelper.Execute<List<Brand>, DummyRequest>(iysRequest);
-        }
+        return await _clientHelper.Execute<List<Brand>, DummyRequest>(iysRequest);
     }
 }

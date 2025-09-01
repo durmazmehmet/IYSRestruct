@@ -1,8 +1,8 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Error;
-using IYSIntegration.Common.Request.Consent;
-using IYSIntegration.Common.Response.Consent;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Error;
+using IYSIntegration.Application.Request.Consent;
+using IYSIntegration.Application.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
@@ -96,18 +96,18 @@ namespace IYSIntegration.API.Controllers
 
             if (!consentLog.IsProcessed)
             {
-                response.Status = Common.Base.ServiceResponseStatuses.Waiting;
+                response.Status = Application.Base.ServiceResponseStatuses.Waiting;
             }
             else
             {
                 if (consentLog.IsSuccess)
                 {
-                    response.Status = Common.Base.ServiceResponseStatuses.Success;
+                    response.Status = Application.Base.ServiceResponseStatuses.Success;
                     response.Data = JsonConvert.DeserializeObject<AddConsentResult>(consentLog.Response);
                 }
                 else
                 {
-                    response.Status = Common.Base.ServiceResponseStatuses.Error;
+                    response.Status = Application.Base.ServiceResponseStatuses.Error;
                     var error = JsonConvert.DeserializeObject<GenericError>(consentLog.Response);
                     if (!string.IsNullOrEmpty(error.Message))
                     {

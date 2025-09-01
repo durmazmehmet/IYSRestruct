@@ -1,7 +1,7 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Request.RetailerAccess;
-using IYSIntegration.Common.Response.RetailerAccess;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Request.RetailerAccess;
+using IYSIntegration.Application.Response.RetailerAccess;
 using Microsoft.Extensions.Configuration;
 
 namespace IYSIntegration.Application.Services

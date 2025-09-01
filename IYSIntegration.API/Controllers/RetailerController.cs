@@ -1,5 +1,5 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Request.Retailer;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Request.Retailer;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.API.Controllers
@@ -16,7 +16,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("retailers")]
         [HttpPost]
-        public async Task<IActionResult> AddRetailer(int iysCode, int brandCode, [FromBody] Common.Base.Retailer retailer)
+        public async Task<IActionResult> AddRetailer(int iysCode, int brandCode, [FromBody] Application.Base.Retailer retailer)
         {
             var request = new AddRetailerRequest { IysCode = iysCode, BrandCode = brandCode, Retailer = retailer };
             var result = await _retailerService.AddRetailer(request);

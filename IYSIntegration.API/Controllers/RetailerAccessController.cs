@@ -1,5 +1,5 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Request.RetailerAccess;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Request.RetailerAccess;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.API.Controllers
@@ -16,7 +16,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("consents/retailers/access")]
         [HttpPost]
-        public async Task<IActionResult> AddRetailerAccess(int iysCode, int brandCode, [FromBody] Common.Base.RetailerRecipientAccess retailerRecipientAccess)
+        public async Task<IActionResult> AddRetailerAccess(int iysCode, int brandCode, [FromBody] Application.Base.RetailerRecipientAccess retailerRecipientAccess)
         {
             var request = new AddRetailerAccessRequest { IysCode = iysCode, BrandCode = brandCode, RetailerRecipientAccess = retailerRecipientAccess };
             var result = await _retailerAccessService.AddRetailerAccess(request);
@@ -25,7 +25,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("retailers/access/list")]
         [HttpPost]
-        public async Task<IActionResult> QueryRetailerAccess(int iysCode, int brandCode, [FromBody] Common.Base.RecipientKey recipientKey, int? offset, int? limit)
+        public async Task<IActionResult> QueryRetailerAccess(int iysCode, int brandCode, [FromBody] Application.Base.RecipientKey recipientKey, int? offset, int? limit)
         {
             var request = new QueryRetailerAccessRequest { IysCode = iysCode, BrandCode = brandCode, Offset = offset, Limit = limit, RecipientKey = recipientKey };
             var result = await _retailerAccessService.QueryRetailerAccess(request);
@@ -34,7 +34,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("consents/retailers/access/remove")]
         [HttpPost]
-        public async Task<IActionResult> DeleteRetailerAccess(int iysCode, int brandCode, [FromBody] Common.Base.RetailerRecipientAccess retailerRecipientAccess)
+        public async Task<IActionResult> DeleteRetailerAccess(int iysCode, int brandCode, [FromBody] Application.Base.RetailerRecipientAccess retailerRecipientAccess)
         {
             var request = new DeleteRetailerAccessRequest { IysCode = iysCode, BrandCode = brandCode, RetailerRecipientAccess = retailerRecipientAccess };
             var result = await _retailerAccessService.DeleteRetailerAccess(request);
@@ -43,7 +43,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("consents/retailers/access")]
         [HttpPut]
-        public async Task<IActionResult> UpdateRetailerAccess(int iysCode, int brandCode, [FromBody] Common.Base.RetailerRecipientAccess retailerRecipientAccess)
+        public async Task<IActionResult> UpdateRetailerAccess(int iysCode, int brandCode, [FromBody] Application.Base.RetailerRecipientAccess retailerRecipientAccess)
         {
             var request = new UpdateRetailerAccessRequest { IysCode = iysCode, BrandCode = brandCode, RetailerRecipientAccess = retailerRecipientAccess };
             var result = await _retailerAccessService.UpdateRetailerAccess(request);
@@ -52,7 +52,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("consents/retailers/access/remove/all")]
         [HttpPost]
-        public async Task<IActionResult> DeleteAllRetailersAccess(int iysCode, int brandCode, [FromBody] Common.Base.RetailerRecipientAccess retailerRecipientAccess)
+        public async Task<IActionResult> DeleteAllRetailersAccess(int iysCode, int brandCode, [FromBody] Application.Base.RetailerRecipientAccess retailerRecipientAccess)
         {
             var request = new DeleteAllRetailersAccessRequest { IysCode = iysCode, BrandCode = brandCode, RetailerRecipientAccess = retailerRecipientAccess };
             var result = await _retailerAccessService.DeleteAllRetailersAccess(request);

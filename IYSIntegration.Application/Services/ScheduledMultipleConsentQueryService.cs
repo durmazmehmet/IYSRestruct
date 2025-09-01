@@ -1,7 +1,7 @@
-using IYSIntegration.Application.Interface;
-using IYSIntegration.Application.Models;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Request.Consent;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Request.Consent;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
