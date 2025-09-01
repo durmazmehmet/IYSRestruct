@@ -132,6 +132,21 @@
             SELECT MAX(ISNULL(BatchId, 0)) FROM IYSConsentRequest (nolock)
                     WHERE ISNULL(BatchId, 0) <> 0 ";
 
+        public static string GetLastConsentRequest = @"
+            SELECT TOP 1
+                Id,
+                IysCode,
+                BrandCode,
+                ConsentDate,
+                Source,
+                Recipient,
+                RecipientType,
+                Status,
+                Type
+            FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK)
+            WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient AND IsProcessed = 1
+            ORDER BY CreateDate DESC";
+
         public static string InsertConsentRequestWitBatch = @"
             INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
                 (
