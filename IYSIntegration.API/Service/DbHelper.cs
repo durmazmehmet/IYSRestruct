@@ -64,6 +64,22 @@ namespace IYSIntegration.API.Service
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
+                var lastConsent = await connection.QueryFirstOrDefaultAsync<ConsentRequestLog>(QueryStrings.GetLastConsentRequest,
+                    new { CompanyCode = request.CompanyCode, Recipient = request.Consent.Recipient });
+
+                if (lastConsent != null &&
+                    lastConsent.IysCode == request.IysCode &&
+                    lastConsent.BrandCode == request.BrandCode &&
+                    lastConsent.ConsentDate == request.Consent.ConsentDate &&
+                    lastConsent.Source == request.Consent.Source &&
+                    lastConsent.RecipientType == request.Consent.RecipientType &&
+                    lastConsent.Status == request.Consent.Status &&
+                    lastConsent.Type == request.Consent.Type)
+                {
+                    connection.Close();
+                    return 0;
+                }
+
                 var result = await connection.ExecuteScalarAsync<int>(QueryStrings.InsertConsentRequest,
                     new
                     {

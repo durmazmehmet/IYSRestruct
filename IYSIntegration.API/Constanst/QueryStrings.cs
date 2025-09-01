@@ -33,37 +33,78 @@
             WHERE Id = @Id;";
 
         public static string InsertConsentRequest = @"
-            INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
-                (
-                CompanyCode,
-                SalesforceId,
-	            IysCode,
-	            BrandCode,
-	            ConsentDate,
-	            Source,
-	            Recipient,
-	            RecipientType,
-	            Status,
-	            Type,
-                CreateDate,
-                IsProcessed
-                )
-            VALUES(
-                @CompanyCode,
-                @SalesforceId,
-	            @IysCode,
-	            @BrandCode,
-	            @ConsentDate,
-	            @Source,
-	            @Recipient,
-	            @RecipientType,
-	            @Status,
-	            @Type,
-                GETDATE(),
-                0
-                );
-            SELECT SCOPE_IDENTITY()
-            ";
+            IF @Status IN ('RED', 'RET')
+            BEGIN
+                IF EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK) WHERE Recipient = @Recipient)
+                   OR EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK) WHERE Recipient = @Recipient)
+                BEGIN
+                    INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
+                        (
+                        CompanyCode,
+                        SalesforceId,
+                        IysCode,
+                        BrandCode,
+                        ConsentDate,
+                        Source,
+                        Recipient,
+                        RecipientType,
+                        Status,
+                        Type,
+                        CreateDate,
+                        IsProcessed
+                        )
+                    VALUES(
+                        @CompanyCode,
+                        @SalesforceId,
+                        @IysCode,
+                        @BrandCode,
+                        @ConsentDate,
+                        @Source,
+                        @Recipient,
+                        @RecipientType,
+                        @Status,
+                        @Type,
+                        GETDATE(),
+                        0
+                        );
+                    SELECT SCOPE_IDENTITY();
+                END
+                ELSE
+                    SELECT 0;
+            END
+            ELSE
+            BEGIN
+                INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
+                    (
+                    CompanyCode,
+                    SalesforceId,
+                    IysCode,
+                    BrandCode,
+                    ConsentDate,
+                    Source,
+                    Recipient,
+                    RecipientType,
+                    Status,
+                    Type,
+                    CreateDate,
+                    IsProcessed
+                    )
+                VALUES(
+                    @CompanyCode,
+                    @SalesforceId,
+                    @IysCode,
+                    @BrandCode,
+                    @ConsentDate,
+                    @Source,
+                    @Recipient,
+                    @RecipientType,
+                    @Status,
+                    @Type,
+                    GETDATE(),
+                    0
+                    );
+                SELECT SCOPE_IDENTITY();
+            END";
 
         public static string UpdateConsentRequest = @"
             UPDATE SfdcMasterData.dbo.IYSConsentRequest
@@ -89,7 +130,22 @@
 
         public static string GetMaxBatchId = @"
             SELECT MAX(ISNULL(BatchId, 0)) FROM IYSConsentRequest (nolock)
-		    WHERE ISNULL(BatchId, 0) <> 0 ";
+                    WHERE ISNULL(BatchId, 0) <> 0 ";
+
+        public static string GetLastConsentRequest = @"
+            SELECT TOP 1
+                Id,
+                IysCode,
+                BrandCode,
+                ConsentDate,
+                Source,
+                Recipient,
+                RecipientType,
+                Status,
+                Type
+            FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK)
+            WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient AND IsProcessed = 1
+            ORDER BY CreateDate DESC";
 
         public static string InsertConsentRequestWitBatch = @"
             INSERT INTO SfdcMasterData.dbo.IYSConsentRequest

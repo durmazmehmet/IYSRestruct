@@ -37,7 +37,7 @@ namespace IYSIntegration.WorkerService.Services
                 {
                     _logger.LogInformation("ConsentPullWorker running at: {time}", DateTimeOffset.Now);
                     // TODO: 24 saatte 1 çalýuþacak þekilde kurgulanacak Gece 01:00 sonrasý
-                    var companyList = new List<string> { "BOI", "BOP", "BOPK", "BOM" };
+                    var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? new List<string>();
                     foreach (var companyCode in companyList)
                     {
                         companyCodeInProc = companyCode;

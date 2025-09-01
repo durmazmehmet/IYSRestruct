@@ -44,7 +44,7 @@ namespace IYSIntegration.WorkerService.Services
                     var checkAfterInSeconds = _configuration.GetValue<int>("MultipleConsentQueryCheckAfter");
                     var batchSize = _configuration.GetValue<int>("MultipleConsentBatchSize");
 
-                    var companyList = new List<string> { "BOI", "BOP", "BOPK", "BOM" };
+                    var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? new List<string>();
                     foreach (var companyCode in companyList)
                     {
                         await _dbHelper.UpdateBatchId(companyCode, batchSize);
