@@ -1,6 +1,6 @@
-using IYSIntegration.API.Helpers;
-using IYSIntegration.API.Interface;
-using IYSIntegration.API.Service;
+using IYSIntegration.Application.Helpers;
+using IYSIntegration.Application.Interface;
+using IYSIntegration.Application.Service;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.LoggingService;
 using IYSIntegration.Common.LoggingService.Loggers;

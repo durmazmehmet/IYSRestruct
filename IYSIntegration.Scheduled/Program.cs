@@ -1,5 +1,5 @@
-using IYSIntegration.Scheduled.Services;
-using IYSIntegration.Scheduled.Utilities;
+using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

@@ -1,4 +1,4 @@
-﻿using IYSIntegration.API.Interface;
+﻿using IYSIntegration.Application.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.API.Controllers
