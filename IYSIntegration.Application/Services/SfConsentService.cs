@@ -1,11 +1,10 @@
 ﻿using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Authenticators;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 namespace IYSIntegration.Application.Services
 {
     public class SfConsentService : ISfConsentService

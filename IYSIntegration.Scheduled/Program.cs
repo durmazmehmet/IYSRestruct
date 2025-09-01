@@ -1,12 +1,10 @@
-using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Interface;
 using IYSIntegration.Application.Services;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System.ServiceModel;
-using IYSIntegration.Application.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 

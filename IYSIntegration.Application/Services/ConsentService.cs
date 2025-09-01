@@ -4,10 +4,8 @@ using IYSIntegration.Common.Error;
 using IYSIntegration.Common.Request;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
-using System;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using IYSIntegration.Common.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace IYSIntegration.Application.Services
 {
@@ -151,6 +149,15 @@ namespace IYSIntegration.Application.Services
             }
 
             return await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest);
+        }
+
+        public ConsentParams GetIysCode(string companyCode)
+        {
+            return new ConsentParams
+            {
+                IysCode = _config.GetValue<int>($"{companyCode}:IysCode"),
+                BrandCode = _config.GetValue<int>($"{companyCode}:BrandCode")
+            };
         }
     }
 }

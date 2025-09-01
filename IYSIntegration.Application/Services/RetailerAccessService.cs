@@ -3,7 +3,6 @@ using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.RetailerAccess;
 using IYSIntegration.Common.Response.RetailerAccess;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace IYSIntegration.Application.Services
 {

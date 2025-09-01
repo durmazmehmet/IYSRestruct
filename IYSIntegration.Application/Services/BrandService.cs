@@ -4,7 +4,6 @@ using IYSIntegration.Common.Request;
 using IYSIntegration.Common.Request.Brand;
 using IYSIntegration.Common.Response.Brand;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 namespace IYSIntegration.Application.Services
 {
     public class BrandService : IBrandService

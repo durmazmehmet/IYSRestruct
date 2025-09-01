@@ -4,7 +4,6 @@ using IYSIntegration.Common.Request;
 using IYSIntegration.Common.Request.Retailer;
 using IYSIntegration.Common.Response.Retailer;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 namespace IYSIntegration.Application.Services
 {
     public class RetailerService : IRetailerService

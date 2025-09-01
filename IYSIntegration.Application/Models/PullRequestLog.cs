@@ -1,5 +1,4 @@
 ﻿using IYSIntegration.Common.Base;
-using System;
 
 namespace IYSIntegration.Application.Models
 {

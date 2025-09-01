@@ -1,13 +1,8 @@
+using IYSIntegration.Application.Interface;
+using IYSIntegration.Application.Models;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
-using IYSIntegration.Application.Models;
-using IYSIntegration.Application.Services;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using IYSIntegration.Application.Interface;
 
 namespace IYSIntegration.Application.Services
 {

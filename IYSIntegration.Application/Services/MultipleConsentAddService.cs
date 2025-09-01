@@ -1,15 +1,10 @@
+using IYSIntegration.Application.Interface;
+using IYSIntegration.Application.Models;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
-using IYSIntegration.Application.Models;
-using IYSIntegration.Application.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using IYSIntegration.Application.Interface;
 
 namespace IYSIntegration.Application.Services
 {

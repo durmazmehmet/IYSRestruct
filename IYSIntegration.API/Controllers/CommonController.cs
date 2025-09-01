@@ -32,7 +32,7 @@ namespace IYSIntegration.API.Controllers
         {
             if (request.IysCode == 0)
             {
-                var consentParams = GetIysCode(request.CompanyCode);
+                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
                 request.IysCode = consentParams.IysCode;
                 request.BrandCode = consentParams.BrandCode;
             }
@@ -58,7 +58,7 @@ namespace IYSIntegration.API.Controllers
         {
             if (request.IysCode == 0)
             {
-                var consentParams = GetIysCode(request.CompanyCode);
+                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
                 request.IysCode = consentParams.IysCode;
                 request.BrandCode = consentParams.BrandCode;
             }
@@ -72,7 +72,7 @@ namespace IYSIntegration.API.Controllers
         {
             if (request.IysCode == 0)
             {
-                var consentParams = GetIysCode(request.CompanyCode);
+                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
                 request.IysCode = consentParams.IysCode;
                 request.BrandCode = consentParams.BrandCode;
             }
@@ -137,7 +137,7 @@ namespace IYSIntegration.API.Controllers
 
             if (request.IysCode == 0)
             {
-                var consentParams = GetIysCode(request.CompanyCode);
+                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
                 request.IysCode = consentParams.IysCode;
                 request.BrandCode = consentParams.BrandCode;
             }
@@ -174,7 +174,7 @@ namespace IYSIntegration.API.Controllers
         {
             if (request.IysCode == 0)
             {
-                var consentParams = GetIysCode(request.CompanyCode);
+                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
                 request.IysCode = consentParams.IysCode;
                 request.BrandCode = consentParams.BrandCode;
             }
@@ -190,7 +190,7 @@ namespace IYSIntegration.API.Controllers
         {
             if (request.IysCode == 0)
             {
-                var consentParams = GetIysCode(request.CompanyCode);
+                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
                 request.IysCode = consentParams.IysCode;
                 request.BrandCode = consentParams.BrandCode;
             }
@@ -205,7 +205,7 @@ namespace IYSIntegration.API.Controllers
         {
             if (request.IysCode == 0)
             {
-                var consentParams = GetIysCode(request.CompanyCode);
+                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
                 request.IysCode = consentParams.IysCode;
                 request.BrandCode = consentParams.BrandCode;
             }
@@ -220,13 +220,6 @@ namespace IYSIntegration.API.Controllers
             return await _SfconsentManager.AddConsent(request);
         }
 
-        private ConsentParams GetIysCode(string companyCode)
-        {
-            return new ConsentParams
-            {
-                IysCode = _config.GetValue<int>($"{companyCode}:IysCode"),
-                BrandCode = _config.GetValue<int>($"{companyCode}:BrandCode")
-            };
-        }
+       
     }
 }

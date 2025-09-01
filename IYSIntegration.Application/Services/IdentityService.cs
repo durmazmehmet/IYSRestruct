@@ -1,11 +1,11 @@
 ﻿using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Request.Identity;
 using IYSIntegration.Common.Response.Identity;
-using Newtonsoft.Json;
-using RestSharp;
+using IYSIntegration.Common.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using IYSIntegration.Common.Services;
+using Newtonsoft.Json;
+using RestSharp;
 
 namespace IYSIntegration.Application.Services
 {

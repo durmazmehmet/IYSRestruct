@@ -2,7 +2,6 @@
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 namespace IYSIntegration.Application.Services
 {
     public class InfoService : IInfoService

@@ -1,13 +1,11 @@
-﻿using IYSIntegration.Common.Base;
+﻿using IYSIntegration.Application.Interface;
+using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace IYSIntegration.Application.Services
 {
@@ -151,5 +149,7 @@ namespace IYSIntegration.Application.Services
 
             return result;
         }
+
+       
     }
 }
