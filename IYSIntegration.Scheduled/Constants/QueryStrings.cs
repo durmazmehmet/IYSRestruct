@@ -1,4 +1,4 @@
-﻿namespace IYSIntegration.WorkerService.Constants
+﻿namespace IYSIntegration.Scheduled.Constants
 {
     public class QueryStrings
     {
