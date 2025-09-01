@@ -5,11 +5,16 @@ using IYSIntegration.Common.LoggingService;
 using IYSIntegration.Common.LoggingService.Loggers;
 using IYSIntegration.Common.Middleware.Exceptions;
 using IYSIntegration.Common.Services;
+using IYSIntegration.Scheduled.Helpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using StackExchange.Redis;
+using System;
+using System.IO;
+using System.Reflection;
 
 internal class Program
 {
@@ -54,7 +59,20 @@ internal class Program
         // 6) MVC & Swagger
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
+        builder.Services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "IYS Scheduled", Version = "v1" });
+
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            c.IncludeXmlComments(xmlPath);
+
+            // Tag açıklaması
+            c.DocumentFilter<TagDescriptionsDocumentFilter>();
+        });
+
+        builder.Services.AddRouting();
+        builder.Services.AddMvc();
 
         var app = builder.Build();
 

@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <UserSecretsId>dotnet-IYSIntegration.Scheduled-F0F4ADAF-89CA-4655-9285-ACEB35D4DB69</UserSecretsId>
     <Configurations>Debug;Release;Local Prod</Configurations>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
