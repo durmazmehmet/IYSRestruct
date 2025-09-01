@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+	  <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\IYSIntegration.Common\IYSIntegration.Common.csproj" />
     <ProjectReference Include="..\IYSIntegration.Application\IYSIntegration.Application.csproj" />
+    <ProjectReference Include="..\IYSIntegration.Common\IYSIntegration.Common.csproj" />
   </ItemGroup>
 
 </Project>
