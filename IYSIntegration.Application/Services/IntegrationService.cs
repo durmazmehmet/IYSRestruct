@@ -1,155 +1,92 @@
-﻿using IYSIntegration.Application.Interface;
+using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using RestSharp;
 
 namespace IYSIntegration.Application.Services
 {
     public class IntegrationService : IIntegrationService
     {
-        private readonly IConfiguration _config;
+        private readonly IConsentService _consentService;
+        private readonly IDbService _dbService;
+        private readonly ISfConsentService _sfConsentService;
         private readonly ILogger<IntegrationService> _logger;
-        public IntegrationService(IConfiguration config, ILogger<IntegrationService> logger)
+
+        public IntegrationService(
+            IConsentService consentService,
+            IDbService dbService,
+            ISfConsentService sfConsentService,
+            ILogger<IntegrationService> logger)
         {
-            _config = config;
+            _consentService = consentService;
+            _dbService = dbService;
+            _sfConsentService = sfConsentService;
             _logger = logger;
         }
 
         public async Task<ResponseBase<AddConsentResult>> AddConsent(AddConsentRequest request)
         {
-            ResponseBase<AddConsentResult> result = new();
-
-            string url = $"{_config.GetValue<string>($"BaseUrl")}";
-            var client = new RestClient(url);
-            var httpRequest = new RestRequest("addConsent", Method.Post);
-            var req = JsonConvert.SerializeObject(request).ToString();
-            httpRequest.AddParameter("application/json", JsonConvert.SerializeObject(request), ParameterType.RequestBody);
-            var response = await client.ExecuteAsync(httpRequest);
-
-            var h = response.IsSuccessful;
-
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            if (request.IysCode == 0)
             {
-                result = JsonConvert.DeserializeObject<ResponseBase<AddConsentResult>>(response.Content);
+                var consentParams = _consentService.GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
             }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+
+            if (!request.WithoutLogging)
             {
-                _logger.LogWarning($"{request.CompanyCode} için AddConsentResult'den yanıt gelmedi");
+                var id = await _dbService.InsertConsentRequest(request);
+                var response = await _consentService.AddConsent(request);
+                response.Id = id;
+                await _dbService.UpdateConsentResponseFromCommon(response);
+                response.OriginalError = null;
+                return response;
             }
-            else
-            {
-                throw new Exception($"{request.CompanyCode} için AddConsentResult hatası: {response.StatusCode} Message: {response.ErrorMessage}");
-            }
-            return result;
+
+            return await _consentService.AddConsent(request);
         }
 
         public async Task<ResponseBase<MultipleConsentResult>> SendMultipleConsent(MultipleConsentRequest request)
         {
-            ResponseBase<MultipleConsentResult> result = new();
+            if (request.IysCode == 0)
+            {
+                var consentParams = _consentService.GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
+            }
 
-            string url = $"{_config.GetValue<string>($"BaseUrl")}";
-            var client = new RestClient(url);
-            var httpRequest = new RestRequest("sendMultipleConsent", Method.Post);
-            httpRequest.AddParameter("application/json", JsonConvert.SerializeObject(request), ParameterType.RequestBody);
-            var response = await client.ExecuteAsync(httpRequest);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
-            {
-                result = JsonConvert.DeserializeObject<ResponseBase<MultipleConsentResult>>(response.Content);
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-            {
-                _logger.LogWarning($"{request.CompanyCode} için MultipleConsentResult'den yanıt gelmedi");
-            }
-            else
-            {
-                throw new Exception($"{request.CompanyCode} için MultipleConsentResult hatası: {response.StatusCode} Message: {response.ErrorMessage}");
-            }
-            return result;
+            return await _consentService.AddMultipleConsent(request);
         }
 
         public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(QueryMultipleConsentRequest request)
         {
-            ResponseBase<List<QueryMultipleConsentResult>> result = new();
+            if (request.IysCode == 0)
+            {
+                var consentParams = _consentService.GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
+            }
 
-            string url = $"{_config.GetValue<string>($"BaseUrl")}";
-            var client = new RestClient(url);
-            var httpRequest = new RestRequest("queryMultipleConsent", Method.Post);
-            httpRequest.AddParameter("application/json", JsonConvert.SerializeObject(request), ParameterType.RequestBody);
-            var response = await client.ExecuteAsync(httpRequest);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
-            {
-                result = JsonConvert.DeserializeObject<ResponseBase<List<QueryMultipleConsentResult>>>(response.Content);
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-            {
-                _logger.LogWarning($"{request.CompanyCode} için QueryMultipleConsentResult'den yanıt gelmedi");
-            }
-            else
-            {
-                throw new Exception($"{request.CompanyCode} için QueryMultipleConsentResult hatası: {response.StatusCode} Message: {response.ErrorMessage}");
-            }
-            return result;
+            return await _consentService.QueryMultipleConsent(request);
         }
 
         public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
         {
-            var result = new ResponseBase<PullConsentResult>();
+            if (request.IysCode == 0)
+            {
+                var consentParams = _consentService.GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
+            }
 
-            string url = $"{_config.GetValue<string>($"BaseUrl")}";
-            var client = new RestClient(url);
-            var httpRequest = new RestRequest("pullConsent", Method.Post);
-            var req = JsonConvert.SerializeObject(request).ToString();
-            httpRequest.AddParameter("application/json", JsonConvert.SerializeObject(request), ParameterType.RequestBody);
-            var response = await client.ExecuteAsync(httpRequest);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
-            {
-                result = JsonConvert.DeserializeObject<ResponseBase<PullConsentResult>>(response.Content);
-                _logger.LogInformation($"{request.CompanyCode} için PullConsent'den alındı");
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-            {
-                _logger.LogWarning($"{request.CompanyCode} için PullConsent'den yanıt gelmedi");
-            }
-            else
-            {
-                _logger.LogInformation($"{request.CompanyCode} için PullConsent'den hata alındı {response.StatusCode}");
-            }
-            return result;
+            return await _consentService.PullConsent(request);
         }
 
         public async Task<SfConsentAddResponse> SfAddConsent(SfConsentAddRequest request)
         {
-            var result = new SfConsentAddResponse();
-
-            string url = $"{_config.GetValue<string>($"BaseUrl")}";
-            var client = new RestClient(url);
-            var httpRequest = new RestRequest("sfaddconsent", Method.Post);
-            httpRequest.AddParameter("application/json", JsonConvert.SerializeObject(request), ParameterType.RequestBody);
-            var response = await client.ExecuteAsync(httpRequest);
-
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
-            {
-                result = JsonConvert.DeserializeObject<SfConsentAddResponse>(response.Content);
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
-            {
-                _logger.LogWarning($"{request.Request.CompanyCode} için SfAddConsent'den yanıt gelmedi");
-            }
-            else
-            {
-                throw new Exception($"{request.Request.CompanyCode} için SfAddConsent hatası: {response.StatusCode} Message: {response.ErrorMessage}");
-            }
-
-            return result;
+            return await _sfConsentService.AddConsent(request);
         }
-
-       
     }
 }
+
