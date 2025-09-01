@@ -9,3 +9,8 @@ The following values from `appsettings.json` indicate how many minutes each dela
 - `SingleConsentQueryDelay` – 300 seconds (5 minutes)
 - `PullConsentQueryDelay` – 3600 seconds (60 minutes)
 - `SfAddConsentDelay` – 90 seconds (1.5 minutes)
+
+## Proxy API
+
+The `IYSIntegration.Proxy.API` project exposes consent endpoints that forward requests to IYS.
+Use this API as an alternate base URL for remote debugging when direct IYS access from local environments is blocked.
