@@ -1,5 +1,6 @@
 using IYSIntegration.Application.Interface;
 using IYSIntegration.Application.Models;
+using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -21,10 +22,12 @@ namespace IYSIntegration.Application.Services
             _consentService = consentService;
         }
 
-        public async Task RunAsync(int limit)
+        public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int limit)
         {
+            var response = new ResponseBase<ScheduledJobStatistics>();
             bool errorFlag = false;
             List<string> failedCompanyCodes = new List<string>();
+            int successCount = 0;
             string companyCodeInProc;
             try
             {
@@ -101,6 +104,7 @@ namespace IYSIntegration.Application.Services
                                 fetchNext = false;
                             }
                         }
+                        successCount++;
                     }
                     catch
                     {
@@ -118,6 +122,18 @@ namespace IYSIntegration.Application.Services
             {
                 _logger.LogError($"PullConsentService {string.Join(",", failedCompanyCodes)} firmaları için hata aldı");
             }
+
+            response.Data = new ScheduledJobStatistics
+            {
+                SuccessCount = successCount,
+                FailedCount = failedCompanyCodes.Count,
+                FailedCompanyCodes = failedCompanyCodes
+            };
+            if (errorFlag)
+            {
+                response.Error("PULL_CONSENT", "Some companies failed during pull.");
+            }
+            return response;
         }
     }
 }

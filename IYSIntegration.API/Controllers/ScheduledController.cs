@@ -1,4 +1,5 @@
 ﻿using IYSIntegration.Application.Services;
+using IYSIntegration.Common.Base;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
@@ -39,8 +40,10 @@ namespace IYSIntegration.API.Controllers
         [HttpPost("multiple-consent-query")]
         public async Task<IActionResult> MultipleConsentQuery([FromQuery] int batchCount)
         {
-            await _multipleConsentQueryService.RunAsync(batchCount);
-            return Ok();
+            var result = await _multipleConsentQueryService.RunAsync(batchCount);
+            if (!result.IsSuccessful())
+                return StatusCode(500, result.Messages);
+            return Ok(result.Data);
         }
 
         /// <summary>
@@ -53,8 +56,10 @@ namespace IYSIntegration.API.Controllers
         [HttpPost("multiple-consent-add")]
         public async Task<IActionResult> MultipleConsentAdd([FromQuery] int batchSize, [FromQuery] int batchCount, [FromQuery] int checkAfter)
         {
-            await _multipleConsentAddService.RunAsync(batchSize, batchCount, checkAfter);
-            return Ok();
+            var result = await _multipleConsentAddService.RunAsync(batchSize, batchCount, checkAfter);
+            if (!result.IsSuccessful())
+                return StatusCode(500, result.Messages);
+            return Ok(result.Data);
         }
 
         /// <summary>
@@ -65,8 +70,10 @@ namespace IYSIntegration.API.Controllers
         [HttpPost("single-consent-add")]
         public async Task<IActionResult> SingleConsentAdd([FromQuery] int rowCount)
         {
-            await _singleConsentAddService.RunAsync(rowCount);
-            return Ok();
+            var result = await _singleConsentAddService.RunAsync(rowCount);
+            if (!result.IsSuccessful())
+                return StatusCode(500, result.Messages);
+            return Ok(result.Data);
         }
 
         /// <summary>
@@ -77,8 +84,10 @@ namespace IYSIntegration.API.Controllers
         [HttpPost("pull-consent")]
         public async Task<IActionResult> PullConsent([FromQuery] int batchSize)
         {
-            await _pullConsentService.RunAsync(batchSize);
-            return Ok();
+            var result = await _pullConsentService.RunAsync(batchSize);
+            if (!result.IsSuccessful())
+                return StatusCode(500, result.Messages);
+            return Ok(result.Data);
         }
 
         /// <summary>
@@ -89,8 +98,10 @@ namespace IYSIntegration.API.Controllers
         [HttpPost("sf-consent")]
         public async Task<IActionResult> SfConsent([FromQuery] int rowCount)
         {
-            await _sfConsentService.RunAsync(rowCount);
-            return Ok();
+            var result = await _sfConsentService.RunAsync(rowCount);
+            if (!result.IsSuccessful())
+                return StatusCode(500, result.Messages);
+            return Ok(result.Data);
         }
 
         /// <summary>

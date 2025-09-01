@@ -19,8 +19,13 @@ namespace IYSIntegration.Application.Services
             _sfConsentService = sfCconsentService;
         }
 
-        public async Task RunAsync(int rowCount)
+        public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
         {
+            var response = new ResponseBase<ScheduledJobStatistics>();
+            int successCount = 0;
+            int failedCount = 0;
+            bool errorFlag = false;
+
             _logger.LogInformation("SfConsentService running at: {time}", DateTimeOffset.Now);
             var consentRequests = await _dbService.GetPullConsentRequests(false, rowCount);
             if (consentRequests?.Count > 0)
@@ -88,14 +93,30 @@ namespace IYSIntegration.Application.Services
                             };
 
                             _dbService.UpdateSfConsentResponse(result).Wait();
+                            if (result.IsSuccess)
+                                successCount++;
+                            else
+                            {
+                                errorFlag = true;
+                                failedCount++;
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
+                        errorFlag = true;
+                        failedCount++;
                         _logger.LogError("SfConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
                     }
                 }
             }
+
+            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
+            if (errorFlag || failedCount > 0)
+            {
+                response.Error("SF_CONSENT", "Some consents failed to send to SF.");
+            }
+            return response;
         }
     }
 }
