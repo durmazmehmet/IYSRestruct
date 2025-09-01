@@ -1,4 +1,4 @@
-﻿using IYSIntegration.API.Interface;
+﻿using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Request.RetailerAccess;
 using Microsoft.AspNetCore.Mvc;
 

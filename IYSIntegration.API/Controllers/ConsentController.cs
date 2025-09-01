@@ -1,4 +1,4 @@
-﻿using IYSIntegration.API.Interface;
+﻿using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Request.Consent;
 using Microsoft.AspNetCore.Mvc;
 

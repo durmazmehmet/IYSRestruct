@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
-using IYSIntegration.Scheduled.Services;
+using IYSIntegration.Application.Services;
 
 namespace IYSIntegration.Scheduled.Controllers
 {
