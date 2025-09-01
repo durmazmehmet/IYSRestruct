@@ -1,11 +1,11 @@
 ﻿using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
-using IYSIntegration.WorkerService.Models;
+using IYSIntegration.Scheduled.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace IYSIntegration.WorkerService.Utilities
+namespace IYSIntegration.Scheduled.Utilities
 {
     public interface IDbHelper
     {

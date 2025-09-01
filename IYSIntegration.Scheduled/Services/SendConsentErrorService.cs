@@ -1,66 +1,37 @@
-﻿using IYSIntegration.WorkerService.Utilities;
+using IYSIntegration.Scheduled.Utilities;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NCrontab;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
-namespace IYSIntegration.WorkerService.Services
+namespace IYSIntegration.Scheduled.Services
 {
-    public class SendConsentErrorWorker : BackgroundService
+    public class SendConsentErrorService
     {
-        private CrontabSchedule _schedule;
-        private DateTime _nextRun;
-
-        private readonly ILogger<SfConsentWorker> _logger;
+        private readonly ILogger<SendConsentErrorService> _logger;
         private readonly IDbHelper _dbHelper;
         private readonly IConfiguration _configuration;
         private readonly IVirtualInterface _client;
-
-        private string Schedule;
         private string SmallDateFormat => "yyyy.MM.dd";
 
-        public SendConsentErrorWorker(IConfiguration configuration, ILogger<SfConsentWorker> logger, IDbHelper dbHelper, IVirtualInterface client)
+        public SendConsentErrorService(IConfiguration configuration, ILogger<SendConsentErrorService> logger, IDbHelper dbHelper, IVirtualInterface client)
         {
             _configuration = configuration;
             _logger = logger;
             _dbHelper = dbHelper;
             _client = client;
-            Schedule = _configuration.GetValue<string>("IYSErrorMail:Schedule");
-
-            _schedule = CrontabSchedule.Parse(Schedule, new CrontabSchedule.ParseOptions { IncludingSeconds = true });
-            _nextRun = _schedule.GetNextOccurrence(DateTime.Now);
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public async Task RunAsync()
         {
-            do
-            {
-                var now = DateTime.Now;
-                var nextrun = _schedule.GetNextOccurrence(now);
-                if (now > _nextRun)
-                {
-                    Process();
-                    _nextRun = _schedule.GetNextOccurrence(DateTime.Now);
-                }
-                await Task.Delay(5000, stoppingToken); //5 seconds delay
-            }
-            while (!stoppingToken.IsCancellationRequested);
-        }
-
-        private async void Process()
-        {
-
             try
             {
-                _logger.LogInformation("SendConsentErrorWorker running at: {time}", DateTimeOffset.Now);
+                _logger.LogInformation("SendConsentErrorService running at: {time}", DateTimeOffset.Now);
 
                 var errorConsents = await _dbHelper.GetIYSConsentRequestErrors();
                 if (errorConsents?.Count > 0)
@@ -83,7 +54,6 @@ namespace IYSIntegration.WorkerService.Services
                             fill.BackgroundColor.SetColor(Color.LightGray);
                             columnIndex++;
                         } while (columnIndex != 12);
-
 
                         columnIndex = 1;
                         excelWorksheet.Cells[1, columnIndex++].Value = "Id";
@@ -110,7 +80,7 @@ namespace IYSIntegration.WorkerService.Services
                             {
                                 var index = user.Recipient.LastIndexOf("@");
                                 if (index >= 2)
-                                    excelWorksheet.Cells[i + 2, columnIndex++].Value = user.Recipient.Substring(0, 2) + new String('*', index - 2) + user.Recipient.Substring(index);
+                                    excelWorksheet.Cells[i + 2, columnIndex++].Value = user.Recipient.Substring(0, 2) + new string('*', index - 2) + user.Recipient.Substring(index);
                             }
                             else
                             {
@@ -145,7 +115,7 @@ namespace IYSIntegration.WorkerService.Services
                             To = _configuration.GetValue<string>("IYSErrorMail:To"),
                             From = _configuration.GetValue<string>("IYSErrorMail:From"),
                             FromDisplayName = _configuration.GetValue<string>("IYSErrorMail:FromDisplayName"),
-                            TemplateName = "IYS Consent Error"
+                            TemplateName = "IYS Consent Error",
                         };
 
                         var attachmentRequest = new AttachmentRequest { };
@@ -153,16 +123,13 @@ namespace IYSIntegration.WorkerService.Services
                         attachmentRequest.FileName = "IYS_Consent_Error_" + dateString + ".xlsx";
                         mailNotificationRequest.Attachments = new List<AttachmentRequest> { attachmentRequest }.ToArray();
                         _client.InsertMailNotificationNoToken(new InsertMailNotificationNoTokenRequest { request = mailNotificationRequest });
-
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError("SendConsentErrorWorker Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-
+                _logger.LogError("SendConsentErrorService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
             }
-
         }
     }
 }

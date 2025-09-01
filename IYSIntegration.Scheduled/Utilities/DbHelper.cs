@@ -2,8 +2,8 @@
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
-using IYSIntegration.WorkerService.Constants;
-using IYSIntegration.WorkerService.Models;
+using IYSIntegration.Scheduled.Constants;
+using IYSIntegration.Scheduled.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -13,7 +13,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IYSIntegration.WorkerService.Utilities
+namespace IYSIntegration.Scheduled.Utilities
 {
     public class DbHelper : IDbHelper
     {

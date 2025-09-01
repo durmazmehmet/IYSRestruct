@@ -4,7 +4,7 @@ using IYSIntegration.Common.Response.Consent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace IYSIntegration.WorkerService.Utilities
+namespace IYSIntegration.Scheduled.Utilities
 {
     public interface IIntegrationHelper
     {

@@ -1,16 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <UserSecretsId>dotnet-IYSIntegration.WorkerService-F0F4ADAF-89CA-4655-9285-ACEB35D4DB69</UserSecretsId>
+    <UserSecretsId>dotnet-IYSIntegration.Scheduled-F0F4ADAF-89CA-4655-9285-ACEB35D4DB69</UserSecretsId>
     <Configurations>Debug;Release;Local Prod</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.35" />
     <PackageReference Include="EPPlus" Version="7.3.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
-    <PackageReference Include="ncrontab" Version="3.3.3" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
