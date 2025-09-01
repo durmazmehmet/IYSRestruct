@@ -38,7 +38,7 @@ namespace IYSIntegration.Application.Services
                         var fetchNext = true;
                         while (fetchNext)
                         {
-                            await Task.Delay(5000);
+                            //await Task.Delay(5000);
                             _logger.LogInformation($"PullConsentService running for: {companyCode}");
 
                             int iysCode = _configuration.GetValue<int>($"{companyCode}:IysCode");
