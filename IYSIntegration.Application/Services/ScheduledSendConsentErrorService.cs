@@ -1,23 +1,20 @@
 using IYSIntegration.Application.Interface;
+using IYSIntegration.Common.Base;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Threading.Tasks;
-using IYSIntegration.Common.Base;
 
 namespace IYSIntegration.Application.Services
 {
-    public class SendConsentErrorService
+    public class ScheduledSendConsentErrorService
     {
-        private readonly ILogger<SendConsentErrorService> _logger;
+        private readonly ILogger<ScheduledSendConsentErrorService> _logger;
         private readonly IDbService _dbService;
         private string SmallDateFormat => "yyyy.MM.dd";
 
-        public SendConsentErrorService(ILogger<SendConsentErrorService> logger, IDbService dbHelper)
+        public ScheduledSendConsentErrorService(ILogger<ScheduledSendConsentErrorService> logger, IDbService dbHelper)
         {
             _logger = logger;
             _dbService = dbHelper;

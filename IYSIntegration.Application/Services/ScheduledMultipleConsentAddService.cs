@@ -8,20 +8,20 @@ using Newtonsoft.Json;
 
 namespace IYSIntegration.Application.Services
 {
-    public class MultipleConsentAddService
+    public class ScheduledMultipleConsentAddService
     {
-        private readonly ILogger<MultipleConsentAddService> _logger;
+        private readonly ILogger<ScheduledMultipleConsentAddService> _logger;
         private readonly IDbService _dbService;
         private readonly IConfiguration _configuration;
-        private readonly IIntegrationService _integrationService;
+        private readonly IConsentService _consentService;
         private readonly object obj = new object();
 
-        public MultipleConsentAddService(IConfiguration configuration, ILogger<MultipleConsentAddService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
+        public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IConsentService consentService)
         {
             _configuration = configuration;
             _logger = logger;
             _dbService = dbHelper;
-            _integrationService = integrationHelper;
+            _consentService = consentService;
         }
 
         public async Task RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
@@ -68,7 +68,17 @@ namespace IYSIntegration.Application.Services
                             });
                         }
 
-                        var result = _integrationService.SendMultipleConsent(request).Result;
+                          if (request.IysCode == 0)
+                        {
+                            var consentParams = _consentService.GetIysCode(request.CompanyCode);
+                            request.IysCode = consentParams.IysCode;
+                            request.BrandCode = consentParams.BrandCode;
+                        }
+
+                        var result = await _consentService.AddMultipleConsent(request);
+
+
+
                         if (result.IsSuccessful())
                         {
                             var batchConsentQuery = new BatchConsentQuery

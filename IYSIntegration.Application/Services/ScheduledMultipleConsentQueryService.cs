@@ -8,17 +8,17 @@ using System.Collections.Concurrent;
 
 namespace IYSIntegration.Application.Services
 {
-    public class MultipleConsentQueryService
+    public class ScheduledMultipleConsentQueryService
     {
-        private readonly ILogger<MultipleConsentQueryService> _logger;
+        private readonly ILogger<ScheduledMultipleConsentQueryService> _logger;
         private readonly IDbService _dbService;
-        private readonly IIntegrationService _integrationService;
+        private readonly IConsentService _consentService;
 
-        public MultipleConsentQueryService(ILogger<MultipleConsentQueryService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
+        public ScheduledMultipleConsentQueryService(ILogger<ScheduledMultipleConsentQueryService> logger, IDbService dbHelper, IConsentService consentService)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _integrationService = integrationHelper;
+            _consentService = consentService;
         }
 
         public async Task RunAsync(int batchCount)
@@ -34,7 +34,7 @@ namespace IYSIntegration.Application.Services
                 var queue = new ConcurrentQueue<BatchConsentQuery>(batchList);
                 var options = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-                Parallel.ForEach(queue, options, q =>
+                Parallel.ForEach(queue, options, async q =>
                 {
                     try
                     {
@@ -52,7 +52,15 @@ namespace IYSIntegration.Application.Services
                             BatchId = batch.BatchId
                         };
 
-                        var result = _integrationService.QueryMultipleConsent(queryMultipleConsentRequest).Result;
+                        if (queryMultipleConsentRequest.IysCode == 0)
+                        {
+                            var consentParams = _consentService.GetIysCode(queryMultipleConsentRequest.CompanyCode);
+                            queryMultipleConsentRequest.IysCode = consentParams.IysCode;
+                            queryMultipleConsentRequest.BrandCode = consentParams.BrandCode;
+                        }
+
+                        var result = await _consentService.QueryMultipleConsent(queryMultipleConsentRequest);
+
                         if (result.IsSuccessful())
                         {
                             if (!result.Data.Any(p => p.Status == "enqueue"))

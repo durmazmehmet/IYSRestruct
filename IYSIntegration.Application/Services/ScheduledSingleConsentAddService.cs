@@ -3,17 +3,17 @@ using IYSIntegration.Common.Request.Consent;
 using Microsoft.Extensions.Logging;
 namespace IYSIntegration.Application.Services
 {
-    public class SingleConsentAddService
+    public class ScheduledSingleConsentAddService
     {
-        private readonly ILogger<SingleConsentAddService> _logger;
+        private readonly ILogger<ScheduledSingleConsentAddService> _logger;
         private readonly IDbService _dbService;
-        private readonly IIntegrationService _integrationService;
+        private readonly IConsentService _consentService;
 
-        public SingleConsentAddService(ILogger<SingleConsentAddService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
+        public ScheduledSingleConsentAddService(ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IConsentService consentService)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _integrationService = integrationHelper;
+            _consentService = consentService;
         }
 
         public async Task RunAsync(int rowCount)
@@ -46,7 +46,24 @@ namespace IYSIntegration.Application.Services
                             }
                         };
 
-                        var response = await _integrationService.AddConsent(consentRequest);
+                        Common.Base.ResponseBase<Common.Response.Consent.AddConsentResult> response = new();
+
+                        if (consentRequest.IysCode == 0)
+                        {
+                            var consentParams = _consentService.GetIysCode(consentRequest.CompanyCode);
+                            consentRequest.IysCode = consentParams.IysCode;
+                            consentRequest.BrandCode = consentParams.BrandCode;
+                        }
+
+                        response = await _consentService.AddConsent(consentRequest);
+
+                        if (!consentRequest.WithoutLogging)
+                        {
+                            var id = await _dbService.InsertConsentRequest(consentRequest);                       
+                            response.Id = id;
+                            await _dbService.UpdateConsentResponseFromCommon(response);
+                            response.OriginalError = null;
+                        }       
 
                         if (response.HttpStatusCode == 0 || response.HttpStatusCode >= 500)
                         {

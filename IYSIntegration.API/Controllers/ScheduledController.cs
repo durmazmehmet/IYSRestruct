@@ -3,25 +3,25 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
 
-namespace IYSIntegration.Scheduled.Controllers
+namespace IYSIntegration.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     public class ScheduledController : ControllerBase
     {
-        private readonly MultipleConsentQueryService _multipleConsentQueryService;
-        private readonly SingleConsentAddService _singleConsentAddService;
-        private readonly MultipleConsentAddService _multipleConsentAddService;
-        private readonly PullConsentService _pullConsentService;
-        private readonly SfConsentScheduledService _sfConsentService;
-        private readonly SendConsentErrorService _sendConsentErrorService;
+        private readonly ScheduledMultipleConsentQueryService _multipleConsentQueryService;
+        private readonly ScheduledSingleConsentAddService _singleConsentAddService;
+        private readonly ScheduledMultipleConsentAddService _multipleConsentAddService;
+        private readonly ScheduledPullConsentService _pullConsentService;
+        private readonly ScheduledSfConsentService _sfConsentService;
+        private readonly ScheduledSendConsentErrorService _sendConsentErrorService;
 
-        public ScheduledController(MultipleConsentQueryService multipleConsentQueryService,
-                                   SingleConsentAddService singleConsentAddService,
-                                   MultipleConsentAddService multipleConsentAddService,
-                                   PullConsentService pullConsentService,
-                                   SfConsentScheduledService sfConsentService,
-                                   SendConsentErrorService sendConsentErrorService)
+        public ScheduledController(ScheduledMultipleConsentQueryService multipleConsentQueryService,
+                                   ScheduledSingleConsentAddService singleConsentAddService,
+                                   ScheduledMultipleConsentAddService multipleConsentAddService,
+                                   ScheduledPullConsentService pullConsentService,
+                                   ScheduledSfConsentService sfConsentService,
+                                   ScheduledSendConsentErrorService sendConsentErrorService)
         {
             _multipleConsentQueryService = multipleConsentQueryService;
             _singleConsentAddService = singleConsentAddService;

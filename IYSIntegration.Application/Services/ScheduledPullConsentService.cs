@@ -3,21 +3,22 @@ using IYSIntegration.Application.Models;
 using IYSIntegration.Common.Request.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+
 namespace IYSIntegration.Application.Services
 {
-    public class PullConsentService
+    public class ScheduledPullConsentService
     {
-        private readonly ILogger<PullConsentService> _logger;
+        private readonly ILogger<ScheduledPullConsentService> _logger;
         private readonly IDbService _dbService;
         private readonly IConfiguration _configuration;
-        private readonly IIntegrationService _integrationService;
+        private readonly IConsentService _consentService;
 
-        public PullConsentService(IConfiguration configuration, ILogger<PullConsentService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
+        public ScheduledPullConsentService(IConfiguration configuration, ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IConsentService consentService)
         {
             _configuration = configuration;
             _logger = logger;
             _dbService = dbHelper;
-            _integrationService = integrationHelper;
+            _consentService = consentService;
         }
 
         public async Task RunAsync(int limit)
@@ -54,7 +55,15 @@ namespace IYSIntegration.Application.Services
                                 Limit = limit
                             };
 
-                            var pullConsentResult = await _integrationService.PullConsent(pullConsentRequest);
+                            if (pullConsentRequest.IysCode == 0)
+                            {
+                                var consentParams = _consentService.GetIysCode(pullConsentRequest.CompanyCode);
+                                pullConsentRequest.IysCode = consentParams.IysCode;
+                                pullConsentRequest.BrandCode = consentParams.BrandCode;
+                            }
+
+                            var pullConsentResult = await _consentService.PullConsent(pullConsentRequest);
+
                             var consentList = pullConsentResult.Data?.List;
 
                             if (consentList?.Length > 0)

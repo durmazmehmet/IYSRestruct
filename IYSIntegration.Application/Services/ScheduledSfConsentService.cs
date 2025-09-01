@@ -6,17 +6,17 @@ using Microsoft.Extensions.Logging;
 
 namespace IYSIntegration.Application.Services
 {
-    public class SfConsentScheduledService
+    public class ScheduledSfConsentService
     {
-        private readonly ILogger<SfConsentScheduledService> _logger;
+        private readonly ILogger<ScheduledSfConsentService> _logger;
         private readonly IDbService _dbService;
-        private readonly IIntegrationService _integrationService;
+        private readonly ISfConsentService _sfConsentService;
 
-        public SfConsentScheduledService(ILogger<SfConsentScheduledService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
+        public ScheduledSfConsentService(ILogger<ScheduledSfConsentService> logger, IDbService dbHelper, ISfConsentService sfCconsentService)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _integrationService = integrationHelper;
+            _sfConsentService = sfCconsentService;
         }
 
         public async Task RunAsync(int rowCount)
@@ -75,7 +75,8 @@ namespace IYSIntegration.Application.Services
                             consent
                         };
 
-                        var addConsentResult = _integrationService.SfAddConsent(new SfConsentAddRequest { Request = request }).Result;
+                        var addConsentResult = await _sfConsentService.AddConsent(new SfConsentAddRequest { Request = request });
+
                         if (!string.IsNullOrEmpty(addConsentResult?.WsStatus))
                         {
                             var result = new SfConsentResult
