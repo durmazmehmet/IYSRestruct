@@ -64,6 +64,7 @@ namespace IYSIntegration.API.Service
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
+
                 var result = await connection.ExecuteScalarAsync<int>(QueryStrings.InsertConsentRequest,
                     new
                     {
