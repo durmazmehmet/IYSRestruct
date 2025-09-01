@@ -3,6 +3,7 @@ using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
 using RestSharp;
+using System;
 
 namespace IYSIntegration.Application.Interface
 {
@@ -32,6 +33,6 @@ namespace IYSIntegration.Application.Interface
         Task InsertPullConsent(AddConsentRequest request);
         Task<List<Consent>> GetPullConsentRequests(bool isProcessed, int rowCount);
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
-        Task<List<Consent>> GetIYSConsentRequestErrors();
+        Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
     }
 }

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using System.Data.SqlClient;
+using System;
 namespace IYSIntegration.Application.Services
 {
     public class DbService : IDbService
@@ -490,7 +491,7 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-        public async Task<List<Consent>> GetIYSConsentRequestErrors()
+        public async Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
@@ -499,7 +500,7 @@ namespace IYSIntegration.Application.Services
                 var result = (await connection.QueryAsync<Consent>(QueryStrings.GetIYSConsentRequestErrors,
                     new
                     {
-                        CreateDate = DateTime.Today
+                        CreateDate = (date ?? DateTime.Today)
                     })).ToList();
 
                 connection.Close();

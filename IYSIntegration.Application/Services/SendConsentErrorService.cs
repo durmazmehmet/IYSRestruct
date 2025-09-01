@@ -1,9 +1,13 @@
 using IYSIntegration.Application.Interface;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Threading.Tasks;
+using IYSIntegration.Common.Base;
 
 namespace IYSIntegration.Application.Services
 {
@@ -11,34 +15,28 @@ namespace IYSIntegration.Application.Services
     {
         private readonly ILogger<SendConsentErrorService> _logger;
         private readonly IDbService _dbService;
-        private readonly IConfiguration _configuration;
-        private readonly IVirtualInterface _client;
         private string SmallDateFormat => "yyyy.MM.dd";
 
-        public SendConsentErrorService(IConfiguration configuration, ILogger<SendConsentErrorService> logger, IDbService dbHelper, IVirtualInterface client)
+        public SendConsentErrorService(ILogger<SendConsentErrorService> logger, IDbService dbHelper)
         {
-            _configuration = configuration;
             _logger = logger;
             _dbService = dbHelper;
-            _client = client;
         }
 
-        public async Task RunAsync()
+        public async Task<string> GetErrorsExcelBase64Async(DateTime? date = null)
         {
             try
             {
-                _logger.LogInformation("SendConsentErrorService running at: {time}", DateTimeOffset.Now);
+                _logger.LogInformation("SendConsentErrorService.GetErrorsExcelBase64Async running at: {time}", DateTimeOffset.Now);
 
-                var errorConsents = await _dbService.GetIYSConsentRequestErrors();
+                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date);
                 if (errorConsents?.Count > 0)
                 {
                     using (var excelPackage = new ExcelPackage())
                     {
-                        var dateString = DateTime.Today.AddDays(-1).ToString(SmallDateFormat);
-                        excelPackage.Workbook.Properties.Title = $"IYS Consent Errors: {dateString}";
-                        excelPackage.Workbook.Worksheets.Add("Errors");
-                        var excelWorksheet = excelPackage.Workbook.Worksheets[0];
-                        excelWorksheet.Name = "Errors";
+                        var queryDate = (date ?? DateTime.Today).ToString(SmallDateFormat);
+                        excelPackage.Workbook.Properties.Title = $"IYS Consent Errors: {queryDate}";
+                        var excelWorksheet = excelPackage.Workbook.Worksheets.Add("Errors");
 
                         int rowIndex = 1;
                         int columnIndex = 1;
@@ -94,37 +92,31 @@ namespace IYSIntegration.Application.Services
                         }
                         excelWorksheet.Cells.AutoFitColumns();
 
-                        var baseLogPath = _configuration.GetValue<string>("LogPath");
-                        var filePath = Path.Combine(baseLogPath, "IYS_Consent_Error_" + dateString + ".xlsx");
-                        var fileInfo = new FileInfo(filePath);
-                        excelPackage.SaveAs(fileInfo);
-
-                        var content = File.ReadAllBytes(filePath);
-                        var templateParameters = new List<ArrayOfArrayOfKeyValueOfstringstringKeyValueOfstringstringKeyValueOfstringstring>();
-                        templateParameters.Add(new ArrayOfArrayOfKeyValueOfstringstringKeyValueOfstringstringKeyValueOfstringstring { Key = "Today", Value = dateString });
-                        var mailNotificationRequest = new MailNotificationRequest
-                        {
-                            ApplicationName = "IYS",
-                            TemplateId = 3189,
-                            Subject = _configuration.GetValue<string>("IYSErrorMail:Subject"),
-                            TemplateBodyParameters = templateParameters.ToArray(),
-                            To = _configuration.GetValue<string>("IYSErrorMail:To"),
-                            From = _configuration.GetValue<string>("IYSErrorMail:From"),
-                            FromDisplayName = _configuration.GetValue<string>("IYSErrorMail:FromDisplayName"),
-                            TemplateName = "IYS Consent Error",
-                        };
-
-                        var attachmentRequest = new AttachmentRequest { };
-                        attachmentRequest.Contents = content;
-                        attachmentRequest.FileName = "IYS_Consent_Error_" + dateString + ".xlsx";
-                        mailNotificationRequest.Attachments = new List<AttachmentRequest> { attachmentRequest }.ToArray();
-                        _client.InsertMailNotificationNoToken(new InsertMailNotificationNoTokenRequest { request = mailNotificationRequest });
+                        var bytes = excelPackage.GetAsByteArray();
+                        return Convert.ToBase64String(bytes);
                     }
                 }
+                return string.Empty;
             }
             catch (Exception ex)
             {
-                _logger.LogError("SendConsentErrorService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+                _logger.LogError("SendConsentErrorService.GetErrorsExcelBase64Async Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+                return string.Empty;
+            }
+        }
+
+        public async Task<string> GetErrorsJsonAsync(DateTime? date = null)
+        {
+            try
+            {
+                _logger.LogInformation("SendConsentErrorService.GetErrorsJsonAsync running at: {time}", DateTimeOffset.Now);
+                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date);
+                return JsonConvert.SerializeObject(errorConsents ?? new List<Consent>());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("SendConsentErrorService.GetErrorsJsonAsync Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+                return string.Empty;
             }
         }
     }
