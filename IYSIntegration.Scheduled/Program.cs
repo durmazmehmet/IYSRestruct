@@ -1,7 +1,6 @@
 using IYSIntegration.Application.Interface;
 using IYSIntegration.Application.Services;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
