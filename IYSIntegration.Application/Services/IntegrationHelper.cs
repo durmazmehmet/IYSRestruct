@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace IYSIntegration.Application.Utilities
+namespace IYSIntegration.Application.Services
 {
     public class IntegrationHelper : IIntegrationHelper
     {

@@ -1,103 +1,94 @@
-using IYSIntegration.Common.Base;
+﻿using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Request.Consent;
-using IYSIntegration.Application.Models;
-using IYSIntegration.Application.Utilities;
+using IYSIntegration.Common.Response.Consent;
+using Newtonsoft.Json;
+using RestSharp;
+using RestSharp.Authenticators;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace IYSIntegration.Application.Services
 {
-    public class SfConsentService
+    public class SfConsentService : ISfConsentService
     {
-        private readonly ILogger<SfConsentService> _logger;
+        private readonly IConfiguration _config;
+        private readonly ISfIdentityService _identityManager;
         private readonly IDbHelper _dbHelper;
-        private readonly IIntegrationHelper _integrationHelper;
-
-        public SfConsentService(ILogger<SfConsentService> logger, IDbHelper dbHelper, IIntegrationHelper integrationHelper)
+        public SfConsentService(IConfiguration config, ISfIdentityService identityManager, IDbHelper dbHelper)
         {
-            _logger = logger;
+            _config = config;
+            _identityManager = identityManager;
             _dbHelper = dbHelper;
-            _integrationHelper = integrationHelper;
         }
 
-        public async Task RunAsync(int rowCount)
+        public async Task<SfConsentAddResponse> AddConsent(SfConsentAddRequest request)
         {
-            _logger.LogInformation("SfConsentService running at: {time}", DateTimeOffset.Now);
-            var consentRequests = await _dbHelper.GetPullConsentRequests(false, rowCount);
-            if (consentRequests?.Count > 0)
+            //Hotfix for sf error
+            var properConsents = new List<Common.Base.Consent>();
+            foreach (var consent in request.Request.Consents)
             {
-                var latestConsents = consentRequests
-                    .GroupBy(x => new { x.CompanyCode, x.Recipient })
-                    .Select(g => g.OrderByDescending(x => x.CreateDate).First())
-                    .ToList();
-
-                var outdatedConsents = consentRequests
-                    .GroupBy(x => new { x.CompanyCode, x.Recipient })
-                    .SelectMany(g => g.OrderByDescending(x => x.CreateDate).Skip(1))
-                    .ToList();
-
-                foreach (var outdated in outdatedConsents)
+                properConsents.Add(new Common.Base.Consent
                 {
-                    try
-                    {
-                        var skipResult = new SfConsentResult
-                        {
-                            Id = outdated.Id,
-                            IsSuccess = false,
-                            LogId = 0,
-                            Error = "Superseded by newer consent",
-                        };
-                        _dbHelper.UpdateSfConsentResponse(skipResult).Wait();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError("SfConsentService duplicate skip error: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-                    }
-                }
-
-                _logger.LogInformation($"SfConsentService running at: {latestConsents?.Count} records processing");
-                foreach (var consent in latestConsents)
+                    ConsentDate = consent.ConsentDate,
+                    Source = consent.Source,
+                    Recipient = consent.Recipient,
+                    RecipientType = consent.RecipientType,
+                    Status = consent.Status,
+                    Type = consent.Type,
+                });
+            }
+            var properRequest = new SfConsentAddRequest
+            {
+                Request = new SfConsentBase
                 {
-                    try
-                    {
-                        var request = new SfConsentBase
-                        {
-                            CompanyCode = consent.CompanyCode
-                        };
-
-                        if (consent.Type != "EPOSTA" && consent.Recipient.StartsWith("+90"))
-                            consent.Recipient = consent.Recipient.Substring(3);
-
-                        consent.CreationDate = null;
-                        consent.TransactionId = null;
-                        consent.CompanyCode = null;
-                        request.Consents = new List<Consent>
-                        {
-                            consent
-                        };
-
-                        var addConsentResult = _integrationHelper.SfAddConsent(new SfConsentAddRequest { Request = request }).Result;
-                        if (!string.IsNullOrEmpty(addConsentResult?.WsStatus))
-                        {
-                            var result = new SfConsentResult
-                            {
-                                Id = consent.Id,
-                                IsSuccess = addConsentResult.WsStatus == "OK",
-                                LogId = addConsentResult.LogId,
-                                Error = (addConsentResult.WsStatus != "OK") ? addConsentResult.WsDescription : null
-                            };
-
-                            _dbHelper.UpdateSfConsentResponse(result).Wait();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError("SfConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-                    }
+                    CompanyCode = request.Request.CompanyCode,
+                    Consents = properConsents
                 }
+            };
+
+            var SfRequest = new Common.Base.IysRequest<SfConsentAddRequest>
+            {
+                Url = _config.GetValue<string>($"Salesforce:BaseUrl") + "/apexrest/iys",
+                Body = properRequest,
+                Action = "Salesforce Add Consent"
+            };
+
+            var logId = await _dbHelper.InsertLog(SfRequest);
+            // TODO: Geçici olarak eklendi, Sf tarafında token expiry date, refresh vs yapılırsa düzenlenecek
+            var token = await _identityManager.GetToken(true);
+
+            var client = new RestClient(new RestClientOptions(SfRequest.Url)
+            {
+                Authenticator = new JwtAuthenticator(token.AccessToken)
+            });
+
+
+            var httpRequest = new RestRequest();
+            if (SfRequest.Body != null)
+            {
+                httpRequest.AddParameter("application/json", JsonConvert.SerializeObject(SfRequest.Body,
+                                         Formatting.None,
+                                         new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }),
+                                         ParameterType.RequestBody);
+            }
+
+            var httpResponse = await client.PostAsync(httpRequest);
+            await _dbHelper.UpdateLog(httpResponse, logId);
+
+            if (httpResponse.IsSuccessful)
+            {
+                var result = JsonConvert.DeserializeObject<SfConsentAddResponse>(httpResponse.Content);
+                result.LogId = logId;
+                return result;
+            }
+            else
+            {
+                var errorResponse = JsonConvert.DeserializeObject<List<SfConsentAddErrorResponse>>(httpResponse.Content);
+                return new SfConsentAddResponse
+                {
+                    LogId = logId,
+                    WsStatus = "ERROR",
+                    WsDescription = $"{errorResponse.FirstOrDefault().errorCode}-{errorResponse.FirstOrDefault().message}"
+                };
             }
         }
     }

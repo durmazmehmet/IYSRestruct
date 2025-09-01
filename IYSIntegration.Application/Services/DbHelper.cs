@@ -1,19 +1,16 @@
 ﻿using Dapper;
+using IYSIntegration.Application.Constants;
+using IYSIntegration.Application.Interface;
+using IYSIntegration.Application.Models;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
-using IYSIntegration.Application.Constants;
-using IYSIntegration.Application.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+using RestSharp;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace IYSIntegration.Application.Utilities
+namespace IYSIntegration.Application.Services
 {
     public class DbHelper : IDbHelper
     {
@@ -24,6 +21,182 @@ namespace IYSIntegration.Application.Utilities
         {
             _configuration = configuration;
             _logger = loggerServiceBase;
+        }
+
+        public async Task<int> InsertLog<TRequest>(IysRequest<TRequest> request)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.InsertRequest,
+                    new
+                    {
+                        request.IysCode,
+                        request.Action,
+                        request.Url,
+                        Method = request.Method.ToString(),
+                        Request = request.Body == null ? string.Empty : JsonConvert.SerializeObject(request.Body,
+                                         Formatting.None,
+                                         new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }),
+                        request.BatchId
+                    });
+                connection.Close();
+
+                return result;
+            }
+        }
+
+        public async Task UpdateLog(RestResponse response, int id)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteAsync(QueryStrings.UpdateRequest,
+                    new
+                    {
+                        Id = id,
+                        Response = response.Content,
+                        IsSuccess = response.IsSuccessful ? 1 : 0,
+                        ResponseCode = (int)response.StatusCode
+                    });
+                connection.Close();
+            }
+        }
+
+        public async Task<int> InsertConsentRequest(AddConsentRequest request)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var lastConsent = await connection.QueryFirstOrDefaultAsync<ConsentRequestLog>(QueryStrings.GetLastConsentRequest,
+                    new { request.CompanyCode, request.Consent.Recipient });
+
+                if (lastConsent != null &&
+                    lastConsent.IysCode == request.IysCode &&
+                    lastConsent.BrandCode == request.BrandCode &&
+                    lastConsent.ConsentDate == request.Consent.ConsentDate &&
+                    lastConsent.Source == request.Consent.Source &&
+                    lastConsent.RecipientType == request.Consent.RecipientType &&
+                    lastConsent.Status == request.Consent.Status &&
+                    lastConsent.Type == request.Consent.Type)
+                {
+                    connection.Close();
+                    return 0;
+                }
+
+                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.InsertConsentRequest,
+                    new
+                    {
+                        request.CompanyCode,
+                        request.SalesforceId,
+                        request.IysCode,
+                        request.BrandCode,
+                        request.Consent.ConsentDate,
+                        request.Consent.Source,
+                        request.Consent.Recipient,
+                        request.Consent.RecipientType,
+                        request.Consent.Status,
+                        request.Consent.Type
+                    });
+                connection.Close();
+
+                return result;
+            }
+        }
+
+        public async Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteAsync(QueryStrings.UpdateConsentRequestFromCommon,
+                    new
+                    {
+                        response.Id,
+                        response.LogId,
+                        IsSuccess = response.IsSuccessful() ? 1 : 0,
+                        response.Data?.TransactionId,
+                        response.Data?.CreationDate
+                    }); ;
+                connection.Close();
+            }
+        }
+
+        public async Task<ConsentResultLog> GetConsentRequest(long id)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = (await connection.QueryAsync<ConsentResultLog>(QueryStrings.QueryConsentRequest,
+                    new
+                    {
+                        Id = id
+                    })).SingleOrDefault();
+
+                connection.Close();
+
+                return result;
+            }
+        }
+
+        public async Task<int> GetMaxBatchId()
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.GetMaxBatchId);
+                connection.Close();
+
+                return result;
+            }
+        }
+
+        public async Task<int> InsertConsentRequestWithBatch(AddConsentRequest request)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.InsertConsentRequestWitBatch,
+                    new
+                    {
+                        request.CompanyCode,
+                        request.SalesforceId,
+                        request.IysCode,
+                        request.BrandCode,
+                        request.Consent.ConsentDate,
+                        request.Consent.Source,
+                        request.Consent.Recipient,
+                        request.Consent.RecipientType,
+                        request.Consent.Status,
+                        request.Consent.Type,
+                        request.Consent.BatchId,
+                        request.Consent.Index,
+                        request.Consent.LogId,
+                        request.Consent.IsSuccess,
+                        request.Consent.BatchError
+                    });
+                connection.Close();
+
+                return result;
+            }
+        }
+
+        public async Task InsertBatchConsentQuery(BatchConsentQuery request)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteScalarAsync<int>(string.Format(QueryStrings.InsertMultipleConsentQuery, request.CheckAfter),
+                    new
+                    {
+                        request.IysCode,
+                        request.BrandCode,
+                        request.BatchId,
+                        request.LogId,
+                        request.RequestId
+                    });
+                connection.Close();
+            }
         }
 
         public async Task<List<BatchSummary>> GetBatchSummary(int batchCount)

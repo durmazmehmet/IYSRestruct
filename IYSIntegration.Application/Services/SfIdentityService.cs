@@ -1,12 +1,13 @@
 ﻿using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Request.Identity;
 using IYSIntegration.Common.Response.Identity;
+using IYSIntegration.Common.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 
-namespace IYSIntegration.Application.Service
+namespace IYSIntegration.Application.Services
 {
     public class SfIdentityService : ISfIdentityService
     {

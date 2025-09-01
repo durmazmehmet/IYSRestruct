@@ -3,14 +3,14 @@ using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-namespace IYSIntegration.Application.Service
+namespace IYSIntegration.Application.Services
 {
     public class InfoService : IInfoService
     {
         private readonly IConfiguration _config;
-        private readonly IRestClientHelper _clientHelper;
+        private readonly IRestClientService _clientHelper;
         private readonly string _baseUrl;
-        public InfoService(IConfiguration config, IRestClientHelper clientHelper)
+        public InfoService(IConfiguration config, IRestClientService clientHelper)
         {
             _config = config;
             _clientHelper = clientHelper;
@@ -20,7 +20,7 @@ namespace IYSIntegration.Application.Service
         public async Task<ResponseBase<List<City>>> GetCities(int iysCode)
         {
             string url = $"{_baseUrl}/info/cities";
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = iysCode,
                 Url = $"{_baseUrl}/info/cities",
@@ -32,7 +32,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<City>> GetCity(int iysCode, string code)
         {
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = iysCode,
                 Url = $"{_baseUrl}/info/cities/{code}",
@@ -44,7 +44,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<Town>> GetTown(int iysCode, string townCode)
         {
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = iysCode,
                 Url = $"{_baseUrl}/info/town/{townCode}",
@@ -56,7 +56,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<List<Town>>> GetTowns(int iysCode)
         {
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = iysCode,
                 Url = $"{_baseUrl}/info/town",

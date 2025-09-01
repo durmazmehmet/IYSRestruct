@@ -1,10 +1,10 @@
-using IYSIntegration.Application.Helpers;
 using IYSIntegration.Application.Interface;
-using IYSIntegration.Application.Service;
+using IYSIntegration.Application.Services;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.LoggingService;
 using IYSIntegration.Common.LoggingService.Loggers;
 using IYSIntegration.Common.Middleware.Exceptions;
+using IYSIntegration.Common.Services;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
@@ -25,7 +25,7 @@ internal class Program
         });
 
         builder.Services.AddSingleton<ICacheService, CacheService>();
-        builder.Services.AddSingleton<IRestClientHelper, RestClientHelper>();
+        builder.Services.AddSingleton<IRestClientService, RestClientService>();
         builder.Services.AddSingleton<IIdentityService, IdentityService>();
         builder.Services.AddSingleton<IConsentService, ConsentService>();
         builder.Services.AddSingleton<IBrandService, BrandService>();

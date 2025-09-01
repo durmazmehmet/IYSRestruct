@@ -12,14 +12,14 @@ namespace IYSIntegration.Scheduled.Controllers
         private readonly SingleConsentAddService _singleConsentAddService;
         private readonly MultipleConsentAddService _multipleConsentAddService;
         private readonly PullConsentService _pullConsentService;
-        private readonly SfConsentService _sfConsentService;
+        private readonly SfConsentScheduledService _sfConsentService;
         private readonly SendConsentErrorService _sendConsentErrorService;
 
         public ScheduledController(MultipleConsentQueryService multipleConsentQueryService,
                                    SingleConsentAddService singleConsentAddService,
                                    MultipleConsentAddService multipleConsentAddService,
                                    PullConsentService pullConsentService,
-                                   SfConsentService sfConsentService,
+                                   SfConsentScheduledService sfConsentService,
                                    SendConsentErrorService sendConsentErrorService)
         {
             _multipleConsentQueryService = multipleConsentQueryService;

@@ -5,15 +5,15 @@ using IYSIntegration.Common.Request.Retailer;
 using IYSIntegration.Common.Response.Retailer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-namespace IYSIntegration.Application.Service
+namespace IYSIntegration.Application.Services
 {
     public class RetailerService : IRetailerService
     {
         private readonly IConfiguration _config;
-        private readonly IRestClientHelper _clientHelper;
+        private readonly IRestClientService _clientHelper;
         private readonly string _baseUrl;
 
-        public RetailerService(IConfiguration config, IRestClientHelper clientHelper)
+        public RetailerService(IConfiguration config, IRestClientService clientHelper)
         {
             _config = config;
             _clientHelper = clientHelper;
@@ -22,7 +22,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<GetRetailerResponse>> GetRetailer(GetRetailerRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/retailers/{request.RetailerCode}",
@@ -35,7 +35,7 @@ namespace IYSIntegration.Application.Service
         public async Task<ResponseBase<GetAllRetailersResponse>> GetAllRetailers(GetAllRetailersRequest request)
         {
             // TODO: Query parametrelerinde pagesize olacak mı sorulacak
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/retailers",
@@ -48,7 +48,7 @@ namespace IYSIntegration.Application.Service
         public async Task<ResponseBase<AddRetailerResponse>> AddRetailer(AddRetailerRequest request)
         {
             string url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/retailers";
-            var iysRequest = new Common.Base.IysRequest<Common.Base.Retailer>
+            var iysRequest = new IysRequest<Retailer>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/request",
@@ -56,13 +56,13 @@ namespace IYSIntegration.Application.Service
                 Action = "Add Retailer"
             };
 
-            return await _clientHelper.Execute<AddRetailerResponse, Common.Base.Retailer>(iysRequest);
+            return await _clientHelper.Execute<AddRetailerResponse, Retailer>(iysRequest);
         }
 
         public async Task<ResponseBase<DeleteRetailerResponse>> DeleteRetailer(DeleteRetailerRequest request)
         {
             string url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/retailers/{request.RetailerCode}";
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/retailers/{request.RetailerCode}",

@@ -7,16 +7,18 @@ using IYSIntegration.Common.Response.Consent;
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-namespace IYSIntegration.Application.Service
+using IYSIntegration.Common.Services;
+
+namespace IYSIntegration.Application.Services
 {
     public class ConsentService : IConsentService
     {
         private readonly IConfiguration _config;
-        private readonly IRestClientHelper _clientHelper;
+        private readonly IRestClientService _clientHelper;
         private readonly string _baseUrl;
         private readonly ICacheService _cacheService;
 
-        public ConsentService(IConfiguration config, IRestClientHelper clientHelper, ICacheService cacheService)
+        public ConsentService(IConfiguration config, IRestClientService clientHelper, ICacheService cacheService)
         {
             _config = config;
             _clientHelper = clientHelper;
@@ -52,7 +54,7 @@ namespace IYSIntegration.Application.Service
                 return response;
             }
 
-            var iysRequest = new Common.Base.IysRequest<Common.Base.Consent>
+            var iysRequest = new IysRequest<Consent>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents",
@@ -61,7 +63,7 @@ namespace IYSIntegration.Application.Service
                 Method = RestSharp.Method.Post
             };
 
-            return await _clientHelper.Execute<AddConsentResult, Common.Base.Consent>(iysRequest);
+            return await _clientHelper.Execute<AddConsentResult, Consent>(iysRequest);
         }
 
         private static bool IsOlderThanBusinessDays(DateTime consentDate, int maxBusinessDays)
@@ -90,7 +92,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<QueryConsentResult>> QueryConsent(QueryConsentRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<Common.Base.RecipientKey>
+            var iysRequest = new IysRequest<RecipientKey>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/status",
@@ -104,7 +106,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsent(MultipleConsentRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<List<Common.Base.Consent>>
+            var iysRequest = new IysRequest<List<Consent>>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/request",
@@ -113,12 +115,12 @@ namespace IYSIntegration.Application.Service
                 BatchId = request.BatchId
             };
 
-            return await _clientHelper.Execute<MultipleConsentResult, List<Common.Base.Consent>>(iysRequest);
+            return await _clientHelper.Execute<MultipleConsentResult, List<Consent>>(iysRequest);
         }
 
         public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(QueryMultipleConsentRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/request/{request.RequestId}",
@@ -131,7 +133,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/changes?source={request.Source ?? "IYS"}",

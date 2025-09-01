@@ -42,7 +42,7 @@ namespace IYSIntegration.API.Controllers
                 var id = await _dbHelper.InsertConsentRequest(request);
                 var response = await _consentManager.AddConsent(request);
                 response.Id = id;
-                await _dbHelper.UpdateConsentResponse(response);
+                await _dbHelper.UpdateConsentResponseFromCommon(response);
                 response.OriginalError = null;
                 return response;
             }

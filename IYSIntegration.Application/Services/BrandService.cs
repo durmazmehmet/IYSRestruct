@@ -4,15 +4,15 @@ using IYSIntegration.Common.Request;
 using IYSIntegration.Common.Request.Brand;
 using IYSIntegration.Common.Response.Brand;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging; 
-namespace IYSIntegration.Application.Service
+using Microsoft.Extensions.Logging;
+namespace IYSIntegration.Application.Services
 {
     public class BrandService : IBrandService
     {
         private readonly IConfiguration _config;
-        private readonly IRestClientHelper _clientHelper;
+        private readonly IRestClientService _clientHelper;
         private readonly string _baseUrl;
-        public BrandService(IConfiguration config, IRestClientHelper clientHelper)
+        public BrandService(IConfiguration config, IRestClientService clientHelper)
         {
             _config = config;
             _clientHelper = clientHelper;
@@ -21,7 +21,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<List<Brand>>> GetBrands(GetBrandRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<DummyRequest>
+            var iysRequest = new IysRequest<DummyRequest>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands",

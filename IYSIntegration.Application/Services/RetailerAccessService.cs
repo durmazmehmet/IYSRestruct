@@ -5,14 +5,14 @@ using IYSIntegration.Common.Response.RetailerAccess;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace IYSIntegration.Application.Service
+namespace IYSIntegration.Application.Services
 {
     public class RetailerAccessService : IRetailerAccessService
     {
         private readonly IConfiguration _config;
-        private readonly IRestClientHelper _clientHelper;
+        private readonly IRestClientService _clientHelper;
         private readonly string _baseUrl;
-        public RetailerAccessService(IConfiguration config, IRestClientHelper clientHelper)
+        public RetailerAccessService(IConfiguration config, IRestClientService clientHelper)
         {
             _config = config;
             _clientHelper = clientHelper;
@@ -21,7 +21,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<AddRetailerAccessResult>> AddRetailerAccess(AddRetailerAccessRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<RetailerRecipientAccess>
+            var iysRequest = new IysRequest<RetailerRecipientAccess>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/retailers/access",
@@ -34,7 +34,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<DeleteAllRetailersAccessResult>> DeleteAllRetailersAccess(DeleteAllRetailersAccessRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<RetailerRecipientAccess>
+            var iysRequest = new IysRequest<RetailerRecipientAccess>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/retailers/access/remove/all",
@@ -47,7 +47,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<UpdateRetailerAccessResult>> UpdateRetailerAccess(UpdateRetailerAccessRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<RetailerRecipientAccess>
+            var iysRequest = new IysRequest<RetailerRecipientAccess>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/retailers/access",
@@ -60,7 +60,7 @@ namespace IYSIntegration.Application.Service
 
         public async Task<ResponseBase<DeleteRetailerAccessResult>> DeleteRetailerAccess(DeleteRetailerAccessRequest request)
         {
-            var iysRequest = new Common.Base.IysRequest<RetailerRecipientAccess>
+            var iysRequest = new IysRequest<RetailerRecipientAccess>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consents/retailers/access/remove",
@@ -74,7 +74,7 @@ namespace IYSIntegration.Application.Service
         public async Task<ResponseBase<QueryRetailerAccessResult>> QueryRetailerAccess(QueryRetailerAccessRequest request)
         {
             // TODO: Query parametrelerinde pagesize olacak mı sorulacak
-            var iysRequest = new Common.Base.IysRequest<Common.Base.RecipientKey>
+            var iysRequest = new IysRequest<RecipientKey>
             {
                 IysCode = request.IysCode,
                 Url = $"{_baseUrl}/sps/{request.IysCode}/brands/{request.BrandCode}/consent/retailers/access/list",
@@ -82,7 +82,7 @@ namespace IYSIntegration.Application.Service
                 Action = "Query Retailer Access"
             };
 
-            return await _clientHelper.Execute<QueryRetailerAccessResult, Common.Base.RecipientKey>(iysRequest);
+            return await _clientHelper.Execute<QueryRetailerAccessResult, RecipientKey>(iysRequest);
         }
     }
 }

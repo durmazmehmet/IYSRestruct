@@ -1,11 +1,12 @@
 using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Utilities;
+using IYSIntegration.Application.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using System.ServiceModel;
+using IYSIntegration.Application.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +18,7 @@ builder.Services.AddScoped<MultipleConsentQueryService>();
 builder.Services.AddScoped<SingleConsentAddService>();
 builder.Services.AddScoped<MultipleConsentAddService>();
 builder.Services.AddScoped<PullConsentService>();
-builder.Services.AddScoped<SfConsentService>();
+builder.Services.AddScoped<SfConsentScheduledService>();
 builder.Services.AddScoped<SendConsentErrorService>();
 
 builder.Services.Add(ServiceDescriptor.Singleton<IVirtualInterface>(new VirtualInterfaceClient(

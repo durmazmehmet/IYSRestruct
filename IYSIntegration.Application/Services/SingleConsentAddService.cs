@@ -1,10 +1,10 @@
 using IYSIntegration.Common.Request.Consent;
-using IYSIntegration.Application.Utilities;
+using IYSIntegration.Application.Services;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-
+using IYSIntegration.Application.Interface;
 namespace IYSIntegration.Application.Services
 {
     public class SingleConsentAddService

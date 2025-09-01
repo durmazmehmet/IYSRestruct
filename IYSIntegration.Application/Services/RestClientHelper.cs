@@ -8,15 +8,15 @@ using RestSharp;
 using RestSharp.Authenticators;
 using System.Net;
 
-namespace IYSIntegration.Application.Helpers
+namespace IYSIntegration.Application.Services
 {
-    public class RestClientHelper : IRestClientHelper
+    public class RestClientService : IRestClientService
     {
         private readonly IIdentityService _identityManager;
         private readonly IDbHelper _dbHelper;
         private readonly LoggerServiceBase loggerService;
 
-        public RestClientHelper(IIdentityService identityManager, IDbHelper dbHelper, LoggerServiceBase loggerService)
+        public RestClientService(IIdentityService identityManager, IDbHelper dbHelper, LoggerServiceBase loggerService)
         {
             _identityManager = identityManager;
             _dbHelper = dbHelper;

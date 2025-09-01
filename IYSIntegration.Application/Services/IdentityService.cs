@@ -5,7 +5,9 @@ using Newtonsoft.Json;
 using RestSharp;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-namespace IYSIntegration.Application.Service
+using IYSIntegration.Common.Services;
+
+namespace IYSIntegration.Application.Services
 {
     public class IdentityService : IIdentityService
     {

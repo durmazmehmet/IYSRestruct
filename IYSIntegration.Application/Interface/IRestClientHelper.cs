@@ -2,7 +2,7 @@
 
 namespace IYSIntegration.Application.Interface
 {
-    public interface IRestClientHelper
+    public interface IRestClientService
     {
         Task<ResponseBase<TResponse>> Execute<TResponse, TBody>(Common.Base.IysRequest<TBody> IysRequest);
     }

@@ -1,12 +1,12 @@
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Application.Models;
-using IYSIntegration.Application.Utilities;
+using IYSIntegration.Application.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
+using IYSIntegration.Application.Interface;
 namespace IYSIntegration.Application.Services
 {
     public class PullConsentService

@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 using StackExchange.Redis;
 
 
-namespace IYSIntegration.Application.Service
+namespace IYSIntegration.Common.Services
 {
 
     public interface ICacheService
@@ -31,7 +31,7 @@ namespace IYSIntegration.Application.Service
             if (!cachedData.HasValue)
             {
                 _logger.LogWarning($"Cache'de veri bulunamadı: {cacheKey}");
-                return default(T);
+                return default;
             }
 
             _logger.LogInformation($"Cache'den veri alındı: {cacheKey}");
@@ -59,7 +59,7 @@ namespace IYSIntegration.Application.Service
             if (!cachedResponse.HasValue)
             {
                 _logger.LogWarning($"Cache'de veri bulunamadı: {hashKey} {Key}");
-                return default(T);
+                return default;
             }
 
             _logger.LogInformation($"Cache'den veri alındı: {hashKey} {Key}");
