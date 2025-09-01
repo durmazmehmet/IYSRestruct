@@ -24,8 +24,9 @@ namespace IYSIntegration.Application.Services
             _consentService = consentService;
         }
 
-        public async Task RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
+        public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
         {
+            var response = new ResponseBase<ScheduledJobStatistics>();
             bool errorFlag = false;
             int successCount = 0;
             int failedCount = 0;
@@ -134,6 +135,13 @@ namespace IYSIntegration.Application.Services
 
             if (errorFlag)
                 _logger.LogError($"MultipleConsentAddService toplam {failedCount + successCount} içinden {failedCount} recipient için hata aldı. , IYSConsentRequest tablosuna göz atın");
+
+            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
+            if (errorFlag)
+            {
+                response.Error("MULTIPLE_CONSENT_ADD", "One or more batches failed.");
+            }
+            return response;
         }
     }
 }

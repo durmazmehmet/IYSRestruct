@@ -1,6 +1,9 @@
 using IYSIntegration.Application.Interface;
+using IYSIntegration.Application.Models;
+using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
 using Microsoft.Extensions.Logging;
+using System.Threading;
 namespace IYSIntegration.Application.Services
 {
     public class ScheduledSingleConsentAddService
@@ -16,9 +19,12 @@ namespace IYSIntegration.Application.Services
             _consentService = consentService;
         }
 
-        public async Task RunAsync(int rowCount)
+        public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
         {
+            var response = new ResponseBase<ScheduledJobStatistics>();
             bool errorFlag = false;
+            int failedCount = 0;
+            int successCount = 0;
 
             _logger.LogInformation("SingleConsentAddService running at: {time}", DateTimeOffset.Now);
 
@@ -46,7 +52,7 @@ namespace IYSIntegration.Application.Services
                             }
                         };
 
-                        Common.Base.ResponseBase<Common.Response.Consent.AddConsentResult> response = new();
+                        var addResponse = new Common.Base.ResponseBase<Common.Response.Consent.AddConsentResult>();
 
                         if (consentRequest.IysCode == 0)
                         {
@@ -55,28 +61,31 @@ namespace IYSIntegration.Application.Services
                             consentRequest.BrandCode = consentParams.BrandCode;
                         }
 
-                        response = await _consentService.AddConsent(consentRequest);
+                        addResponse = await _consentService.AddConsent(consentRequest);
 
                         if (!consentRequest.WithoutLogging)
                         {
-                            var id = await _dbService.InsertConsentRequest(consentRequest);                       
-                            response.Id = id;
-                            await _dbService.UpdateConsentResponseFromCommon(response);
-                            response.OriginalError = null;
-                        }       
+                            var id = await _dbService.InsertConsentRequest(consentRequest);
+                            addResponse.Id = id;
+                            await _dbService.UpdateConsentResponseFromCommon(addResponse);
+                            addResponse.OriginalError = null;
+                        }
 
-                        if (response.HttpStatusCode == 0 || response.HttpStatusCode >= 500)
+                        if (addResponse.HttpStatusCode == 0 || addResponse.HttpStatusCode >= 500)
                         {
+                            Interlocked.Increment(ref failedCount);
                             return;
                         }
 
-                        response.Id = log.Id;
+                        addResponse.Id = log.Id;
 
-                        await _dbService.UpdateConsentResponse(response);
+                        await _dbService.UpdateConsentResponse(addResponse);
+                        Interlocked.Increment(ref successCount);
                     }
                     catch (Exception ex)
                     {
                         errorFlag = true;
+                        Interlocked.Increment(ref failedCount);
                         _logger.LogError($"SingleConsentAddService ID {log.Id} ve {ex.Message} ile alınamadı");
                     }
                 });
@@ -92,6 +101,13 @@ namespace IYSIntegration.Application.Services
             {
                 _logger.LogError("SingleConsentAddService hata aldı, IYSConsentRequest tablosuna gözatın");
             }
+
+            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
+            if (errorFlag || failedCount > 0)
+            {
+                response.Error("SINGLE_CONSENT_ADD", "Some consents failed to add.");
+            }
+            return response;
         }
     }
 }
