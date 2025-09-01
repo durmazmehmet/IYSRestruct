@@ -58,11 +58,13 @@ internal class Program
 
         var app = builder.Build();
 
-        // 7) Middleware pipeline
-        app.UseMiddleware<ExceptionMiddleware>();     // En üste: tüm hataları yakalasın
-
+        app.UseDeveloperExceptionPage();
         app.UseSwagger();
         app.UseSwaggerUI();
+
+        app.UseMiddleware<ExceptionMiddleware>();
+
+        app.UseAuthorization();
 
         app.MapControllers();
 
