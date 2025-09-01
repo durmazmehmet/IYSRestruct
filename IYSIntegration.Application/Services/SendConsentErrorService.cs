@@ -10,16 +10,16 @@ namespace IYSIntegration.Application.Services
     public class SendConsentErrorService
     {
         private readonly ILogger<SendConsentErrorService> _logger;
-        private readonly IDbHelper _dbHelper;
+        private readonly IDbService _dbService;
         private readonly IConfiguration _configuration;
         private readonly IVirtualInterface _client;
         private string SmallDateFormat => "yyyy.MM.dd";
 
-        public SendConsentErrorService(IConfiguration configuration, ILogger<SendConsentErrorService> logger, IDbHelper dbHelper, IVirtualInterface client)
+        public SendConsentErrorService(IConfiguration configuration, ILogger<SendConsentErrorService> logger, IDbService dbHelper, IVirtualInterface client)
         {
             _configuration = configuration;
             _logger = logger;
-            _dbHelper = dbHelper;
+            _dbService = dbHelper;
             _client = client;
         }
 
@@ -29,7 +29,7 @@ namespace IYSIntegration.Application.Services
             {
                 _logger.LogInformation("SendConsentErrorService running at: {time}", DateTimeOffset.Now);
 
-                var errorConsents = await _dbHelper.GetIYSConsentRequestErrors();
+                var errorConsents = await _dbService.GetIYSConsentRequestErrors();
                 if (errorConsents?.Count > 0)
                 {
                     using (var excelPackage = new ExcelPackage())

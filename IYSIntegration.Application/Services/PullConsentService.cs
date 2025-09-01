@@ -8,16 +8,16 @@ namespace IYSIntegration.Application.Services
     public class PullConsentService
     {
         private readonly ILogger<PullConsentService> _logger;
-        private readonly IDbHelper _dbHelper;
+        private readonly IDbService _dbService;
         private readonly IConfiguration _configuration;
-        private readonly IIntegrationHelper _integrationHelper;
+        private readonly IIntegrationService _integrationService;
 
-        public PullConsentService(IConfiguration configuration, ILogger<PullConsentService> logger, IDbHelper dbHelper, IIntegrationHelper integrationHelper)
+        public PullConsentService(IConfiguration configuration, ILogger<PullConsentService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
         {
             _configuration = configuration;
             _logger = logger;
-            _dbHelper = dbHelper;
-            _integrationHelper = integrationHelper;
+            _dbService = dbHelper;
+            _integrationService = integrationHelper;
         }
 
         public async Task RunAsync(int limit)
@@ -43,7 +43,7 @@ namespace IYSIntegration.Application.Services
                             int iysCode = _configuration.GetValue<int>($"{companyCode}:IysCode");
                             int brandCode = _configuration.GetValue<int>($"{companyCode}:BrandCode");
 
-                            var pullRequestLog = await _dbHelper.GetPullRequestLog(companyCode);
+                            var pullRequestLog = await _dbService.GetPullRequestLog(companyCode);
                             var pullConsentRequest = new PullConsentRequest
                             {
                                 CompanyCode = companyCode,
@@ -54,7 +54,7 @@ namespace IYSIntegration.Application.Services
                                 Limit = limit
                             };
 
-                            var pullConsentResult = await _integrationHelper.PullConsent(pullConsentRequest);
+                            var pullConsentResult = await _integrationService.PullConsent(pullConsentRequest);
                             var consentList = pullConsentResult.Data?.List;
 
                             if (consentList?.Length > 0)
@@ -68,10 +68,10 @@ namespace IYSIntegration.Application.Services
                                         BrandCode = pullConsentRequest.BrandCode,
                                         Consent = consent
                                     };
-                                    await _dbHelper.InsertPullConsent(addConsentRequest);
+                                    await _dbService.InsertPullConsent(addConsentRequest);
                                 }
 
-                                await _dbHelper.UpdatePullRequestLog(new PullRequestLog
+                                await _dbService.UpdatePullRequestLog(new PullRequestLog
                                 {
                                     CompanyCode = companyCode,
                                     IysCode = pullConsentRequest.IysCode,
@@ -83,7 +83,7 @@ namespace IYSIntegration.Application.Services
                             }
                             else
                             {
-                                await _dbHelper.UpdateJustRequestDateOfPullRequestLog(new PullRequestLog
+                                await _dbService.UpdateJustRequestDateOfPullRequestLog(new PullRequestLog
                                 {
                                     CompanyCode = companyCode,
                                     IysCode = pullConsentRequest.IysCode,

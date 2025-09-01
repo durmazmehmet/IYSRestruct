@@ -11,17 +11,17 @@ namespace IYSIntegration.Application.Services
     public class MultipleConsentAddService
     {
         private readonly ILogger<MultipleConsentAddService> _logger;
-        private readonly IDbHelper _dbHelper;
+        private readonly IDbService _dbService;
         private readonly IConfiguration _configuration;
-        private readonly IIntegrationHelper _integrationHelper;
+        private readonly IIntegrationService _integrationService;
         private readonly object obj = new object();
 
-        public MultipleConsentAddService(IConfiguration configuration, ILogger<MultipleConsentAddService> logger, IDbHelper dbHelper, IIntegrationHelper integrationHelper)
+        public MultipleConsentAddService(IConfiguration configuration, ILogger<MultipleConsentAddService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
         {
             _configuration = configuration;
             _logger = logger;
-            _dbHelper = dbHelper;
-            _integrationHelper = integrationHelper;
+            _dbService = dbHelper;
+            _integrationService = integrationHelper;
         }
 
         public async Task RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
@@ -36,16 +36,16 @@ namespace IYSIntegration.Application.Services
                 var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? new List<string>();
                 foreach (var companyCode in companyList)
                 {
-                    await _dbHelper.UpdateBatchId(companyCode, batchSize);
+                    await _dbService.UpdateBatchId(companyCode, batchSize);
                 }
 
-                var batchList = await _dbHelper.GetBatchSummary(batchCount);
+                var batchList = await _dbService.GetBatchSummary(batchCount);
 
                 foreach (var batch in batchList)
                 {
                     try
                     {
-                        var consentRequests = _dbHelper.GeBatchConsentRequests(batch.BatchId).Result;
+                        var consentRequests = _dbService.GeBatchConsentRequests(batch.BatchId).Result;
                         var request = new MultipleConsentRequest
                         {
                             IysCode = consentRequests[0].IysCode,
@@ -68,7 +68,7 @@ namespace IYSIntegration.Application.Services
                             });
                         }
 
-                        var result = _integrationHelper.SendMultipleConsent(request).Result;
+                        var result = _integrationService.SendMultipleConsent(request).Result;
                         if (result.IsSuccessful())
                         {
                             var batchConsentQuery = new BatchConsentQuery
@@ -83,7 +83,7 @@ namespace IYSIntegration.Application.Services
 
                             lock (obj)
                             {
-                                _dbHelper.UpdateBatchConsentRequests(batchConsentQuery).Wait();
+                                _dbService.UpdateBatchConsentRequests(batchConsentQuery).Wait();
                             }
                             successCount++;
                         }
@@ -103,10 +103,10 @@ namespace IYSIntegration.Application.Services
                                         IsQueryResult = false
                                     };
 
-                                    _dbHelper.UpdateMultipleConsentItem(batchItemResult).Wait();
+                                    _dbService.UpdateMultipleConsentItem(batchItemResult).Wait();
                                 }
 
-                                _dbHelper.ReorderBatch(batch.BatchId).Wait();
+                                _dbService.ReorderBatch(batch.BatchId).Wait();
                             }
                         }
                     }

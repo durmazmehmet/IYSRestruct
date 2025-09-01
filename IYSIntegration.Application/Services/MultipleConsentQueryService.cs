@@ -11,14 +11,14 @@ namespace IYSIntegration.Application.Services
     public class MultipleConsentQueryService
     {
         private readonly ILogger<MultipleConsentQueryService> _logger;
-        private readonly IDbHelper _dbHelper;
-        private readonly IIntegrationHelper _integrationHelper;
+        private readonly IDbService _dbService;
+        private readonly IIntegrationService _integrationService;
 
-        public MultipleConsentQueryService(ILogger<MultipleConsentQueryService> logger, IDbHelper dbHelper, IIntegrationHelper integrationHelper)
+        public MultipleConsentQueryService(ILogger<MultipleConsentQueryService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
         {
             _logger = logger;
-            _dbHelper = dbHelper;
-            _integrationHelper = integrationHelper;
+            _dbService = dbHelper;
+            _integrationService = integrationHelper;
         }
 
         public async Task RunAsync(int batchCount)
@@ -30,7 +30,7 @@ namespace IYSIntegration.Application.Services
             try
             {
                 _logger.LogInformation("MultipleConsentQueryService running at: {time}", DateTimeOffset.Now);
-                var batchList = await _dbHelper.GetUnprocessedMultipleConsenBatches(batchCount);
+                var batchList = await _dbService.GetUnprocessedMultipleConsenBatches(batchCount);
                 var queue = new ConcurrentQueue<BatchConsentQuery>(batchList);
                 var options = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
@@ -52,7 +52,7 @@ namespace IYSIntegration.Application.Services
                             BatchId = batch.BatchId
                         };
 
-                        var result = _integrationHelper.QueryMultipleConsent(queryMultipleConsentRequest).Result;
+                        var result = _integrationService.QueryMultipleConsent(queryMultipleConsentRequest).Result;
                         if (result.IsSuccessful())
                         {
                             if (!result.Data.Any(p => p.Status == "enqueue"))
@@ -68,10 +68,10 @@ namespace IYSIntegration.Application.Services
                                         IsQueryResult = true
                                     };
 
-                                    _dbHelper.UpdateMultipleConsentItem(batchItemResult).Wait();
+                                    _dbService.UpdateMultipleConsentItem(batchItemResult).Wait();
                                 }
 
-                                _dbHelper.UpdateMultipleConsentQueryDate(batch.BatchId, result.LogId).Wait();
+                                _dbService.UpdateMultipleConsentQueryDate(batch.BatchId, result.LogId).Wait();
                             }
                             successCount++;
                         }

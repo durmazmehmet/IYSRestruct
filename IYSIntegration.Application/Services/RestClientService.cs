@@ -13,19 +13,19 @@ namespace IYSIntegration.Application.Services
     public class RestClientService : IRestClientService
     {
         private readonly IIdentityService _identityManager;
-        private readonly IDbHelper _dbHelper;
+        private readonly IDbService _dbService;
         private readonly LoggerServiceBase loggerService;
 
-        public RestClientService(IIdentityService identityManager, IDbHelper dbHelper, LoggerServiceBase loggerService)
+        public RestClientService(IIdentityService identityManager, IDbService dbHelper, LoggerServiceBase loggerService)
         {
             _identityManager = identityManager;
-            _dbHelper = dbHelper;
+            _dbService = dbHelper;
             this.loggerService = loggerService;
         }
 
         public async Task<ResponseBase<TResponse>> Execute<TResponse, TRequest>(IysRequest<TRequest> iysRequest)
         {
-            var logId = await _dbHelper.InsertLog(iysRequest);
+            var logId = await _dbService.InsertLog(iysRequest);
 
             var response = new ResponseBase<TResponse>
             {
@@ -44,7 +44,7 @@ namespace IYSIntegration.Application.Services
                 httpResponse = await GetReponse(iysRequest, token.AccessToken);
             }
 
-            await _dbHelper.UpdateLog(httpResponse, logId);
+            await _dbService.UpdateLog(httpResponse, logId);
 
             response.SendDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 

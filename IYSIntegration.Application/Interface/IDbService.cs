@@ -6,7 +6,7 @@ using RestSharp;
 
 namespace IYSIntegration.Application.Interface
 {
-    public interface IDbHelper
+    public interface IDbService
     {
         Task<int> InsertLog<TRequest>(IysRequest<TRequest> request);
         Task UpdateLog(RestResponse response, int id);

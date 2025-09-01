@@ -32,7 +32,7 @@ internal class Program
         builder.Services.AddSingleton<IRetailerService, RetailerService>();
         builder.Services.AddSingleton<IInfoService, InfoService>();
         builder.Services.AddSingleton<IRetailerAccessService, RetailerAccessService>();
-        builder.Services.AddSingleton<IDbHelper, DbHelper>();
+        builder.Services.AddSingleton<IDbService, DbService>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
         builder.Services.AddSingleton<ISfConsentService, SfConsentService>();
         builder.Services.AddSingleton<LoggerServiceBase>(provider => { return new GrayLogger(); });

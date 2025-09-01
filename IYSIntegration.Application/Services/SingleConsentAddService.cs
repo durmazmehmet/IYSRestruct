@@ -6,14 +6,14 @@ namespace IYSIntegration.Application.Services
     public class SingleConsentAddService
     {
         private readonly ILogger<SingleConsentAddService> _logger;
-        private readonly IDbHelper _dbHelper;
-        private readonly IIntegrationHelper _integrationHelper;
+        private readonly IDbService _dbService;
+        private readonly IIntegrationService _integrationService;
 
-        public SingleConsentAddService(ILogger<SingleConsentAddService> logger, IDbHelper dbHelper, IIntegrationHelper integrationHelper)
+        public SingleConsentAddService(ILogger<SingleConsentAddService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
         {
             _logger = logger;
-            _dbHelper = dbHelper;
-            _integrationHelper = integrationHelper;
+            _dbService = dbHelper;
+            _integrationService = integrationHelper;
         }
 
         public async Task RunAsync(int rowCount)
@@ -24,7 +24,7 @@ namespace IYSIntegration.Application.Services
 
             try
             {
-                var consentRequestLogs = await _dbHelper.GetConsentRequests(false, rowCount);
+                var consentRequestLogs = await _dbService.GetConsentRequests(false, rowCount);
 
                 var tasks = consentRequestLogs.Select(async log =>
                 {
@@ -46,7 +46,7 @@ namespace IYSIntegration.Application.Services
                             }
                         };
 
-                        var response = await _integrationHelper.AddConsent(consentRequest);
+                        var response = await _integrationService.AddConsent(consentRequest);
 
                         if (response.HttpStatusCode == 0 || response.HttpStatusCode >= 500)
                         {
@@ -55,7 +55,7 @@ namespace IYSIntegration.Application.Services
 
                         response.Id = log.Id;
 
-                        await _dbHelper.UpdateConsentResponse(response);
+                        await _dbService.UpdateConsentResponse(response);
                     }
                     catch (Exception ex)
                     {

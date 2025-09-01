@@ -9,11 +9,11 @@ using RestSharp;
 
 namespace IYSIntegration.Application.Services
 {
-    public class IntegrationHelper : IIntegrationHelper
+    public class IntegrationService : IIntegrationService
     {
         private readonly IConfiguration _config;
-        private readonly ILogger<IntegrationHelper> _logger;
-        public IntegrationHelper(IConfiguration config, ILogger<IntegrationHelper> logger)
+        private readonly ILogger<IntegrationService> _logger;
+        public IntegrationService(IConfiguration config, ILogger<IntegrationService> logger)
         {
             _config = config;
             _logger = logger;

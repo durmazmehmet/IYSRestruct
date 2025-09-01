@@ -10,8 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
 
-builder.Services.AddSingleton<IDbHelper, DbHelper>();
-builder.Services.AddSingleton<IIntegrationHelper, IntegrationHelper>();
+builder.Services.AddSingleton<IDbService, DbService>();
+builder.Services.AddSingleton<IIntegrationService, IntegrationService>();
 builder.Services.AddScoped<MultipleConsentQueryService>();
 builder.Services.AddScoped<SingleConsentAddService>();
 builder.Services.AddScoped<MultipleConsentAddService>();

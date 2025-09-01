@@ -12,12 +12,12 @@ using RestSharp;
 using System.Data.SqlClient;
 namespace IYSIntegration.Application.Services
 {
-    public class DbHelper : IDbHelper
+    public class DbService : IDbService
     {
         private readonly IConfiguration _configuration;
-        private readonly ILogger<DbHelper> _logger;
+        private readonly ILogger<DbService> _logger;
 
-        public DbHelper(IConfiguration configuration, ILogger<DbHelper> loggerServiceBase)
+        public DbService(IConfiguration configuration, ILogger<DbService> loggerServiceBase)
         {
             _configuration = configuration;
             _logger = loggerServiceBase;

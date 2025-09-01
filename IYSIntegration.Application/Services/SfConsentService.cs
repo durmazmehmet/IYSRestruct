@@ -11,12 +11,12 @@ namespace IYSIntegration.Application.Services
     {
         private readonly IConfiguration _config;
         private readonly ISfIdentityService _identityManager;
-        private readonly IDbHelper _dbHelper;
-        public SfConsentService(IConfiguration config, ISfIdentityService identityManager, IDbHelper dbHelper)
+        private readonly IDbService _dbService;
+        public SfConsentService(IConfiguration config, ISfIdentityService identityManager, IDbService dbHelper)
         {
             _config = config;
             _identityManager = identityManager;
-            _dbHelper = dbHelper;
+            _dbService = dbHelper;
         }
 
         public async Task<SfConsentAddResponse> AddConsent(SfConsentAddRequest request)
@@ -51,7 +51,7 @@ namespace IYSIntegration.Application.Services
                 Action = "Salesforce Add Consent"
             };
 
-            var logId = await _dbHelper.InsertLog(SfRequest);
+            var logId = await _dbService.InsertLog(SfRequest);
             // TODO: Geçici olarak eklendi, Sf tarafında token expiry date, refresh vs yapılırsa düzenlenecek
             var token = await _identityManager.GetToken(true);
 
@@ -71,7 +71,7 @@ namespace IYSIntegration.Application.Services
             }
 
             var httpResponse = await client.PostAsync(httpRequest);
-            await _dbHelper.UpdateLog(httpResponse, logId);
+            await _dbService.UpdateLog(httpResponse, logId);
 
             if (httpResponse.IsSuccessful)
             {

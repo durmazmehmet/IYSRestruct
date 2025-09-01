@@ -9,20 +9,20 @@ namespace IYSIntegration.Application.Services
     public class SfConsentScheduledService
     {
         private readonly ILogger<SfConsentScheduledService> _logger;
-        private readonly IDbHelper _dbHelper;
-        private readonly IIntegrationHelper _integrationHelper;
+        private readonly IDbService _dbService;
+        private readonly IIntegrationService _integrationService;
 
-        public SfConsentScheduledService(ILogger<SfConsentScheduledService> logger, IDbHelper dbHelper, IIntegrationHelper integrationHelper)
+        public SfConsentScheduledService(ILogger<SfConsentScheduledService> logger, IDbService dbHelper, IIntegrationService integrationHelper)
         {
             _logger = logger;
-            _dbHelper = dbHelper;
-            _integrationHelper = integrationHelper;
+            _dbService = dbHelper;
+            _integrationService = integrationHelper;
         }
 
         public async Task RunAsync(int rowCount)
         {
             _logger.LogInformation("SfConsentService running at: {time}", DateTimeOffset.Now);
-            var consentRequests = await _dbHelper.GetPullConsentRequests(false, rowCount);
+            var consentRequests = await _dbService.GetPullConsentRequests(false, rowCount);
             if (consentRequests?.Count > 0)
             {
                 var latestConsents = consentRequests
@@ -46,7 +46,7 @@ namespace IYSIntegration.Application.Services
                             LogId = 0,
                             Error = "Superseded by newer consent",
                         };
-                        _dbHelper.UpdateSfConsentResponse(skipResult).Wait();
+                        _dbService.UpdateSfConsentResponse(skipResult).Wait();
                     }
                     catch (Exception ex)
                     {
@@ -75,7 +75,7 @@ namespace IYSIntegration.Application.Services
                             consent
                         };
 
-                        var addConsentResult = _integrationHelper.SfAddConsent(new SfConsentAddRequest { Request = request }).Result;
+                        var addConsentResult = _integrationService.SfAddConsent(new SfConsentAddRequest { Request = request }).Result;
                         if (!string.IsNullOrEmpty(addConsentResult?.WsStatus))
                         {
                             var result = new SfConsentResult
@@ -86,7 +86,7 @@ namespace IYSIntegration.Application.Services
                                 Error = (addConsentResult.WsStatus != "OK") ? addConsentResult.WsDescription : null
                             };
 
-                            _dbHelper.UpdateSfConsentResponse(result).Wait();
+                            _dbService.UpdateSfConsentResponse(result).Wait();
                         }
                     }
                     catch (Exception ex)

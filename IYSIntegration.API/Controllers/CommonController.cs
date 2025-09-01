@@ -14,14 +14,14 @@ namespace IYSIntegration.API.Controllers
     {
         private readonly IConsentService _consentManager;
         private readonly ISfConsentService _SfconsentManager;
-        private readonly IDbHelper _dbHelper;
+        private readonly IDbService _dbService;
         private readonly IConfiguration _config;
         private object obj = new Object();
 
-        public CommonController(IConsentService consentManager, IDbHelper dbHelper, IConfiguration config, ISfConsentService SfconsentManager)
+        public CommonController(IConsentService consentManager, IDbService dbHelper, IConfiguration config, ISfConsentService SfconsentManager)
         {
             _consentManager = consentManager;
-            _dbHelper = dbHelper;
+            _dbService = dbHelper;
             _config = config;
             _SfconsentManager = SfconsentManager;
         }
@@ -39,10 +39,10 @@ namespace IYSIntegration.API.Controllers
 
             if (!request.WithoutLogging)
             {
-                var id = await _dbHelper.InsertConsentRequest(request);
+                var id = await _dbService.InsertConsentRequest(request);
                 var response = await _consentManager.AddConsent(request);
                 response.Id = id;
-                await _dbHelper.UpdateConsentResponseFromCommon(response);
+                await _dbService.UpdateConsentResponseFromCommon(response);
                 response.OriginalError = null;
                 return response;
             }
@@ -63,7 +63,7 @@ namespace IYSIntegration.API.Controllers
                 request.BrandCode = consentParams.BrandCode;
             }
 
-            return await _dbHelper.InsertConsentRequest(request);
+            return await _dbService.InsertConsentRequest(request);
         }
 
         [Route("queryConsent")]
@@ -85,7 +85,7 @@ namespace IYSIntegration.API.Controllers
         [HttpGet]
         public async Task<ResponseBase<AddConsentResult>> QueryConsentAsync(int id)
         {
-            var consentLog = await _dbHelper.GetConsentRequest(id);
+            var consentLog = await _dbService.GetConsentRequest(id);
 
             var response = new ResponseBase<AddConsentResult>
             {
@@ -161,7 +161,7 @@ namespace IYSIntegration.API.Controllers
                     }
                 };
 
-                await _dbHelper.InsertConsentRequest(addConsentRequest);
+                await _dbService.InsertConsentRequest(addConsentRequest);
             }
 
             response.Success();

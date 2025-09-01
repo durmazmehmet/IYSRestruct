@@ -4,7 +4,7 @@ using IYSIntegration.Common.Response.Consent;
 
 namespace IYSIntegration.Application.Interface
 {
-    public interface IIntegrationHelper
+    public interface IIntegrationService
     {
         Task<ResponseBase<AddConsentResult>> AddConsent(AddConsentRequest request);
         Task<ResponseBase<MultipleConsentResult>> SendMultipleConsent(MultipleConsentRequest request);
