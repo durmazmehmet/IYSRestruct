@@ -3,7 +3,8 @@ using IYSIntegration.Common.Request.Identity;
 using IYSIntegration.Common.Response.Identity;
 using Newtonsoft.Json;
 using RestSharp;
-
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 namespace IYSIntegration.Application.Service
 {
     public class IdentityService : IIdentityService

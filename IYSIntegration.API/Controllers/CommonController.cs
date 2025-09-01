@@ -96,18 +96,18 @@ namespace IYSIntegration.API.Controllers
 
             if (!consentLog.IsProcessed)
             {
-                response.Status = ServiceResponseStatuses.Waiting;
+                response.Status = Common.Base.ServiceResponseStatuses.Waiting;
             }
             else
             {
                 if (consentLog.IsSuccess)
                 {
-                    response.Status = ServiceResponseStatuses.Success;
+                    response.Status = Common.Base.ServiceResponseStatuses.Success;
                     response.Data = JsonConvert.DeserializeObject<AddConsentResult>(consentLog.Response);
                 }
                 else
                 {
-                    response.Status = ServiceResponseStatuses.Error;
+                    response.Status = Common.Base.ServiceResponseStatuses.Error;
                     var error = JsonConvert.DeserializeObject<GenericError>(consentLog.Response);
                     if (!string.IsNullOrEmpty(error.Message))
                     {

@@ -29,7 +29,7 @@ namespace IYSIntegration.Application.Helpers
 
             var response = new ResponseBase<TResponse>
             {
-                Status = ServiceResponseStatuses.Error,
+                Status = Common.Base.ServiceResponseStatuses.Error,
                 LogId = logId
             };
 

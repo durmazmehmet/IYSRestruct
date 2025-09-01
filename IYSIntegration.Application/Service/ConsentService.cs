@@ -5,7 +5,8 @@ using IYSIntegration.Common.Request;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
 using System;
-
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 namespace IYSIntegration.Application.Service
 {
     public class ConsentService : IConsentService

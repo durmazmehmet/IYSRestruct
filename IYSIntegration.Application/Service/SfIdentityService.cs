@@ -1,6 +1,8 @@
 ﻿using IYSIntegration.Application.Interface;
 using IYSIntegration.Common.Request.Identity;
 using IYSIntegration.Common.Response.Identity;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 

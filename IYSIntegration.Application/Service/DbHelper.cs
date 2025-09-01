@@ -7,7 +7,8 @@ using IYSIntegration.Common.Response.Consent;
 using Newtonsoft.Json;
 using RestSharp;
 using System.Data.SqlClient;
-
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 namespace IYSIntegration.Application.Service
 {
     public class DbHelper : IDbHelper
