@@ -1,8 +1,10 @@
-﻿using IYSIntegration.API.Interface;
+using IYSIntegration.API.Interface;
 using IYSIntegration.Common.Base;
+using IYSIntegration.Common.Error;
 using IYSIntegration.Common.Request;
 using IYSIntegration.Common.Request.Consent;
 using IYSIntegration.Common.Response.Consent;
+using System;
 
 namespace IYSIntegration.API.Service
 {
@@ -17,12 +19,38 @@ namespace IYSIntegration.API.Service
         {
             _config = config;
             _clientHelper = clientHelper;
-            _baseUrl = _config.GetValue<string>($"BaseUrl");
+            _baseUrl = _config.GetValue<string>("BaseUrl");
             _cacheService = cacheService;
         }
 
         public async Task<ResponseBase<AddConsentResult>> AddConsent(AddConsentRequest request)
         {
+            if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
+                DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
+                IsOlderThanBusinessDays(consentDate, 3))
+            {
+                var response = new ResponseBase<AddConsentResult>
+                {
+                    HttpStatusCode = 200,
+                    OriginalError = new GenericError
+                    {
+                        Message = "Consent older than three business days",
+                        Status = 400,
+                        Errors = new[]
+                        {
+                            new ErrorDetails
+                            {
+                                Code = "H174",
+                                Message = "Consent older than three business days"
+                            }
+                        }
+                    }
+                };
+
+                response.Error("ConsentDate", "Consent older than three business days");
+                return response;
+            }
+
             var iysRequest = new Common.Base.IysRequest<Common.Base.Consent>
             {
                 IysCode = request.IysCode,
@@ -33,6 +61,30 @@ namespace IYSIntegration.API.Service
             };
 
             return await _clientHelper.Execute<AddConsentResult, Common.Base.Consent>(iysRequest);
+        }
+
+        private static bool IsOlderThanBusinessDays(DateTime consentDate, int maxBusinessDays)
+        {
+            var date = consentDate.Date;
+            var today = DateTime.Now.Date;
+            int businessDays = 0;
+
+            while (date < today)
+            {
+                if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    businessDays++;
+                }
+
+                if (businessDays >= maxBusinessDays)
+                {
+                    return true;
+                }
+
+                date = date.AddDays(1);
+            }
+
+            return false;
         }
 
         public async Task<ResponseBase<QueryConsentResult>> QueryConsent(QueryConsentRequest request)
@@ -95,7 +147,7 @@ namespace IYSIntegration.API.Service
                 iysRequest.Url += $"&after={request.After}";
             }
 
-            return await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest); ;
+            return await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest);
         }
     }
 }
