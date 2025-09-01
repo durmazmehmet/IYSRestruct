@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -39,8 +40,37 @@ namespace IYSIntegration.WorkerService.Services
                 var consentRequests = await _dbHelper.GetPullConsentRequests(false, rowCount);
                 if (consentRequests?.Count > 0)
                 {
-                    _logger.LogInformation($"SfConsentWorker running at: {consentRequests?.Count} records processing");
-                    foreach (var consent in consentRequests)
+                    var latestConsents = consentRequests
+                        .GroupBy(x => new { x.CompanyCode, x.Recipient })
+                        .Select(g => g.OrderByDescending(x => x.CreateDate).First())
+                        .ToList();
+
+                    var outdatedConsents = consentRequests
+                        .GroupBy(x => new { x.CompanyCode, x.Recipient })
+                        .SelectMany(g => g.OrderByDescending(x => x.CreateDate).Skip(1))
+                        .ToList();
+
+                    foreach (var outdated in outdatedConsents)
+                    {
+                        try
+                        {
+                            var skipResult = new SfConsentResult
+                            {
+                                Id = outdated.Id,
+                                IsSuccess = false,
+                                LogId = 0,
+                                Error = "Superseded by newer consent"
+                            };
+                            _dbHelper.UpdateSfConsentResponse(skipResult).Wait();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError("SfConsentWorker duplicate skip error: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+                        }
+                    }
+
+                    _logger.LogInformation($"SfConsentWorker running at: {latestConsents?.Count} records processing");
+                    foreach (var consent in latestConsents)
                     {
                         try
                         {
@@ -81,7 +111,6 @@ namespace IYSIntegration.WorkerService.Services
                             _logger.LogError("SfConsentWorker Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
                         }
                     }
-                    ;
 
                 }
                 await Task.Delay(_configuration.GetValue<int>("SfAddConsentDelay"), stoppingToken);
