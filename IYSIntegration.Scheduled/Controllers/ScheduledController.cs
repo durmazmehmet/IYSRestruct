@@ -1,5 +1,6 @@
 using IYSIntegration.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Threading.Tasks;
 
 namespace IYSIntegration.Scheduled.Controllers
@@ -65,11 +66,18 @@ namespace IYSIntegration.Scheduled.Controllers
             return Ok();
         }
 
-        [HttpPost("send-consent-error")]
-        public async Task<IActionResult> SendConsentError()
+        [HttpGet("consent-error-excel")]
+        public async Task<IActionResult> GetConsentErrorExcel([FromQuery] DateTime? date)
         {
-            await _sendConsentErrorService.RunAsync();
-            return Ok();
+            var result = await _sendConsentErrorService.GetErrorsExcelBase64Async(date);
+            return Ok(result);
+        }
+
+        [HttpGet("consent-error-json")]
+        public async Task<IActionResult> GetConsentErrorJson([FromQuery] DateTime? date)
+        {
+            var result = await _sendConsentErrorService.GetErrorsJsonAsync(date);
+            return Ok(result);
         }
     }
 }
