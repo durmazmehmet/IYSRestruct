@@ -4,8 +4,6 @@ using IYSIntegration.Application.Base;
 using IYSIntegration.Application.Request.Consent;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System.Collections.Concurrent;
-
 namespace IYSIntegration.Application.Services
 {
     public class ScheduledMultipleConsentQueryService
@@ -32,19 +30,12 @@ namespace IYSIntegration.Application.Services
             {
                 _logger.LogInformation("MultipleConsentQueryService running at: {time}", DateTimeOffset.Now);
                 var batchList = await _dbService.GetUnprocessedMultipleConsenBatches(batchCount);
-                var queue = new ConcurrentQueue<BatchConsentQuery>(batchList);
                 var options = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-                Parallel.ForEach(queue, options, async q =>
+                await Parallel.ForEachAsync(batchList, options, async (batch, _) =>
                 {
                     try
                     {
-                        var batch = new BatchConsentQuery();
-                        if (!queue.TryDequeue(out batch))
-                        {
-                            return;
-                        }
-
                         var queryMultipleConsentRequest = new QueryMultipleConsentRequest
                         {
                             IysCode = batch.IysCode,
@@ -77,18 +68,18 @@ namespace IYSIntegration.Application.Services
                                         IsQueryResult = true
                                     };
 
-                                    _dbService.UpdateMultipleConsentItem(batchItemResult).Wait();
+                                    await _dbService.UpdateMultipleConsentItem(batchItemResult);
                                 }
 
-                                _dbService.UpdateMultipleConsentQueryDate(batch.BatchId, result.LogId).Wait();
+                                await _dbService.UpdateMultipleConsentQueryDate(batch.BatchId, result.LogId);
                             }
-                            successCount++;
+                            Interlocked.Increment(ref successCount);
                         }
                     }
                     catch
                     {
                         errorFlag = true;
-                        failedCount++;
+                        Interlocked.Increment(ref failedCount);
                     }
                 });
             }
