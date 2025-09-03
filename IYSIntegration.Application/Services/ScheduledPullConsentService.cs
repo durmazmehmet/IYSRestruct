@@ -2,6 +2,7 @@ using IYSIntegration.Application.Interface;
 using IYSIntegration.Application.Models;
 using IYSIntegration.Common.Base;
 using IYSIntegration.Common.Request.Consent;
+using IYSIntegration.Common.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +14,8 @@ namespace IYSIntegration.Application.Services
         private readonly IDbService _dbService;
         private readonly IConfiguration _configuration;
         private readonly IConsentService _consentService;
+        private readonly SimpleRestClient _restClient;
+        private readonly string _baseProxyUrl;
 
         public ScheduledPullConsentService(IConfiguration configuration, ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IConsentService consentService)
         {
@@ -20,6 +23,8 @@ namespace IYSIntegration.Application.Services
             _logger = logger;
             _dbService = dbHelper;
             _consentService = consentService;
+            _restClient = new SimpleRestClient();
+            _baseProxyUrl = _configuration.GetValue<string>("IysProxyBaseUrl");
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int limit)
@@ -65,7 +70,10 @@ namespace IYSIntegration.Application.Services
                                 pullConsentRequest.BrandCode = consentParams.BrandCode;
                             }
 
-                            var pullConsentResult = await _consentService.PullConsent(pullConsentRequest);
+                            var url = $"{_baseProxyUrl}/{companyCode}/pullConsent?" +
+                                      $"after={pullRequestLog?.AfterId}&limit={limit}&source={pullConsentRequest.Source}";
+
+                            var pullConsentResult = await _restClient.GetAsync<PullConsentResult>(url);
 
                             var consentList = pullConsentResult.Data?.List;
 
