@@ -19,6 +19,7 @@ namespace IYSIntegration.Application.Services
 
         public ScheduledSingleConsentAddService(IConfiguration config, ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IRestClientService clientHelper)
         {
+            _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger;
             _dbService = dbHelper;
             _clientHelper = clientHelper;
