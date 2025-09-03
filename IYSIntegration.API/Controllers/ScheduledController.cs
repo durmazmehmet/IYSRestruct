@@ -16,26 +16,22 @@ namespace IYSIntegration.API.Controllers
         private readonly ScheduledPullConsentService _pullConsentService;
         private readonly ScheduledSfConsentService _sfConsentService;
         private readonly ScheduledSendConsentErrorService _sendConsentErrorService;
-        private readonly IConfiguration _configuration;
 
         public ScheduledController(ScheduledMultipleConsentQueryService multipleConsentQueryService,
                                    ScheduledSingleConsentAddService singleConsentAddService,
                                    ScheduledMultipleConsentAddService multipleConsentAddService,
                                    ScheduledPullConsentService pullConsentService,
                                    ScheduledSfConsentService sfConsentService,
-                                   ScheduledSendConsentErrorService sendConsentErrorService,
-                                   IConfiguration configuration)
+                                   ScheduledSendConsentErrorService sendConsentErrorService)
         {
-            /*_multipleConsentQueryService = multipleConsentQueryService;
+            _multipleConsentQueryService = multipleConsentQueryService;
             _singleConsentAddService = singleConsentAddService;
             _multipleConsentAddService = multipleConsentAddService;
             _pullConsentService = pullConsentService;
             _sfConsentService = sfConsentService;
-            _sendConsentErrorService = sendConsentErrorService;*/
-            _pullConsentService = pullConsentService;
-            _configuration = configuration;
+            _sendConsentErrorService = sendConsentErrorService;
         }
-        /*
+
         /// <summary>
         /// IYS'den toplu rıza sorgulama sonuçları çekilir ve DB'de güncellenir.
         /// </summary>
@@ -79,7 +75,6 @@ namespace IYSIntegration.API.Controllers
                 return StatusCode(500, result.Messages);
             return Ok(result.Data);
         }
-        */
         /// <summary>
         /// IYS'den rıza kayıtlarını çekilir ve SF'a aktarılır.
         /// </summary>
@@ -93,7 +88,6 @@ namespace IYSIntegration.API.Controllers
                 return StatusCode(500, result.Messages);
             return Ok(result.Data);
         }
-        /*
         /// <summary>
         /// SF'dan gelen consentler sıraya alınır
         /// </summary>
@@ -131,6 +125,5 @@ namespace IYSIntegration.API.Controllers
             var result = await _sendConsentErrorService.GetErrorsJsonAsync(date);
             return Ok(result);
         }
-        */
     }
 }
