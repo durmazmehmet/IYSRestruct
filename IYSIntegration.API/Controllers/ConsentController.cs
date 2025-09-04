@@ -1,5 +1,5 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Request.Consent;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Request.Consent;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.API.Controllers
@@ -16,7 +16,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("consents")]
         [HttpPost]
-        public async Task<IActionResult> AddConsent(int iysCode, int brandCode, [FromBody] Common.Base.Consent consent)
+        public async Task<IActionResult> AddConsent(int iysCode, int brandCode, [FromBody] Application.Base.Consent consent)
         {
             var request = new AddConsentRequest { IysCode = iysCode, BrandCode = brandCode, Consent = consent };
             var result = await _consentManager.AddConsent(request);
@@ -25,7 +25,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("consents/status")]
         [HttpPost]
-        public async Task<IActionResult> SearchConsent(int iysCode, int brandCode, [FromBody] Common.Base.RecipientKey recipientKey)
+        public async Task<IActionResult> SearchConsent(int iysCode, int brandCode, [FromBody] Application.Base.RecipientKey recipientKey)
         {
             var request = new QueryConsentRequest { IysCode = iysCode, BrandCode = brandCode, RecipientKey = recipientKey };
             var result = await _consentManager.QueryConsent(request);
@@ -35,7 +35,7 @@ namespace IYSIntegration.API.Controllers
 
         [Route("consents/request")]
         [HttpPost]
-        public async Task<IActionResult> AddMultipleConsent(int iysCode, int brandCode, [FromBody] List<Common.Base.Consent> consents)
+        public async Task<IActionResult> AddMultipleConsent(int iysCode, int brandCode, [FromBody] List<Application.Base.Consent> consents)
         {
             var request = new MultipleConsentRequest { IysCode = iysCode, BrandCode = brandCode, Consents = consents };
             var result = await _consentManager.AddMultipleConsent(request);

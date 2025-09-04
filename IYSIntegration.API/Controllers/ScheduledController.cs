@@ -1,5 +1,5 @@
 ﻿using IYSIntegration.Application.Services;
-using IYSIntegration.Common.Base;
+using IYSIntegration.Application.Base;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
@@ -75,13 +75,12 @@ namespace IYSIntegration.API.Controllers
                 return StatusCode(500, result.Messages);
             return Ok(result.Data);
         }
-
         /// <summary>
         /// IYS'den rıza kayıtlarını çekilir ve SF'a aktarılır.
         /// </summary>
         /// <param name="batchSize"></param>
         /// <returns></returns>
-        [HttpPost("pull-consent")]
+        [HttpGet("pull-consent")]
         public async Task<IActionResult> PullConsent([FromQuery] int batchSize)
         {
             var result = await _pullConsentService.RunAsync(batchSize);
@@ -89,7 +88,6 @@ namespace IYSIntegration.API.Controllers
                 return StatusCode(500, result.Messages);
             return Ok(result.Data);
         }
-
         /// <summary>
         /// SF'dan gelen consentler sıraya alınır
         /// </summary>

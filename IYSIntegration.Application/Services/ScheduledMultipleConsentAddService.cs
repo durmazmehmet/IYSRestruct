@@ -1,7 +1,7 @@
-using IYSIntegration.Application.Interface;
-using IYSIntegration.Application.Models;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Request.Consent;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Request.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -51,14 +51,14 @@ namespace IYSIntegration.Application.Services
                         {
                             IysCode = consentRequests[0].IysCode,
                             BrandCode = consentRequests[0].BrandCode,
-                            Consents = new List<Common.Base.Consent>(),
+                            Consents = new List<Application.Base.Consent>(),
                             BatchId = batch.BatchId,
                             ForBatch = true
                         };
 
                         foreach (var consent in consentRequests)
                         {
-                            request.Consents.Add(new Common.Base.Consent
+                            request.Consents.Add(new Application.Base.Consent
                             {
                                 ConsentDate = consent.ConsentDate,
                                 Recipient = consent.Recipient,

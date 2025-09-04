@@ -1,6 +1,6 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Request.Consent;
-using IYSIntegration.Common.Response.Consent;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Request.Consent;
+using IYSIntegration.Application.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using RestSharp;
@@ -22,10 +22,10 @@ namespace IYSIntegration.Application.Services
         public async Task<SfConsentAddResponse> AddConsent(SfConsentAddRequest request)
         {
             //Hotfix for sf error
-            var properConsents = new List<Common.Base.Consent>();
+            var properConsents = new List<Application.Base.Consent>();
             foreach (var consent in request.Request.Consents)
             {
-                properConsents.Add(new Common.Base.Consent
+                properConsents.Add(new Application.Base.Consent
                 {
                     ConsentDate = consent.ConsentDate,
                     Source = consent.Source,
@@ -44,7 +44,7 @@ namespace IYSIntegration.Application.Services
                 }
             };
 
-            var SfRequest = new Common.Base.IysRequest<SfConsentAddRequest>
+            var SfRequest = new Application.Base.IysRequest<SfConsentAddRequest>
             {
                 Url = _config.GetValue<string>($"Salesforce:BaseUrl") + "/apexrest/iys",
                 Body = properRequest,

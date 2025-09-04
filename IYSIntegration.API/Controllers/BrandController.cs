@@ -1,5 +1,5 @@
-﻿using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Request.Brand;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Request.Brand;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.API.Controllers

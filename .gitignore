@@ -38,3 +38,7 @@ msbuild.wrn
 /a.xml
 
 launchSettings.json
+appsettings.json
+appsettings.*.json
+/IYSIntegration.API/appsettings.json
+/IYSIntegration.Proxy.API/appsettings.json

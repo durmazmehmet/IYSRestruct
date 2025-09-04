@@ -1,55 +1,77 @@
-using IYSIntegration.Application.Interface;
+﻿using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Middleware.Exceptions;
+using IYSIntegration.Application.Middleware.LoggingService;
+using IYSIntegration.Application.Middleware.LoggingService.Loggers;
 using IYSIntegration.Application.Services;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.LoggingService;
-using IYSIntegration.Common.LoggingService.Loggers;
-using IYSIntegration.Common.Middleware.Exceptions;
-using IYSIntegration.Common.Services;
+using IYSIntegration.Proxy.API.Helpers;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
+using System.Reflection;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Logging
-builder.Services.AddSingleton<LoggerServiceBase>(_ => new GrayLogger());
-
-// Configuration
-builder.Services.Configure<CacheSettings>(builder.Configuration.GetSection("CacheSettings"));
-
-// Infrastructure
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+internal class Program
 {
-    var cacheSettings = sp.GetRequiredService<IOptions<CacheSettings>>().Value;
-    return ConnectionMultiplexer.Connect(cacheSettings.ConnectionString);
-});
+    private static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<ICacheService, CacheService>();
+        // Logging
+        builder.Services.AddSingleton<LoggerServiceBase>(_ => new GrayLogger());
 
-// Domain services
-builder.Services.AddSingleton<IDbService, DbService>();
-builder.Services.AddSingleton<IIdentityService, IdentityService>();
-builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
-builder.Services.AddSingleton<IRestClientService, RestClientService>();
-builder.Services.AddSingleton<IConsentService, ConsentService>();
-builder.Services.AddSingleton<ISfConsentService, SfConsentService>();
+        // Configuration
+        builder.Services.Configure<CacheSettings>(builder.Configuration.GetSection("CacheSettings"));
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "IYS Integration Proxy", Version = "v1" });
-});
+        // Infrastructure
+        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+        {
+            var cacheSettings = sp.GetRequiredService<IOptions<CacheSettings>>().Value;
+            return ConnectionMultiplexer.Connect(cacheSettings.ConnectionString);
+        });
 
-var app = builder.Build();
+        builder.Services.AddSingleton<ICacheService, CacheService>();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+        // Domain services
+        builder.Services.AddSingleton<IIdentityService, IdentityService>();
+        builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
+        builder.Services.AddSingleton<IRestClientService, RestClientService>();
 
-app.UseMiddleware<ExceptionMiddleware>();
+        builder.Services.AddControllers();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "IYS Proxy", Version = "v1" });
 
-app.UseAuthorization();
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            c.IncludeXmlComments(xmlPath);
 
-app.MapControllers();
+            // Tag açıklaması
+            c.DocumentFilter<TagDescriptionsDocumentFilter>();
+        });
 
-app.Run();
+        builder.Services.AddRouting();
+        builder.Services.AddMvc();
+
+        var app = builder.Build();
+
+        // Configure the HTTP request pipeline.
+        if (app.Environment.IsDevelopment())
+        {
+
+        }
+
+        //app.UseDeveloperExceptionPage();
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
+        app.UseMiddleware<ExceptionMiddleware>();
+
+        app.UseAuthorization();
+
+        app.MapControllers();
+
+        app.Run();
+    }
+}

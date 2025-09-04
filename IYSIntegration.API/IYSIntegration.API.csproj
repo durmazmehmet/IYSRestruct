@@ -17,7 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IYSIntegration.Application\IYSIntegration.Application.csproj" />
-    <ProjectReference Include="..\IYSIntegration.Common\IYSIntegration.Common.csproj" />
   </ItemGroup>
 
 </Project>

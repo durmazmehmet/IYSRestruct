@@ -1,5 +1,5 @@
-using IYSIntegration.Application.Interface;
-using IYSIntegration.Common.Base;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Base;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OfficeOpenXml;

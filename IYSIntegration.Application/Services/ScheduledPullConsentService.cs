@@ -1,9 +1,11 @@
-using IYSIntegration.Application.Interface;
-using IYSIntegration.Application.Models;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Request.Consent;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Request.Consent;
+using IYSIntegration.Application.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace IYSIntegration.Application.Services
 {
@@ -12,60 +14,65 @@ namespace IYSIntegration.Application.Services
         private readonly ILogger<ScheduledPullConsentService> _logger;
         private readonly IDbService _dbService;
         private readonly IConfiguration _configuration;
-        private readonly IConsentService _consentService;
+        private readonly IRestClientService _clientHelper;
+        private readonly string _baseProxyUrl;
 
-        public ScheduledPullConsentService(IConfiguration configuration, ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IConsentService consentService)
+        public ScheduledPullConsentService(IConfiguration configuration, ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IRestClientService clientHelper)
         {
             _configuration = configuration;
             _logger = logger;
             _dbService = dbHelper;
-            _consentService = consentService;
+            _clientHelper = clientHelper;
+            _baseProxyUrl = _configuration.GetValue<string>("BaseProxyUrl");
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int limit)
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
-            bool errorFlag = false;
-            List<string> failedCompanyCodes = new List<string>();
+            var results = new ConcurrentBag<LogResult>();
+            List<string> failedCompanyCodes = [];
+            int failedCount = 0;
             int successCount = 0;
-            string companyCodeInProc;
+
             try
             {
                 _logger.LogInformation("PullConsentService running at: {time}", DateTimeOffset.Now);
-                var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? new List<string>();
+
+                var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? [];
+
                 foreach (var companyCode in companyList)
                 {
-                    companyCodeInProc = companyCode;
                     try
                     {
+                        var consentParams = GetIysCode(companyCode);
+
                         var fetchNext = true;
+
                         while (fetchNext)
                         {
                             //await Task.Delay(5000);
                             _logger.LogInformation($"PullConsentService running for: {companyCode}");
 
-                            int iysCode = _configuration.GetValue<int>($"{companyCode}:IysCode");
-                            int brandCode = _configuration.GetValue<int>($"{companyCode}:BrandCode");
-
                             var pullRequestLog = await _dbService.GetPullRequestLog(companyCode);
-                            var pullConsentRequest = new PullConsentRequest
+
+
+
+                            var proxyRequest = new IysRequest<Consent>
                             {
-                                CompanyCode = companyCode,
-                                IysCode = iysCode,
-                                BrandCode = brandCode,
-                                Source = "IYS",
-                                After = pullRequestLog?.AfterId,
-                                Limit = limit
+                                Url = $"{_baseProxyUrl}/{companyCode}?after={pullRequestLog?.AfterId}&limit={limit}&source=IYS",
+                                Action = "Add Consent",
+                                Method = RestSharp.Method.Get
                             };
 
-                            if (pullConsentRequest.IysCode == 0)
-                            {
-                                var consentParams = _consentService.GetIysCode(pullConsentRequest.CompanyCode);
-                                pullConsentRequest.IysCode = consentParams.IysCode;
-                                pullConsentRequest.BrandCode = consentParams.BrandCode;
-                            }
+                            var pullConsentResult = await _clientHelper.Execute<PullConsentResult, Consent>(proxyRequest);
 
-                            var pullConsentResult = await _consentService.PullConsent(pullConsentRequest);
+                            if (pullConsentResult.HttpStatusCode == 0 || pullConsentResult.HttpStatusCode >= 500)
+                            {
+                                results.Add(new LogResult { Id = 0, Status = "Failed", Message = $"IYS error {pullConsentResult.HttpStatusCode}" });
+                                Interlocked.Increment(ref failedCount);
+                                _logger.LogError("pullconsent failed (status: {Status}) for company {companyCode}", pullConsentResult.HttpStatusCode, companyCode);
+                                continue;
+                            }
 
                             var consentList = pullConsentResult.Data?.List;
 
@@ -76,8 +83,8 @@ namespace IYSIntegration.Application.Services
                                     var addConsentRequest = new AddConsentRequest
                                     {
                                         CompanyCode = companyCode,
-                                        IysCode = pullConsentRequest.IysCode,
-                                        BrandCode = pullConsentRequest.BrandCode,
+                                        IysCode = consentParams.IysCode,
+                                        BrandCode = consentParams.BrandCode,
                                         Consent = consent
                                     };
                                     await _dbService.InsertPullConsent(addConsentRequest);
@@ -86,8 +93,8 @@ namespace IYSIntegration.Application.Services
                                 await _dbService.UpdatePullRequestLog(new PullRequestLog
                                 {
                                     CompanyCode = companyCode,
-                                    IysCode = pullConsentRequest.IysCode,
-                                    BrandCode = pullConsentRequest.BrandCode,
+                                    IysCode = consentParams.IysCode,
+                                    BrandCode = consentParams.BrandCode,
                                     AfterId = pullConsentResult.Data.After
                                 });
 
@@ -95,21 +102,24 @@ namespace IYSIntegration.Application.Services
                             }
                             else
                             {
+
                                 await _dbService.UpdateJustRequestDateOfPullRequestLog(new PullRequestLog
                                 {
                                     CompanyCode = companyCode,
-                                    IysCode = pullConsentRequest.IysCode,
-                                    BrandCode = pullConsentRequest.BrandCode
+                                    IysCode = consentParams.IysCode,
+                                    BrandCode = consentParams.BrandCode
                                 });
+
                                 fetchNext = false;
                             }
                         }
+
                         successCount++;
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        errorFlag = true;
-                        failedCompanyCodes.Add(companyCodeInProc);
+                        results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Status = "Exception", Message = ex.Message });
+                        failedCompanyCodes.Add(companyCode);
                     }
                 }
             }
@@ -118,22 +128,36 @@ namespace IYSIntegration.Application.Services
                 _logger.LogError("PullConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
             }
 
-            if (errorFlag)
-            {
-                _logger.LogError($"PullConsentService {string.Join(",", failedCompanyCodes)} firmaları için hata aldı");
-            }
-
             response.Data = new ScheduledJobStatistics
             {
                 SuccessCount = successCount,
                 FailedCount = failedCompanyCodes.Count,
                 FailedCompanyCodes = failedCompanyCodes
             };
-            if (errorFlag)
+
+            foreach (var result in results)
             {
-                response.Error("PULL_CONSENT", "Some companies failed during pull.");
+                var msgKey = $"Consent_{result.Id}_{result.CompanyCode}";
+                var msg = $"{result.Status}{(string.IsNullOrWhiteSpace(result.Message) ? "" : $": {result.Message}")}";
+                response.AddMessage(msgKey, msg);
             }
+
             return response;
+        }
+
+        private ConsentParams GetIysCode(string companyCode)
+        {
+            var iysCode = _configuration.GetValue<int?>($"{companyCode}:IysCode");
+            var brandCode = _configuration.GetValue<int?>($"{companyCode}:BrandCode");
+
+            if (iysCode == null || brandCode == null)
+                throw new InvalidOperationException($"'{companyCode}' için eirşim bilgisi mevcut değil.");
+
+            return new ConsentParams
+            {
+                IysCode = iysCode.Value,
+                BrandCode = brandCode.Value
+            };
         }
     }
 }

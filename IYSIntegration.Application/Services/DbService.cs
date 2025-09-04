@@ -1,16 +1,16 @@
 ﻿using Dapper;
-using IYSIntegration.Application.Constants;
-using IYSIntegration.Application.Interface;
-using IYSIntegration.Application.Models;
-using IYSIntegration.Common.Base;
-using IYSIntegration.Common.Request.Consent;
-using IYSIntegration.Common.Response.Consent;
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Request.Consent;
+using IYSIntegration.Application.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using System.Data.SqlClient;
 using System;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Constants;
+using IYSIntegration.Application.Services.Models;
 namespace IYSIntegration.Application.Services
 {
     public class DbService : IDbService
