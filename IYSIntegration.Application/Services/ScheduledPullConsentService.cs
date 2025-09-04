@@ -1,11 +1,12 @@
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request.Consent;
 using IYSIntegration.Application.Response.Consent;
+using IYSIntegration.Application.Request.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace IYSIntegration.Application.Services
 {
@@ -14,16 +15,15 @@ namespace IYSIntegration.Application.Services
         private readonly ILogger<ScheduledPullConsentService> _logger;
         private readonly IDbService _dbService;
         private readonly IConfiguration _configuration;
-        private readonly IRestClientService _clientHelper;
-        private readonly string _baseProxyUrl;
+        private readonly SimpleRestClient _client;
+        private const string BaseUrl = "http://bomdvdigip02/iysproxy/api/IYSProxy/";
 
-        public ScheduledPullConsentService(IConfiguration configuration, ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IRestClientService clientHelper)
+        public ScheduledPullConsentService(IConfiguration configuration, ILogger<ScheduledPullConsentService> logger, IDbService dbHelper)
         {
             _configuration = configuration;
             _logger = logger;
             _dbService = dbHelper;
-            _clientHelper = clientHelper;
-            _baseProxyUrl = _configuration.GetValue<string>("BaseProxyUrl");
+            _client = new SimpleRestClient(BaseUrl);
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int limit)
@@ -57,20 +57,22 @@ namespace IYSIntegration.Application.Services
 
 
 
-                            var proxyRequest = new IysRequest<Consent>
+                            var queryParams = new Dictionary<string, string?>
                             {
-                                Url = $"{_baseProxyUrl}/{companyCode}?after={pullRequestLog?.AfterId}&limit={limit}&source=IYS",
-                                Action = "Add Consent",
-                                Method = RestSharp.Method.Get
+                                ["after"] = pullRequestLog?.AfterId,
+                                ["limit"] = limit.ToString(),
+                                ["source"] = "IYS"
                             };
 
-                            var pullConsentResult = await _clientHelper.Execute<PullConsentResult, Consent>(proxyRequest);
+                            var pullConsentResult = await _client.GetAsync<PullConsentResult>(
+                                $"{companyCode}/pullConsent",
+                                queryParams);
 
-                            if (pullConsentResult.HttpStatusCode == 0 || pullConsentResult.HttpStatusCode >= 500)
+                            if (!pullConsentResult.Status || pullConsentResult.StatusCode == 0 || pullConsentResult.StatusCode >= 500)
                             {
-                                results.Add(new LogResult { Id = 0, Status = "Failed", Message = $"IYS error {pullConsentResult.HttpStatusCode}" });
+                                results.Add(new LogResult { Id = 0, Status = "Failed", Message = $"IYS error {pullConsentResult.StatusCode}" });
                                 Interlocked.Increment(ref failedCount);
-                                _logger.LogError("pullconsent failed (status: {Status}) for company {companyCode}", pullConsentResult.HttpStatusCode, companyCode);
+                                _logger.LogError("pullconsent failed (status: {Status}) for company {companyCode}", pullConsentResult.StatusCode, companyCode);
                                 continue;
                             }
 
