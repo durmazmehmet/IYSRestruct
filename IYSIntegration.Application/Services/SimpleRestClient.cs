@@ -4,14 +4,14 @@ using RestSharp;
 
 namespace IYSIntegration.Application.Services;
 
-public sealed class SalesforceClient(IConfiguration c) : MiniRest(c["BaseSfProxyUrl"]!){}
-public sealed class IysClient(IConfiguration c) : MiniRest(c["BaseIysProxyUrl"]!){}
+public sealed class SalesforceClient(IConfiguration c) : SimpleRestClient(c["BaseSfProxyUrl"]!){}
+public sealed class IysClient(IConfiguration c) : SimpleRestClient(c["BaseIysProxyUrl"]!){}
 
-public class MiniRest
+public class SimpleRestClient
 {
     private readonly RestClient _client;
 
-    public MiniRest(string baseUrl, int timeoutMs = 30000)
+    public SimpleRestClient(string baseUrl, int timeoutMs = 30000)
     {
         _client = new RestClient(new RestClientOptions(baseUrl)
         {

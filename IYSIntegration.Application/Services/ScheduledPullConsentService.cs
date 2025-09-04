@@ -55,6 +55,8 @@ namespace IYSIntegration.Application.Services
 
                             var pullRequestLog = await _dbService.GetPullRequestLog(companyCode);
 
+
+
                             var proxyRequest = new IysRequest<Consent>
                             {
                                 Url = $"{_baseProxyUrl}/{companyCode}?after={pullRequestLog?.AfterId}&limit={limit}&source=IYS",
