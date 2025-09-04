@@ -1,28 +1,35 @@
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Response.Consent;
+using IYSIntegration.Application.Services.Helpers;
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
-using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request.Consent;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
 namespace IYSIntegration.Application.Services
 {
     public class ScheduledMultipleConsentQueryService
     {
         private readonly ILogger<ScheduledMultipleConsentQueryService> _logger;
         private readonly IDbService _dbService;
-        private readonly IConsentService _consentService;
+        private readonly IysClient _client;
+        private readonly IIysHelper _iysHelper;
+        private readonly IConfiguration _configuration;
 
-        public ScheduledMultipleConsentQueryService(ILogger<ScheduledMultipleConsentQueryService> logger, IDbService dbHelper, IConsentService consentService)
+        public ScheduledMultipleConsentQueryService(IConfiguration configuration, ILogger<ScheduledMultipleConsentQueryService> logger, IDbService dbHelper, IIysHelper iysHelper)
         {
+            _configuration = configuration;
             _logger = logger;
             _dbService = dbHelper;
-            _consentService = consentService;
+            _client = new IysClient(_configuration);
+            _iysHelper = iysHelper;
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchCount)
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
-            bool errorFlag = false;
+            var results = new ConcurrentBag<LogResult>();
             int successCount = 0;
             int failedCount = 0;
 
@@ -34,24 +41,17 @@ namespace IYSIntegration.Application.Services
 
                 await Parallel.ForEachAsync(batchList, options, async (batch, _) =>
                 {
+                    var companyCode = _iysHelper.GetCompanyCode(batch.IysCode);
+
                     try
                     {
-                        var queryMultipleConsentRequest = new QueryMultipleConsentRequest
+                        var queryParams = new Dictionary<string, string?>
                         {
-                            IysCode = batch.IysCode,
-                            BrandCode = batch.BrandCode,
-                            RequestId = batch.RequestId,
-                            BatchId = batch.BatchId
+                            ["requestId"] = batch.RequestId,
+                            ["batchId"] = batch.BatchId.ToString()
                         };
 
-                        if (queryMultipleConsentRequest.IysCode == 0)
-                        {
-                            var consentParams = _consentService.GetIysCode(queryMultipleConsentRequest.CompanyCode);
-                            queryMultipleConsentRequest.IysCode = consentParams.IysCode;
-                            queryMultipleConsentRequest.BrandCode = consentParams.BrandCode;
-                        }
-
-                        var result = await _consentService.QueryMultipleConsent(queryMultipleConsentRequest);
+                        var result = await _client.GetAsync<List<QueryMultipleConsentResult>>("{companyCode}/queryMultipleConsent", queryParams);
 
                         if (result.IsSuccessful())
                         {
@@ -76,9 +76,9 @@ namespace IYSIntegration.Application.Services
                             Interlocked.Increment(ref successCount);
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        errorFlag = true;
+                        results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Status = "Error", Message = $"IYSConsentRequest tablosuna bakın: {ex.Message}" });
                         Interlocked.Increment(ref failedCount);
                     }
                 });
@@ -86,16 +86,11 @@ namespace IYSIntegration.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError("MultipleConsentQueryService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+                results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Error", Message = $"IYSConsentRequest tablosuna bakın: {ex.Message} {ex.InnerException?.Message ?? "None"}" });
             }
-
-            if (errorFlag)
-                _logger.LogError($"MultipleConsentQueryService toplam {failedCount + successCount} içinden {failedCount} recipient için hata aldı, IYSConsentRequest tablosuna bakın");
 
             response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
-            if (errorFlag)
-            {
-                response.Error("MULTIPLE_CONSENT_QUERY", "One or more batches failed.");
-            }
+
             return response;
         }
     }

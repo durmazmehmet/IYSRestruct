@@ -1,8 +1,9 @@
-using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Base;
 using IYSIntegration.Application.Request.Consent;
 using IYSIntegration.Application.Response.Consent;
+using IYSIntegration.Application.Services.Helpers;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -13,26 +14,25 @@ namespace IYSIntegration.Application.Services
     {
         private readonly ILogger<ScheduledSingleConsentAddService> _logger;
         private readonly IDbService _dbService;
-        private readonly IRestClientService _clientHelper;
         private readonly IConfiguration _config;
-        private readonly string _baseProxyUrl;
+        private readonly IysClient _client;
+        private readonly IIysHelper _iysHelper;
 
-        public ScheduledSingleConsentAddService(IConfiguration config, ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IRestClientService clientHelper)
+        public ScheduledSingleConsentAddService(IConfiguration config, ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IRestClientService clientHelper, IIysHelper iysHelper)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger;
             _dbService = dbHelper;
-            _clientHelper = clientHelper;
-            _baseProxyUrl = _config.GetValue<string>("BaseProxyUrl");
+            _client = new IysClient(_config);
+            _iysHelper = iysHelper;
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
+            var results = new ConcurrentBag<LogResult>();
             int failedCount = 0;
             int successCount = 0;
-
-            var results = new ConcurrentBag<LogResult>();
 
             _logger.LogInformation("SingleConsentAddService started at {Time}", DateTimeOffset.Now);
 
@@ -42,6 +42,8 @@ namespace IYSIntegration.Application.Services
 
                 var tasks = logs.Select(async log =>
                 {
+                    var companyCode = _iysHelper.GetCompanyCode(log.IysCode);
+
                     try
                     {
                         var request = new AddConsentRequest
@@ -62,7 +64,7 @@ namespace IYSIntegration.Application.Services
 
                         if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
                             DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
-                            IsOlderThanBusinessDays(consentDate, 3))
+                            _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
                         {
                             results.Add(new LogResult { Id = log.Id, CompanyCode = request.CompanyCode, Status = "Skipped", Message = "Consent older than 3 business days" });
                             Interlocked.Increment(ref failedCount);
@@ -70,15 +72,7 @@ namespace IYSIntegration.Application.Services
                             return;
                         }
 
-                        var proxyRequest = new IysRequest<Consent>
-                        {
-                            Url = $"{_baseProxyUrl}/{request.CompanyCode}",
-                            Body = request.Consent,
-                            Action = "Add Consent",
-                            Method = RestSharp.Method.Post
-                        };
-
-                        var addResponse = await _clientHelper.Execute<AddConsentResult, Consent>(proxyRequest);
+                        var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"{companyCode}/addConsent", request.Consent);
 
                         if (!request.WithoutLogging)
                         {
@@ -103,7 +97,7 @@ namespace IYSIntegration.Application.Services
                     }
                     catch (Exception ex)
                     {
-                        results.Add(new LogResult { Id = log.Id, Status = "Exception", Message = ex.Message });
+                        results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Status = "Exception", Message = ex.Message });
                         Interlocked.Increment(ref failedCount);
                         _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
                     }
@@ -114,13 +108,8 @@ namespace IYSIntegration.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Fatal error in SingleConsentAddService");
+                results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Failed", Message = $"{ex.Message}" });
                 response.Error("SINGLE_CONSENT_ADD_FATAL", "Service failed with an unexpected exception.");
-            }
-
-            if (failedCount > 0)
-            {
-                _logger.LogWarning("SingleConsentAddService completed with {FailedCount} failures", failedCount);
-                response.Error("SINGLE_CONSENT_ADD", "Some consents failed to add.");
             }
 
             response.Data = new ScheduledJobStatistics
@@ -139,29 +128,5 @@ namespace IYSIntegration.Application.Services
             return response;
         }
 
-
-        private static bool IsOlderThanBusinessDays(DateTime consentDate, int maxBusinessDays)
-        {
-            var date = consentDate.Date;
-            var today = DateTime.Now.Date;
-            int businessDays = 0;
-
-            while (date < today)
-            {
-                if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
-                {
-                    businessDays++;
-                }
-
-                if (businessDays >= maxBusinessDays)
-                {
-                    return true;
-                }
-
-                date = date.AddDays(1);
-            }
-
-            return false;
-        }
     }
 }

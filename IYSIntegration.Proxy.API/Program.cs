@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
 using System.Reflection;
+using IYSIntegration.Application.Services.Helpers;
 
 internal class Program
 {
@@ -37,6 +38,7 @@ internal class Program
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
         builder.Services.AddSingleton<IRestClientService, RestClientService>();
         builder.Services.AddSingleton<IDbService, DbService>();
+        builder.Services.AddSingleton<IIysHelper, IysHelper>();
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();

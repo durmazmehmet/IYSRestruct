@@ -3,6 +3,7 @@ using IYSIntegration.Application.Base;
 using IYSIntegration.Application.Request;
 using IYSIntegration.Application.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
+using IYSIntegration.Application.Services.Helpers;
 
 namespace IYSIntegration.Proxy.API.Controllers;
 
@@ -12,13 +13,15 @@ public class IYSProxyController : ControllerBase
 {
     private readonly IConfiguration _config;
     private readonly IRestClientService _clientHelper;
+    private readonly IIysHelper _iysHelper;
     private readonly string _baseUrl;
 
-    public IYSProxyController(IConfiguration config, IRestClientService clientHelper)
+    public IYSProxyController(IConfiguration config, IRestClientService clientHelper, IIysHelper iysHelper)
     {
         _config = config;
         _clientHelper = clientHelper;
         _baseUrl = _config.GetValue<string>("BaseUrl");
+        _iysHelper = iysHelper;
     }
 
     /// <summary>
@@ -28,21 +31,20 @@ public class IYSProxyController : ControllerBase
     /// <param name="consent"></param>
     /// <returns></returns>
     [HttpPost("addConsent")]
-    public async Task<IActionResult> AddConsent([FromRoute] string companyCode, [FromBody] Consent consent)
+    public async Task<ResponseBase<AddConsentResult>> AddConsent(
+        [FromRoute] string companyCode, 
+        [FromBody] Consent consent)
     {
-        var consentParams = GetIysCode(companyCode);
+        var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        var request = new IysRequest<Consent>
+        return await _clientHelper.Execute<AddConsentResult, Consent>(new IysRequest<Consent>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents",
             Body = consent,
             Action = "Add Consent",
             Method = RestSharp.Method.Post
-        };
-
-        var result = await _clientHelper.Execute<AddConsentResult, Consent>(request);
-        return Ok(result);
+        });
     }
 
     /// <summary>
@@ -52,21 +54,20 @@ public class IYSProxyController : ControllerBase
     /// <param name="recipientKey"></param>
     /// <returns></returns>
     [HttpPost("queryConsent")]
-    public async Task<IActionResult> SearchConsent([FromRoute] string companyCode, [FromBody] RecipientKey recipientKey)
+    public async Task<ResponseBase<QueryConsentResult>> QueryConsent(
+        [FromRoute] string companyCode,
+        [FromBody] RecipientKey recipientKey)
     {
-        var consentParams = GetIysCode(companyCode);
+        var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        var request = new IysRequest<RecipientKey>
+        return await _clientHelper.Execute<QueryConsentResult, RecipientKey>(new IysRequest<RecipientKey>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/status",
             Body = recipientKey,
             Action = "Query Consent",
             Method = RestSharp.Method.Post
-        };
-
-        var result = await _clientHelper.Execute<QueryConsentResult, RecipientKey>(request);
-        return Ok(result);
+        });
     }
 
     /// <summary>
@@ -76,21 +77,20 @@ public class IYSProxyController : ControllerBase
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("addMultipleConsent")]
-    public async Task<IActionResult> AddMultipleConsent([FromRoute] string companyCode, [FromBody] MultipleConsentRequestDto request)
+    public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsent(
+        [FromRoute] string companyCode, 
+        [FromBody] MultipleConsentRequestDto request)
     {
-        var consentParams = GetIysCode(companyCode);
+        var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        var iysRequest = new IysRequest<List<Consent>>
+        return await _clientHelper.Execute<MultipleConsentResult, List<Consent>>(new IysRequest<List<Consent>>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request",
             Body = request.Consents,
             Action = "Add Multiple Consent",
             BatchId = request.BatchId
-        };
-
-        var result = await _clientHelper.Execute<MultipleConsentResult, List<Consent>>(iysRequest);
-        return Ok(result);
+        });
     }
 
     /// <summary>
@@ -101,25 +101,19 @@ public class IYSProxyController : ControllerBase
     /// <param name="batchId"></param>
     /// <returns></returns>
     [HttpGet("queryMultipleConsent")]
-    public async Task<IActionResult> SearchMultipleConsent(
+    public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(
         [FromRoute] string companyCode,
-        [FromQuery] string requestId,
-        [FromQuery] int? batchId = null)
+        [FromQuery] string requestId, int? batchId = null)
     {
-        var consentParams = GetIysCode(companyCode);
+        var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        var url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{Uri.EscapeDataString(requestId)}";
-
-        var iysRequest = new IysRequest<DummyRequest>
+        return await _clientHelper.Execute<List<QueryMultipleConsentResult>, DummyRequest>(new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
-            Url = url,
+            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{Uri.EscapeDataString(requestId)}",
             Action = "Query Multiple Consent",
             BatchId = batchId
-        };
-
-        var result = await _clientHelper.Execute<List<QueryMultipleConsentResult>, DummyRequest>(iysRequest);
-        return Ok(result);
+        });
     }
 
     /// <summary>
@@ -131,44 +125,25 @@ public class IYSProxyController : ControllerBase
     /// <param name="source"></param>
     /// <returns></returns>
     [HttpGet("pullConsent")]
-    public async Task<IActionResult> PullConsent(
+    public async Task<ResponseBase<PullConsentResult>> PullConsent(
         [FromRoute] string companyCode,
-        [FromQuery] string? after = null,
-        [FromQuery] int limit = 0,
-        [FromQuery] string source = "IYS")
+        [FromQuery] string? after = null, int limit = 0, string source = "IYS")
     {
-        var consentParams = GetIysCode(companyCode);
+        var consentParams = _iysHelper.GetIysCode(companyCode);
 
         var queryParams = new List<string> { $"source={Uri.EscapeDataString(source)}" };
-        if (limit > 0) queryParams.Add($"limit={limit}");
-        if (!string.IsNullOrWhiteSpace(after)) queryParams.Add($"after={Uri.EscapeDataString(after)}");
 
-        var url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/changes?" +
-                  string.Join("&", queryParams);
+        if (limit > 0) queryParams.Add($"limit={limit}");
+
+        if (!string.IsNullOrWhiteSpace(after)) queryParams.Add($"after={Uri.EscapeDataString(after)}");
 
         var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
-            Url = url,
+            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/changes?" + string.Join("&", queryParams),
             Action = "Pull Consent"
         };
 
-        var result = await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest);
-        return Ok(result);
-    }
-
-    private ConsentParams GetIysCode(string companyCode)
-    {
-        var iysCode = _config.GetValue<int?>($"{companyCode}:IysCode");
-        var brandCode = _config.GetValue<int?>($"{companyCode}:BrandCode");
-
-        if (iysCode == null || brandCode == null)
-            throw new InvalidOperationException($"'{companyCode}' için eirşim bilgisi mevcut değil.");
-
-        return new ConsentParams
-        {
-            IysCode = iysCode.Value,
-            BrandCode = brandCode.Value
-        };
+        return await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest);
     }
 }

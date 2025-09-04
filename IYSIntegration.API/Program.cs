@@ -1,11 +1,12 @@
 ﻿using IYSIntegration.API.Helpers;
-using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Base;
 using IYSIntegration.Application.Middleware.Exceptions;
 using IYSIntegration.Application.Middleware.LoggingService;
 using IYSIntegration.Application.Middleware.LoggingService.Loggers;
 using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Services.Helpers;
+using IYSIntegration.Application.Services.Interface;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
@@ -35,6 +36,7 @@ internal class Program
         builder.Services.AddSingleton<LoggerServiceBase>(_ => new GrayLogger());
 
         // 5) Domain/Application services
+        builder.Services.AddScoped<IIysHelper, IysHelper>();
         builder.Services.AddSingleton<IDbService, DbService>();
         builder.Services.AddSingleton<IIdentityService, IdentityService>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();

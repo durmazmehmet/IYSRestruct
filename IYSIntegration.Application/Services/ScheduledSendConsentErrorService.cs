@@ -20,8 +20,10 @@ namespace IYSIntegration.Application.Services
             _dbService = dbHelper;
         }
 
-        public async Task<string> GetErrorsExcelBase64Async(DateTime? date = null)
+        public async Task<ResponseBase<string>> GetErrorsExcelBase64Async(DateTime? date = null)
         {
+            var response = new ResponseBase<string>();
+
             try
             {
                 _logger.LogInformation("SendConsentErrorService.GetErrorsExcelBase64Async running at: {time}", DateTimeOffset.Now);
@@ -90,31 +92,39 @@ namespace IYSIntegration.Application.Services
                         excelWorksheet.Cells.AutoFitColumns();
 
                         var bytes = excelPackage.GetAsByteArray();
-                        return Convert.ToBase64String(bytes);
+                        response.Data = Convert.ToBase64String(bytes);
                     }
                 }
-                return string.Empty;
+                response.Data ??= string.Empty;
             }
             catch (Exception ex)
             {
                 _logger.LogError("SendConsentErrorService.GetErrorsExcelBase64Async Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-                return string.Empty;
+                response.Data ??= string.Empty;
+                response.AddMessage("Hata", ex.Message);
             }
+
+            return response;
         }
 
-        public async Task<string> GetErrorsJsonAsync(DateTime? date = null)
+        public async Task<ResponseBase<string>> GetErrorsJsonAsync(DateTime? date = null)
         {
+            var response = new ResponseBase<string>();
+
             try
             {
                 _logger.LogInformation("SendConsentErrorService.GetErrorsJsonAsync running at: {time}", DateTimeOffset.Now);
                 var errorConsents = await _dbService.GetIYSConsentRequestErrors(date);
-                return JsonConvert.SerializeObject(errorConsents ?? new List<Consent>());
+                response.Data =  JsonConvert.SerializeObject(errorConsents ?? new List<Consent>());
             }
             catch (Exception ex)
             {
                 _logger.LogError("SendConsentErrorService.GetErrorsJsonAsync Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-                return string.Empty;
+                response.AddMessage("Hata", ex.Message); 
+                response.Data ??= string.Empty;
             }
+
+            return response;
         }
     }
 }

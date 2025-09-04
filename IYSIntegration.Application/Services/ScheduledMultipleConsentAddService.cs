@@ -1,84 +1,67 @@
+using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Response.Consent;
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
-using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
 
-namespace IYSIntegration.Application.Services
+namespace IYSIntegration.Application.Services;
+
+public class ScheduledMultipleConsentAddService
 {
-    public class ScheduledMultipleConsentAddService
+    private readonly ILogger<ScheduledMultipleConsentAddService> _logger;
+    private readonly IDbService _dbService;
+    private readonly IConfiguration _configuration;
+    private readonly IysClient _client;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IConsentService consentService)
     {
-        private readonly ILogger<ScheduledMultipleConsentAddService> _logger;
-        private readonly IDbService _dbService;
-        private readonly IConfiguration _configuration;
-        private readonly IConsentService _consentService;
-        private readonly object obj = new object();
+        _configuration = configuration;
+        _logger = logger;
+        _dbService = dbHelper;
+        _client = new IysClient(_configuration);
+    }
 
-        public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IConsentService consentService)
-        {
-            _configuration = configuration;
-            _logger = logger;
-            _dbService = dbHelper;
-            _consentService = consentService;
-        }
+    public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
+    {
+        var response = new ResponseBase<ScheduledJobStatistics>();
+        var successCount = 0;
+        var failedCount = 0;
+        var results = new ConcurrentBag<LogResult>();
 
-        public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
+        _logger.LogInformation("MultipleConsentAddService running at: {time}", DateTimeOffset.Now);
+
+        try
         {
-            var response = new ResponseBase<ScheduledJobStatistics>();
-            bool errorFlag = false;
-            int successCount = 0;
-            int failedCount = 0;
-            try
+            var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? new();
+
+            foreach (var companyCode in companyList)
             {
-                _logger.LogInformation("MultipleConsentAddService running at: {time}", DateTimeOffset.Now);
-
-                var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? new List<string>();
-                foreach (var companyCode in companyList)
-                {
-                    await _dbService.UpdateBatchId(companyCode, batchSize);
-                }
-
+                await _dbService.UpdateBatchId(companyCode, batchSize);
                 var batchList = await _dbService.GetBatchSummary(batchCount);
 
                 foreach (var batch in batchList)
                 {
                     try
                     {
-                        var consentRequests = _dbService.GeBatchConsentRequests(batch.BatchId).Result;
-                        var request = new MultipleConsentRequest
+                        var consentRequests = await _dbService.GeBatchConsentRequests(batch.BatchId);
+                        var first = consentRequests.FirstOrDefault();
+                        if (first == null) continue;
+
+                        var consents = consentRequests.Select(x => new Consent
                         {
-                            IysCode = consentRequests[0].IysCode,
-                            BrandCode = consentRequests[0].BrandCode,
-                            Consents = new List<Application.Base.Consent>(),
-                            BatchId = batch.BatchId,
-                            ForBatch = true
-                        };
+                            ConsentDate = x.ConsentDate,
+                            Recipient = x.Recipient,
+                            RecipientType = x.RecipientType,
+                            Source = x.Source,
+                            Status = x.Status,
+                            Type = x.Type
+                        }).ToList();
 
-                        foreach (var consent in consentRequests)
-                        {
-                            request.Consents.Add(new Application.Base.Consent
-                            {
-                                ConsentDate = consent.ConsentDate,
-                                Recipient = consent.Recipient,
-                                RecipientType = consent.RecipientType,
-                                Source = consent.Source,
-                                Status = consent.Status,
-                                Type = consent.Type
-                            });
-                        }
-
-                          if (request.IysCode == 0)
-                        {
-                            var consentParams = _consentService.GetIysCode(request.CompanyCode);
-                            request.IysCode = consentParams.IysCode;
-                            request.BrandCode = consentParams.BrandCode;
-                        }
-
-                        var result = await _consentService.AddMultipleConsent(request);
-
-
+                        var result = await _client.PostJsonAsync<List<Consent>, MultipleConsentResult>($"{companyCode}/multipleConsent", consents);
 
                         if (result.IsSuccessful())
                         {
@@ -92,15 +75,22 @@ namespace IYSIntegration.Application.Services
                                 CheckAfter = checkAfterInSeconds
                             };
 
-                            lock (obj)
+                            await _semaphore.WaitAsync();
+                            try
                             {
-                                _dbService.UpdateBatchConsentRequests(batchConsentQuery).Wait();
+                                await _dbService.UpdateBatchConsentRequests(batchConsentQuery);
                             }
-                            successCount++;
+                            finally
+                            {
+                                _semaphore.Release();
+                            }
+
+                            Interlocked.Increment(ref successCount);
                         }
                         else if (result.HttpStatusCode == 422 && result.OriginalError?.Errors?.Length > 0)
                         {
-                            lock (obj)
+                            await _semaphore.WaitAsync();
+                            try
                             {
                                 foreach (var error in result.OriginalError.Errors)
                                 {
@@ -114,34 +104,45 @@ namespace IYSIntegration.Application.Services
                                         IsQueryResult = false
                                     };
 
-                                    _dbService.UpdateMultipleConsentItem(batchItemResult).Wait();
+                                    await _dbService.UpdateMultipleConsentItem(batchItemResult);
                                 }
 
-                                _dbService.ReorderBatch(batch.BatchId).Wait();
+                                await _dbService.ReorderBatch(batch.BatchId);
                             }
+                            finally
+                            {
+                                _semaphore.Release();
+                            }
+
+                            Interlocked.Increment(ref failedCount);
+                            _logger.LogError($"MultipleConsentAddService {batch.BatchId} hata aldı. IYSConsentRequest tablosuna göz atın");
+                            results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Status = "Failed", Message = $"BatchId {batch.BatchId} ile IYSConsentRequest tablosuna göz atın." });
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        errorFlag = true;
-                        failedCount++;
+                        _logger.LogError($"MultipleConsentAddService {companyCode} hata aldı. IYSConsentRequest tablosuna göz atın");
+                        results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Status = "Failed", Message = $"{companyCode} hata aldı. IYSConsentRequest tablosuna göz atın." });
+                        Interlocked.Increment(ref failedCount);
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError("MultipleConsentAddService hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-            }
-
-            if (errorFlag)
-                _logger.LogError($"MultipleConsentAddService toplam {failedCount + successCount} içinden {failedCount} recipient için hata aldı. , IYSConsentRequest tablosuna göz atın");
-
-            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
-            if (errorFlag)
-            {
-                response.Error("MULTIPLE_CONSENT_ADD", "One or more batches failed.");
-            }
-            return response;
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "MultipleConsentAddService genel hata");
+            results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Failed", Message = $"Genel hata. {ex.Message}" });
+        }
+
+        foreach (var result in results)
+        {
+            var msgKey = result.CompanyCode;
+            var msg = $"{result.Status}{(string.IsNullOrWhiteSpace(result.Message) ? "" : $": {result.Message}")}";
+            response.AddMessage(msgKey, msg);
+        }
+
+        response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
+
+        return response;
     }
 }
