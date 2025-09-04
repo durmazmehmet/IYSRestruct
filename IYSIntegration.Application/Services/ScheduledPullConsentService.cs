@@ -30,7 +30,6 @@ namespace IYSIntegration.Application.Services
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
             var results = new ConcurrentBag<LogResult>();
-            List<string> failedCompanyCodes = [];
             int failedCount = 0;
             int successCount = 0;
 
@@ -70,16 +69,17 @@ namespace IYSIntegration.Application.Services
 
                             if (!pullConsentResult.Status || pullConsentResult.StatusCode == 0 || pullConsentResult.StatusCode >= 500)
                             {
-                                results.Add(new LogResult { Id = 0, Status = "Failed", Message = $"IYS error {pullConsentResult.StatusCode}" });
+                                results.Add(new LogResult { Id = 0,CompanyCode = companyCode, Status = "Failed", Message = $"IYS error {pullConsentResult.StatusCode}" });
                                 Interlocked.Increment(ref failedCount);
                                 _logger.LogError("pullconsent failed (status: {Status}) for company {companyCode}", pullConsentResult.StatusCode, companyCode);
                                 continue;
                             }
 
                             var consentList = pullConsentResult.Data?.List;
-
+                            
                             if (consentList?.Length > 0)
                             {
+                                results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Status = "Recordcount", Message = consentList?.Length.ToString() });
                                 foreach (var consent in consentList)
                                 {
                                     var addConsentRequest = new AddConsentRequest
@@ -104,7 +104,7 @@ namespace IYSIntegration.Application.Services
                             }
                             else
                             {
-
+                                results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Status = "Recordcount", Message = "0"});
                                 await _dbService.UpdateJustRequestDateOfPullRequestLog(new PullRequestLog
                                 {
                                     CompanyCode = companyCode,
@@ -121,7 +121,6 @@ namespace IYSIntegration.Application.Services
                     catch (Exception ex)
                     {
                         results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Status = "Exception", Message = ex.Message });
-                        failedCompanyCodes.Add(companyCode);
                     }
                 }
             }
@@ -133,13 +132,11 @@ namespace IYSIntegration.Application.Services
             response.Data = new ScheduledJobStatistics
             {
                 SuccessCount = successCount,
-                FailedCount = failedCompanyCodes.Count,
-                FailedCompanyCodes = failedCompanyCodes
             };
 
             foreach (var result in results)
             {
-                var msgKey = $"Consent_{result.Id}_{result.CompanyCode}";
+                var msgKey = result.CompanyCode;
                 var msg = $"{result.Status}{(string.IsNullOrWhiteSpace(result.Message) ? "" : $": {result.Message}")}";
                 response.AddMessage(msgKey, msg);
             }

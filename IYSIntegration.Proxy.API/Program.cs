@@ -36,6 +36,7 @@ internal class Program
         builder.Services.AddSingleton<IIdentityService, IdentityService>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
         builder.Services.AddSingleton<IRestClientService, RestClientService>();
+        builder.Services.AddSingleton<IDbService, DbService>();
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();

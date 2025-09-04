@@ -1,8 +1,5 @@
 ﻿using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Base;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
 
 namespace IYSIntegration.API.Controllers
 {
@@ -42,8 +39,8 @@ namespace IYSIntegration.API.Controllers
         {
             var result = await _multipleConsentQueryService.RunAsync(batchCount);
             if (!result.IsSuccessful())
-                return StatusCode(500, result.Messages);
-            return Ok(result.Data);
+                return StatusCode(500, result);
+            return Ok(result);
         }
 
         /// <summary>
@@ -58,8 +55,8 @@ namespace IYSIntegration.API.Controllers
         {
             var result = await _multipleConsentAddService.RunAsync(batchSize, batchCount, checkAfter);
             if (!result.IsSuccessful())
-                return StatusCode(500, result.Messages);
-            return Ok(result.Data);
+                return StatusCode(500, result);
+            return Ok(result);
         }
 
         /// <summary>
@@ -72,8 +69,8 @@ namespace IYSIntegration.API.Controllers
         {
             var result = await _singleConsentAddService.RunAsync(rowCount);
             if (!result.IsSuccessful())
-                return StatusCode(500, result.Messages);
-            return Ok(result.Data);
+                return StatusCode(500, result);
+            return Ok(result);
         }
         /// <summary>
         /// IYS'den rıza kayıtlarını çekilir ve SF'a aktarılır.
@@ -85,8 +82,8 @@ namespace IYSIntegration.API.Controllers
         {
             var result = await _pullConsentService.RunAsync(batchSize);
             if (!result.IsSuccessful())
-                return StatusCode(500, result.Messages);
-            return Ok(result.Data);
+                return StatusCode(500, result);
+            return Ok(result);
         }
         /// <summary>
         /// SF'dan gelen consentler sıraya alınır
@@ -98,8 +95,8 @@ namespace IYSIntegration.API.Controllers
         {
             var result = await _sfConsentService.RunAsync(rowCount);
             if (!result.IsSuccessful())
-                return StatusCode(500, result.Messages);
-            return Ok(result.Data);
+                return StatusCode(500, result);
+            return Ok(result);
         }
 
         /// <summary>
