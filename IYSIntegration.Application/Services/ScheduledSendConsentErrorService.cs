@@ -23,6 +23,7 @@ namespace IYSIntegration.Application.Services
         public async Task<ResponseBase<string>> GetErrorsExcelBase64Async(DateTime? date = null)
         {
             var response = new ResponseBase<string>();
+            ExcelPackage.License.SetNonCommercialOrganization("IYSIntegration");
 
             try
             {
@@ -107,21 +108,21 @@ namespace IYSIntegration.Application.Services
             return response;
         }
 
-        public async Task<ResponseBase<string>> GetErrorsJsonAsync(DateTime? date = null)
+        public async Task<ResponseBase<List<Consent>>> GetErrorsJsonAsync(DateTime? date = null)
         {
-            var response = new ResponseBase<string>();
+            var response = new ResponseBase<List<Consent>>();
 
             try
             {
                 _logger.LogInformation("SendConsentErrorService.GetErrorsJsonAsync running at: {time}", DateTimeOffset.Now);
                 var errorConsents = await _dbService.GetIYSConsentRequestErrors(date);
-                response.Data =  JsonConvert.SerializeObject(errorConsents ?? new List<Consent>());
+                response.Data = errorConsents ?? new List<Consent>();
             }
             catch (Exception ex)
             {
                 _logger.LogError("SendConsentErrorService.GetErrorsJsonAsync Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
                 response.AddMessage("Hata", ex.Message); 
-                response.Data ??= string.Empty;
+                response.Data ??= new List<Consent>();
             }
 
             return response;
