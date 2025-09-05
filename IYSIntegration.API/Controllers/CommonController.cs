@@ -15,22 +15,19 @@ namespace IYSIntegration.API.Controllers
     {
         private readonly IDbService _dbService;
         private readonly IConfiguration _config;
-        private readonly IysClient _client;
-        private readonly SalesforceClient _sfClient;
+        private readonly IysProxy _client;
 
-        public CommonController(IDbService dbHelper, IConfiguration config)
+        public CommonController(IDbService dbHelper, IysProxy iysClient)
         {
             _dbService = dbHelper;
-            _config = config;
-            _client = new IysClient(_config);
-            _sfClient = new SalesforceClient(_config);
+            _client = iysClient;
         }
 
         [Route("addConsent")]
         [HttpPost]
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
-            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"{request.CompanyCode}/addConsent", request.Consent);
+            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consent/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)
             {
@@ -52,7 +49,7 @@ namespace IYSIntegration.API.Controllers
         [Route("queryConsent")]
         [HttpPost]
         public async Task<ResponseBase<QueryConsentResult>> QueryConsent([FromBody] QueryConsentRequest request)
-            => await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"{request.CompanyCode}/queryConsent", request.RecipientKey);
+            => await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consent/{request.CompanyCode}/queryConsent", request.RecipientKey);
 
         [Route("queryConsentAsync/{id}")]
         [HttpGet]
@@ -137,19 +134,19 @@ namespace IYSIntegration.API.Controllers
         [Route("sendMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<MultipleConsentResult>> SendMultipleConsent([FromBody] MultipleConsentRequest request)
-            => await _client.PostJsonAsync<MultipleConsentRequest, MultipleConsentResult>($"{request.CompanyCode}/addMultipleConsent", request);
+            => await _client.PostJsonAsync<MultipleConsentRequest, MultipleConsentResult>($"consent/{request.CompanyCode}/addMultipleConsent", request);
 
 
         [Route("queryMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(QueryMultipleConsentRequest request)
-           => await _client.PostJsonAsync<QueryMultipleConsentRequest, List<QueryMultipleConsentResult>>($"{request.CompanyCode}/queryMultipleConsent", request);
+           => await _client.PostJsonAsync<QueryMultipleConsentRequest, List<QueryMultipleConsentResult>>($"consent/{request.CompanyCode}/queryMultipleConsent", request);
 
 
         [Route("pullConsent")]
         [HttpPost]
         public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
-            => await _client.PostJsonAsync<PullConsentRequest, PullConsentResult>($"{request.CompanyCode}/pullConsent", request);
+            => await _client.PostJsonAsync<PullConsentRequest, PullConsentResult>($"consent/{request.CompanyCode}/pullConsent", request);
 
 
         [Route("sfaddconsent")]
@@ -180,7 +177,7 @@ namespace IYSIntegration.API.Controllers
                 Action = "Salesforce Add Consent"
             });
 
-            var response = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("AddConsent", requestBody);
+            var response = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("salesForce/AddConsent", requestBody);
 
             await _dbService.UpdateLogFromResponseBase<SfConsentAddResponse>(response, logId);
 

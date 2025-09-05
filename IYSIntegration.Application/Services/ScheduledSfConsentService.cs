@@ -12,15 +12,13 @@ namespace IYSIntegration.Application.Services
     {
         private readonly ILogger<ScheduledSfConsentService> _logger;
         private readonly IDbService _dbService;
-        private readonly SalesforceClient _client;
-        private readonly IConfiguration _config;
+        private readonly SfClient _client;
 
-        public ScheduledSfConsentService(ILogger<ScheduledSfConsentService> logger, IConfiguration config, IDbService dbHelper)
+        public ScheduledSfConsentService(ILogger<ScheduledSfConsentService> logger, IDbService dbHelper, SfClient sfClient)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _config = config;
-            _client = new SalesforceClient(_config);
+            _client = sfClient;
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)

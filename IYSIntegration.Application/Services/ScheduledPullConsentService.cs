@@ -3,7 +3,6 @@ using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
@@ -13,16 +12,14 @@ namespace IYSIntegration.Application.Services
     {
         private readonly ILogger<ScheduledPullConsentService> _logger;
         private readonly IDbService _dbService;
-        private readonly IConfiguration _configuration;
-        private readonly IysClient _client;
+        private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
 
-        public ScheduledPullConsentService(IConfiguration configuration, ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IIysHelper iysHelper)
+        public ScheduledPullConsentService(ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IIysHelper iysHelper, IysProxy iysClient)
         {
-            _configuration = configuration;
             _logger = logger;
             _dbService = dbHelper;
-            _client = new IysClient(_configuration);
+            _client = iysClient;
             _iysHelper = iysHelper;
         }
 
@@ -37,7 +34,7 @@ namespace IYSIntegration.Application.Services
             {
                 _logger.LogInformation("PullConsentService running at: {time}", DateTimeOffset.Now);
 
-                var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? [];
+                var companyList = _iysHelper.GetAllCompanyCodes();
 
                 foreach (var companyCode in companyList)
                 {

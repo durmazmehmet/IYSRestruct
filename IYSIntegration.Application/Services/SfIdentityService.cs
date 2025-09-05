@@ -10,7 +10,6 @@ namespace IYSIntegration.Application.Services;
 
 public class SfIdentityService : ISfIdentityService
 {
-    private SfToken token;
     private readonly IConfiguration _config;
     private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private readonly ICacheService _cacheService;

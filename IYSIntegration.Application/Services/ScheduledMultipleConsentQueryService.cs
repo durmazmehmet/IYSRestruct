@@ -12,16 +12,14 @@ namespace IYSIntegration.Application.Services
     {
         private readonly ILogger<ScheduledMultipleConsentQueryService> _logger;
         private readonly IDbService _dbService;
-        private readonly IysClient _client;
+        private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
-        private readonly IConfiguration _configuration;
 
-        public ScheduledMultipleConsentQueryService(IConfiguration configuration, ILogger<ScheduledMultipleConsentQueryService> logger, IDbService dbHelper, IIysHelper iysHelper)
+        public ScheduledMultipleConsentQueryService(ILogger<ScheduledMultipleConsentQueryService> logger, IDbService dbHelper, IIysHelper iysHelper, IysProxy iysClient)
         {
-            _configuration = configuration;
             _logger = logger;
             _dbService = dbHelper;
-            _client = new IysClient(_configuration);
+            _client = iysClient;
             _iysHelper = iysHelper;
         }
 

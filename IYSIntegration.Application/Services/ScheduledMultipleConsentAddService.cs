@@ -14,10 +14,10 @@ public class ScheduledMultipleConsentAddService
     private readonly ILogger<ScheduledMultipleConsentAddService> _logger;
     private readonly IDbService _dbService;
     private readonly IConfiguration _configuration;
-    private readonly ISimpleRestClient _client;
+    private readonly IysProxy _client;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, ISimpleRestClient client)
+    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IysProxy client)
     {
         _configuration = configuration;
         _logger = logger;

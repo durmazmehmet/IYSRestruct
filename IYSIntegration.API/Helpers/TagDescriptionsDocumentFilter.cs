@@ -14,10 +14,6 @@ namespace IYSIntegration.API.Helpers
                     Description = "IYS takvimli işler servisi"
                 },
                 new() {
-                    Name = "Brand",
-                    Description = "IYS Marka kodları servisi"
-                },
-                new() {
                     Name = "Common",
                     Description = "Ortak İşlevler"
                 }

@@ -14,6 +14,10 @@ namespace IYSIntegration.Proxy.API.Helpers
                     Description = "IYS Consents Servisi"
                 },
                 new() {
+                    Name = "SalesForce",
+                    Description = "SalesForce Proxy Servisi"
+                },
+                new() {
                     Name = "Brands",
                     Description = "IYS Brands Servisi"
                 },
@@ -22,16 +26,12 @@ namespace IYSIntegration.Proxy.API.Helpers
                     Description = "IYS Info Servisi"
                 },
                 new() {
-                    Name = "Retailers Access",
+                    Name = "RetailersAccess",
                     Description = "IYS Retailers Access Servisi"
                 },
                 new() {
                     Name = "Retailers",
                     Description = "IYS Retailers Servisi"
-                },
-                new() {
-                    Name = "SFProxy",
-                    Description = "SF Proxy Servisi"
                 }
             ];
         }

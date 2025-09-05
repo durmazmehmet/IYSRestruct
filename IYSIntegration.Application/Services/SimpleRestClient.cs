@@ -1,13 +1,9 @@
 ﻿using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
-using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using RestSharp;
 
 namespace IYSIntegration.Application.Services;
-
-public sealed class SalesforceClient(IConfiguration c) : SimpleRestClient(c["BaseSfProxyUrl"]!) { }
-public sealed class IysClient(IConfiguration c) : SimpleRestClient(c["BaseIysProxyUrl"]!) { }
 
 public class SimpleRestClient : ISimpleRestClient
 {
@@ -15,14 +11,14 @@ public class SimpleRestClient : ISimpleRestClient
     private string? _authScheme;
     private string? _authToken;
 
-    public SimpleRestClient(string baseUrl, int timeoutMs = 30000)
+    public SimpleRestClient(string baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
             throw new ArgumentException("Base URL boş olamaz.", nameof(baseUrl));
 
         _client = new RestClient(new RestClientOptions(baseUrl)
         {
-            MaxTimeout = timeoutMs,
+            MaxTimeout = 30000,
             ThrowOnAnyError = false
         });
     }

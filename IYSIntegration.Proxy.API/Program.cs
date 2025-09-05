@@ -31,6 +31,13 @@ internal class Program
 
         builder.Services.AddSingleton<ICacheService, CacheService>();
 
+        builder.Services.AddTransient<SfClient>(provider =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            var url = config.GetValue<string>("SfApexUrl");
+            return new SfClient(url);
+        });
+
         // Domain services
         builder.Services.AddSingleton<IIysIdentityService, IysIdentityService>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();

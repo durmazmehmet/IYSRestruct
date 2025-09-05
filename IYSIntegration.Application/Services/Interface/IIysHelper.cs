@@ -7,4 +7,5 @@ public interface IIysHelper
     ConsentParams GetIysCode(string companyCode);
     string? GetCompanyCode(int code);
     bool IsOlderThanBusinessDays(DateTime consentDate, int maxBusinessDays);
+    List<string> GetAllCompanyCodes();
 }

@@ -14,12 +14,16 @@ internal class Program
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddSingleton<LoggerServiceBase>(provider => { return new GrayLogger(); });
+        builder.Services.AddSingleton<IDbService, DbService>();
+
+        builder.Services.AddTransient<SfClient>(provider =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            var url = config.GetValue<string>("BaseSfProxyUrl");
+            return new SfClient(url);
+        });
 
         builder.Services.AddScoped<IIysHelper, IysHelper>();
-        builder.Services.AddSingleton<IDbService, DbService>();
-        builder.Services.AddSingleton<SalesforceClient>();
-        builder.Services.AddSingleton<ISimpleRestClient, IysClient>();
-
         builder.Services.AddScoped<ScheduledMultipleConsentQueryService>();
         builder.Services.AddScoped<ScheduledSingleConsentAddService>();
         builder.Services.AddScoped<ScheduledMultipleConsentAddService>();

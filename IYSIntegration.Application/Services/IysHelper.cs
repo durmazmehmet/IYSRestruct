@@ -13,6 +13,8 @@ public sealed class IysHelper : IIysHelper
         _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
+    public List<string> GetAllCompanyCodes() => _config.GetSection("CompanyCodes").Get<List<string>>() ?? [];
+
     public ConsentParams GetIysCode(string companyCode)
     {
         if (string.IsNullOrWhiteSpace(companyCode))

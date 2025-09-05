@@ -13,10 +13,10 @@ public class ScheduledSingleConsentAddService
 {
     private readonly ILogger<ScheduledSingleConsentAddService> _logger;
     private readonly IDbService _dbService;
-    private readonly ISimpleRestClient _client;
+    private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
 
-    public ScheduledSingleConsentAddService(ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, ISimpleRestClient client, IIysHelper iysHelper)
+    public ScheduledSingleConsentAddService(ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IysProxy client, IIysHelper iysHelper)
     {
         _logger = logger;
         _dbService = dbHelper;

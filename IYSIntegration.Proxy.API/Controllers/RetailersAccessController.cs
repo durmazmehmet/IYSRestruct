@@ -96,6 +96,7 @@ public class RetailersAccessController : ControllerBase
     /// </summary>
     /// <param name="request"></param>
     /// <returns></returns>
+    [HttpPost("deleteRetailerAccess")]
     public async Task<ResponseBase<DeleteRetailerAccessResult>> DeleteRetailerAccess(DeleteRetailerAccessRequest request)
     {
         var iysRequest = new IysRequest<RetailerRecipientAccess>
