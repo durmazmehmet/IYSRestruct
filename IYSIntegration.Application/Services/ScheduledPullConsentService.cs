@@ -60,7 +60,7 @@ namespace IYSIntegration.Application.Services
                             };
 
                             var pullConsentResult = await _client.GetAsync<PullConsentResult>(
-                                $"{companyCode}/pullConsent",
+                                $"consents/{companyCode}/pullConsent",
                                 queryParams);
 
                             if (!pullConsentResult.IsSuccessful() || pullConsentResult.HttpStatusCode == 0 || pullConsentResult.HttpStatusCode >= 500)

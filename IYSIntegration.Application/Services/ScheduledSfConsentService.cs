@@ -12,13 +12,13 @@ namespace IYSIntegration.Application.Services
     {
         private readonly ILogger<ScheduledSfConsentService> _logger;
         private readonly IDbService _dbService;
-        private readonly SfClient _client;
+        private readonly IysProxy _client;
 
-        public ScheduledSfConsentService(ILogger<ScheduledSfConsentService> logger, IDbService dbHelper, SfClient sfClient)
+        public ScheduledSfConsentService(ILogger<ScheduledSfConsentService> logger, IDbService dbHelper, IysProxy client)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _client = sfClient;
+            _client = client;
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
@@ -82,7 +82,7 @@ namespace IYSIntegration.Application.Services
                             consent
                         };
 
-                        var addConsentResult = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("AddConsent", new SfConsentAddRequest { Request = request });
+                        var addConsentResult = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("salesforce/AddConsent", new SfConsentAddRequest { Request = request });
 
 
                         if (addConsentResult.IsSuccessful())
