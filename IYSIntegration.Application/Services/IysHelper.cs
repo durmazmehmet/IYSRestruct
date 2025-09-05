@@ -1,5 +1,5 @@
-﻿using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Services.Interface;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Base;
 using Microsoft.Extensions.Configuration;
 
 namespace IYSIntegration.Application.Services;

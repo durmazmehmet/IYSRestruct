@@ -1,11 +1,10 @@
-﻿using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Middleware.Exceptions.Handlers;
+﻿using IYSIntegration.Application.Middleware.Exceptions.Handlers;
+using IYSIntegration.Application.Middleware.LoggingService;
+using IYSIntegration.Application.Services.Models.Base;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Security.Authentication;
-using System.IO;
-using IYSIntegration.Application.Middleware.LoggingService;
 
 namespace IYSIntegration.Application.Middleware.Exceptions;
 

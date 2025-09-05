@@ -1,5 +1,4 @@
-﻿using IYSIntegration.Application.Middleware.LoggingService;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Serilog;
 
 namespace IYSIntegration.Application.Middleware.LoggingService.Loggers;

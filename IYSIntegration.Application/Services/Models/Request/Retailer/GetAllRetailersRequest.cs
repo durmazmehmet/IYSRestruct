@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using IYSIntegration.Application.Services.Models.Base;
+using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Request.Retailer
+namespace IYSIntegration.Application.Services.Models.Request.Retailer
 {
-    public class GetAllRetailersRequest : Base.ConsentParams
+    public class GetAllRetailersRequest : ConsentParams
     {
         [JsonProperty("offset")]
         public int? Offset { get; set; }

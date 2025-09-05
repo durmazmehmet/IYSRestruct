@@ -1,8 +1,8 @@
-﻿using IYSIntegration.Application.Base;
+﻿using IYSIntegration.Application.Services.Models.Base;
 
-namespace IYSIntegration.Application.Request.RetailerAccess
+namespace IYSIntegration.Application.Services.Models.Request.RetailerAccess
 {
-    public class DeleteRetailerAccessRequest : Application.Base.ConsentParams
+    public class DeleteRetailerAccessRequest : ConsentParams
     {
         public RetailerRecipientAccess RetailerRecipientAccess { get; set; }
     }

@@ -1,4 +1,4 @@
-namespace IYSIntegration.Application.Services
+namespace IYSIntegration.Application.Services.Models.Base
 {
     public class LogResult
     {

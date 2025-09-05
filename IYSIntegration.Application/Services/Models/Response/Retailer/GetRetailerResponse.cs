@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Response.Retailer
+namespace IYSIntegration.Application.Services.Models.Response.Retailer
 {
     public class GetRetailerResponse : Base.Retailer
     {

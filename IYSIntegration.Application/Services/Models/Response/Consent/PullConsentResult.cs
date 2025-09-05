@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Response.Consent
+namespace IYSIntegration.Application.Services.Models.Response.Consent
 {
     public class PullConsentResult
     {
@@ -8,6 +8,6 @@ namespace IYSIntegration.Application.Response.Consent
         public string After { get; set; }
 
         [JsonProperty("list")]
-        public Application.Base.Consent[] List { get; set; }
+        public Base.Consent[] List { get; set; }
     }
 }

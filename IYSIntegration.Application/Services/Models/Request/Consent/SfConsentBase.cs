@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Request.Consent
+namespace IYSIntegration.Application.Services.Models.Request.Consent
 {
     public class SfConsentBase
     {
@@ -8,6 +8,6 @@ namespace IYSIntegration.Application.Request.Consent
         public string CompanyCode { get; set; }
 
         [JsonProperty("consents")]
-        public List<Application.Base.Consent> Consents { get; set; }
+        public List<Base.Consent> Consents { get; set; }
     }
 }

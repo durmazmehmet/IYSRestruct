@@ -1,8 +1,7 @@
-﻿using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request.Consent;
-using IYSIntegration.Application.Response.Consent;
-using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Services.Interface;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Request.Consent;
+using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.Proxy.API.Controllers;
@@ -32,7 +31,7 @@ public class SalesForceController : ControllerBase
     {
         var token = await _identityManager.GetToken(true);
 
-        _clientHelper.AddAuthorization("Bearer",token.AccessToken);
+        _clientHelper.AddAuthorization("Bearer", token.AccessToken);
 
         // new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }),????
 

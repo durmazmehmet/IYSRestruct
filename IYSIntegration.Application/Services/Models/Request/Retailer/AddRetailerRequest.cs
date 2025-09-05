@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Request.Retailer
+namespace IYSIntegration.Application.Services.Models.Request.Retailer
 {
     public class AddRetailerRequest
     {

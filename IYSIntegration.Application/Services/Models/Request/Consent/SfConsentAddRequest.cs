@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Request.Consent
+namespace IYSIntegration.Application.Services.Models.Request.Consent
 {
     public class SfConsentAddRequest
     {

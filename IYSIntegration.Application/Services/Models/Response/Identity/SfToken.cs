@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 
 
-namespace IYSIntegration.Application.Response.Identity
+namespace IYSIntegration.Application.Services.Models.Response.Identity
 {
     public class SfToken
     {

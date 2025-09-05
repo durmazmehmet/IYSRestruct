@@ -1,9 +1,8 @@
-﻿using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Services.Interface;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Base;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using RestSharp;
-using System;
 
 namespace IYSIntegration.Application.Services;
 

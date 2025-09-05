@@ -1,9 +1,8 @@
 ﻿using IYSIntegration.Application.Services.Models;
-using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request.Consent;
-using IYSIntegration.Application.Response.Consent;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Request.Consent;
+using IYSIntegration.Application.Services.Models.Response.Consent;
 using RestSharp;
-using System;
 
 namespace IYSIntegration.Application.Services.Interface
 {

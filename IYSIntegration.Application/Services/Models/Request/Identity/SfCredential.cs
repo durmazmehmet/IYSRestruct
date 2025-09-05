@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Request.Identity
+namespace IYSIntegration.Application.Services.Models.Request.Identity
 {
     public partial class SfCredential
     {

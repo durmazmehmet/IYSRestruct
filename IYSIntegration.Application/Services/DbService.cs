@@ -1,16 +1,15 @@
 ﻿using Dapper;
-using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request.Consent;
-using IYSIntegration.Application.Response.Consent;
+using IYSIntegration.Application.Services.Constants;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Request.Consent;
+using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using System.Data.SqlClient;
-using System;
-using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Services.Constants;
-using IYSIntegration.Application.Services.Models;
 namespace IYSIntegration.Application.Services
 {
     public class DbService : IDbService
@@ -19,7 +18,7 @@ namespace IYSIntegration.Application.Services
         private readonly ILogger<DbService> _logger;
         private readonly IIysHelper _iysHelper;
 
-        public DbService(IConfiguration configuration, ILogger<DbService> loggerServiceBase, IIysHelper iysHelper   )
+        public DbService(IConfiguration configuration, ILogger<DbService> loggerServiceBase, IIysHelper iysHelper)
         {
             _configuration = configuration;
             _logger = loggerServiceBase;

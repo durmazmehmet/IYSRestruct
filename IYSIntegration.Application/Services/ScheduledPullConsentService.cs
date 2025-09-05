@@ -1,8 +1,8 @@
-using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request.Consent;
-using IYSIntegration.Application.Response.Consent;
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Request.Consent;
+using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -68,14 +68,14 @@ namespace IYSIntegration.Application.Services
 
                             if (!pullConsentResult.IsSuccessful() || pullConsentResult.HttpStatusCode == 0 || pullConsentResult.HttpStatusCode >= 500)
                             {
-                                results.Add(new LogResult { Id = 0,CompanyCode = companyCode, Status = "Failed", Message = $"IYS error {pullConsentResult.OriginalError}" });
+                                results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Status = "Failed", Message = $"IYS error {pullConsentResult.OriginalError}" });
                                 Interlocked.Increment(ref failedCount);
                                 _logger.LogError("pullconsent failed (status: {Status}) for company {companyCode}", pullConsentResult.HttpStatusCode, companyCode);
                                 continue;
                             }
 
                             var consentList = pullConsentResult.Data?.List;
-                            
+
                             if (consentList?.Length > 0)
                             {
                                 results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Status = "Recordcount", Message = consentList?.Length.ToString() });
@@ -103,7 +103,7 @@ namespace IYSIntegration.Application.Services
                             }
                             else
                             {
-                                results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Status = "Recordcount", Message = "0"});
+                                results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Status = "Recordcount", Message = "0" });
                                 await _dbService.UpdateJustRequestDateOfPullRequestLog(new PullRequestLog
                                 {
                                     CompanyCode = companyCode,
@@ -115,7 +115,7 @@ namespace IYSIntegration.Application.Services
                             }
                         }
 
-                        Interlocked.Increment(ref successCount); 
+                        Interlocked.Increment(ref successCount);
                     }
                     catch (Exception ex)
                     {

@@ -1,6 +1,6 @@
-﻿using IYSIntegration.Application.Request.Identity;
-using IYSIntegration.Application.Response.Identity;
-using IYSIntegration.Application.Services.Interface;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Request.Identity;
+using IYSIntegration.Application.Services.Models.Response.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;

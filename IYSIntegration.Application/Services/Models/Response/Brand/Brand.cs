@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Response.Brand
+namespace IYSIntegration.Application.Services.Models.Response.Brand
 {
     public class Brand
     {

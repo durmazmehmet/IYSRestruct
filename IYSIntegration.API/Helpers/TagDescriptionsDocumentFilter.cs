@@ -20,7 +20,7 @@ namespace IYSIntegration.API.Helpers
                 new() {
                     Name = "Common",
                     Description = "Ortak İşlevler"
-                }                
+                }
             ];
         }
     }

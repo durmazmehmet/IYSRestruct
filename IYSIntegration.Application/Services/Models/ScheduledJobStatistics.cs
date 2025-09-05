@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace IYSIntegration.Application.Services.Models
 {
     /// <summary>

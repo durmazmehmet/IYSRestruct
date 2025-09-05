@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Response.Identity;
+﻿using IYSIntegration.Application.Services.Models.Response.Identity;
 
 namespace IYSIntegration.Application.Services.Interface
 {

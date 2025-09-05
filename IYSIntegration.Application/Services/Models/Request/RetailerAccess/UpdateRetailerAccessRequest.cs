@@ -1,8 +1,8 @@
-﻿using IYSIntegration.Application.Base;
+﻿using IYSIntegration.Application.Services.Models.Base;
 
-namespace IYSIntegration.Application.Request.RetailerAccess
+namespace IYSIntegration.Application.Services.Models.Request.RetailerAccess
 {
-    public class UpdateRetailerAccessRequest : Application.Base.ConsentParams
+    public class UpdateRetailerAccessRequest : ConsentParams
     {
         public RetailerRecipientAccess RetailerRecipientAccess { get; set; }
     }

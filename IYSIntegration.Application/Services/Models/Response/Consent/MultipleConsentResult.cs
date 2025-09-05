@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Response.Consent
+namespace IYSIntegration.Application.Services.Models.Response.Consent
 {
     public partial class MultipleConsentResult
     {

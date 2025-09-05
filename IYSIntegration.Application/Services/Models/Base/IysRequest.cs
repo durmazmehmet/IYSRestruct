@@ -1,6 +1,6 @@
 ﻿using RestSharp;
 
-namespace IYSIntegration.Application.Base
+namespace IYSIntegration.Application.Services.Models.Base
 {
     public class IysRequest
     {

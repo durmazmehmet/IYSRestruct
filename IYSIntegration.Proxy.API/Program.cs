@@ -1,9 +1,9 @@
-﻿using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Middleware.Exceptions;
+﻿using IYSIntegration.Application.Middleware.Exceptions;
 using IYSIntegration.Application.Middleware.LoggingService;
 using IYSIntegration.Application.Middleware.LoggingService.Loggers;
+using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Proxy.API.Helpers;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;

@@ -1,8 +1,10 @@
-﻿namespace IYSIntegration.Application.Request.Consent
+﻿using IYSIntegration.Application.Services.Models.Base;
+
+namespace IYSIntegration.Application.Services.Models.Request.Consent
 {
-    public class AddConsentRequest : Base.ConsentParams
+    public class AddConsentRequest : ConsentParams
     {
-        public Application.Base.Consent Consent { get; set; }
+        public Base.Consent Consent { get; set; }
         public bool WithoutLogging { get; set; }
         public string? SalesforceId { get; set; }
         public string? CompanyCode { get; set; }

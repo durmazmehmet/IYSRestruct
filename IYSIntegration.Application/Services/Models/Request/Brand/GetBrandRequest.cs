@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Request.Brand
+namespace IYSIntegration.Application.Services.Models.Request.Brand
 {
     public class GetBrandRequest
     {

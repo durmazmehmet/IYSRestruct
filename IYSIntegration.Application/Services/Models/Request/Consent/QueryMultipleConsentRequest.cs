@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using IYSIntegration.Application.Services.Models.Base;
+using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Request.Consent
+namespace IYSIntegration.Application.Services.Models.Request.Consent
 {
-    public class QueryMultipleConsentRequest : Base.ConsentParams
+    public class QueryMultipleConsentRequest : ConsentParams
     {
 
         [JsonProperty("companyCode")]

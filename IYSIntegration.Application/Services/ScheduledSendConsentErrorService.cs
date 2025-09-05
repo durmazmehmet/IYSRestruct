@@ -1,7 +1,6 @@
 using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Services.Models.Base;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System.Drawing;
@@ -121,7 +120,7 @@ namespace IYSIntegration.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError("SendConsentErrorService.GetErrorsJsonAsync Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-                response.AddMessage("Hata", ex.Message); 
+                response.AddMessage("Hata", ex.Message);
                 response.Data ??= new List<Consent>();
             }
 

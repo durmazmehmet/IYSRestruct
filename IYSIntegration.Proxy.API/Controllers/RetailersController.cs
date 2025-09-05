@@ -1,8 +1,7 @@
-﻿using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request;
-using IYSIntegration.Application.Response.Retailer;
-using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Services.Interface;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Request;
+using IYSIntegration.Application.Services.Models.Response.Retailer;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.Proxy.API.Controllers;
@@ -32,7 +31,7 @@ public class RetailersController : ControllerBase
     /// <returns></returns>
     [HttpPost("addRetailer")]
     public async Task<ResponseBase<AddRetailerResponse>> AddConsent(
-        [FromRoute] string companyCode, 
+        [FromRoute] string companyCode,
         [FromBody] Retailer retailer)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);

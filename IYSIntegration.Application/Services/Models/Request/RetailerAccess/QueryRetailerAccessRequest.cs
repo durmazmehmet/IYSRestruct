@@ -1,9 +1,9 @@
-﻿using IYSIntegration.Application.Base;
+﻿using IYSIntegration.Application.Services.Models.Base;
 using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Request.RetailerAccess
+namespace IYSIntegration.Application.Services.Models.Request.RetailerAccess
 {
-    public class QueryRetailerAccessRequest : Application.Base.ConsentParams
+    public class QueryRetailerAccessRequest : ConsentParams
     {
         [JsonProperty("offset")]
         public int? Offset { get; set; }

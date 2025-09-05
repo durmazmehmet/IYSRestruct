@@ -1,9 +1,4 @@
-﻿using IYSIntegration.Application.Base;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using IYSIntegration.Application.Services.Models.Base;
 
 namespace IYSIntegration.Application.Services.Interface;
 

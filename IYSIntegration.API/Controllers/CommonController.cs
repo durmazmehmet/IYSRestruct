@@ -1,9 +1,9 @@
-﻿using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Error;
-using IYSIntegration.Application.Request.Consent;
-using IYSIntegration.Application.Response.Consent;
-using IYSIntegration.Application.Services;
+﻿using IYSIntegration.Application.Services;
 using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Error;
+using IYSIntegration.Application.Services.Models.Request.Consent;
+using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
@@ -47,11 +47,11 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<int> AddConsentAsync([FromBody] AddConsentRequest request)
             => await _dbService.InsertConsentRequest(request);
-        
+
 
         [Route("queryConsent")]
         [HttpPost]
-        public async Task<ResponseBase<QueryConsentResult>> QueryConsent([FromBody] QueryConsentRequest request) 
+        public async Task<ResponseBase<QueryConsentResult>> QueryConsent([FromBody] QueryConsentRequest request)
             => await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"{request.CompanyCode}/queryConsent", request.RecipientKey);
 
         [Route("queryConsentAsync/{id}")]
@@ -69,18 +69,18 @@ namespace IYSIntegration.API.Controllers
 
             if (!consentLog.IsProcessed)
             {
-                response.Status = Application.Base.ServiceResponseStatuses.Waiting;
+                response.Status = ServiceResponseStatuses.Waiting;
             }
             else
             {
                 if (consentLog.IsSuccess)
                 {
-                    response.Status = Application.Base.ServiceResponseStatuses.Success;
+                    response.Status = ServiceResponseStatuses.Success;
                     response.Data = JsonConvert.DeserializeObject<AddConsentResult>(consentLog.Response);
                 }
                 else
                 {
-                    response.Status = Application.Base.ServiceResponseStatuses.Error;
+                    response.Status = ServiceResponseStatuses.Error;
                     var error = JsonConvert.DeserializeObject<GenericError>(consentLog.Response);
                     if (!string.IsNullOrEmpty(error.Message))
                     {
@@ -201,6 +201,6 @@ namespace IYSIntegration.API.Controllers
                 };
             }
         }
- 
+
     }
 }

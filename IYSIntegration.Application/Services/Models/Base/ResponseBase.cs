@@ -1,6 +1,6 @@
-﻿using IYSIntegration.Application.Error;
+﻿using IYSIntegration.Application.Services.Models.Error;
 
-namespace IYSIntegration.Application.Base
+namespace IYSIntegration.Application.Services.Models.Base
 {
     public enum ServiceResponseStatuses : int
     {
@@ -18,7 +18,7 @@ namespace IYSIntegration.Application.Base
     {
         public ResponseBase()
         {
-            this.Status = ServiceResponseStatuses.Success;
+            Status = ServiceResponseStatuses.Success;
             Messages = new Dictionary<string, string>();
         }
 
@@ -39,31 +39,31 @@ namespace IYSIntegration.Application.Base
 
         public void AddMessage(string messageKey, string message)
         {
-            if (this.Messages == null)
+            if (Messages == null)
             {
-                this.Messages = new Dictionary<string, string>();
+                Messages = new Dictionary<string, string>();
             }
 
-            if (!this.Messages.ContainsKey(messageKey))
+            if (!Messages.ContainsKey(messageKey))
             {
-                this.Messages.Add(messageKey, message);
+                Messages.Add(messageKey, message);
             }
         }
 
         public bool IsSuccessful()
         {
-            return this.Status == ServiceResponseStatuses.Success;
+            return Status == ServiceResponseStatuses.Success;
         }
 
         public void Error()
         {
-            this.Status = ServiceResponseStatuses.Error;
+            Status = ServiceResponseStatuses.Error;
         }
 
         public void Error(string messageKey, string message)
         {
-            this.Error();
-            this.AddMessage(messageKey, message);
+            Error();
+            AddMessage(messageKey, message);
         }
 
         /// <summary>
@@ -71,10 +71,10 @@ namespace IYSIntegration.Application.Base
         /// </summary>
         public void Error(Dictionary<string, string> messages)
         {
-            this.Error();
+            Error();
             foreach (KeyValuePair<string, string> keyValuePair in messages)
             {
-                this.AddMessage(keyValuePair.Key, keyValuePair.Value);
+                AddMessage(keyValuePair.Key, keyValuePair.Value);
             }
         }
 
@@ -83,7 +83,7 @@ namespace IYSIntegration.Application.Base
         /// </summary>
         public void Success()
         {
-            this.Status = ServiceResponseStatuses.Success;
+            Status = ServiceResponseStatuses.Success;
         }
 
         /// <summary>
@@ -92,8 +92,8 @@ namespace IYSIntegration.Application.Base
         /// <param name="data"></param>
         public void Success(T data)
         {
-            this.Data = data;
-            this.Success();
+            Data = data;
+            Success();
         }
 
         /// <summary>
@@ -103,9 +103,9 @@ namespace IYSIntegration.Application.Base
         /// <param name="messageList"></param>
         public void Success(T data, Dictionary<string, string> messageList)
         {
-            this.Data = data;
-            this.Messages = messageList;
-            this.Success();
+            Data = data;
+            Messages = messageList;
+            Success();
         }
 
         /// <summary>
@@ -115,12 +115,12 @@ namespace IYSIntegration.Application.Base
         /// <param name="clearMessages"></param>
         public void Success(T data, bool clearMessages)
         {
-            this.Data = data;
+            Data = data;
             if (clearMessages)
             {
-                this.Messages.Clear();
+                Messages.Clear();
             }
-            this.Success();
+            Success();
         }
     }
 }

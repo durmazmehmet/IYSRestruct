@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Error
+namespace IYSIntegration.Application.Services.Models.Error
 {
     public class GenericError
     {

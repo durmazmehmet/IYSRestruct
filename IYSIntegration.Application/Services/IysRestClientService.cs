@@ -1,7 +1,7 @@
-﻿using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Error;
-using IYSIntegration.Application.Middleware.LoggingService;
+﻿using IYSIntegration.Application.Middleware.LoggingService;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Error;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
@@ -29,7 +29,7 @@ namespace IYSIntegration.Application.Services
 
             var response = new ResponseBase<TResponse>
             {
-                Status = Application.Base.ServiceResponseStatuses.Error,
+                Status = ServiceResponseStatuses.Error,
                 LogId = logId
             };
 

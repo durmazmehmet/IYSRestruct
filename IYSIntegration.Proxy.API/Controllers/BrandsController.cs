@@ -1,8 +1,7 @@
-﻿using IYSIntegration.Application.Base;
-using IYSIntegration.Application.Request;
-using IYSIntegration.Application.Response.Brand;
-using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Services.Interface;
+﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Request;
+using IYSIntegration.Application.Services.Models.Response.Brand;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.Proxy.API.Controllers;

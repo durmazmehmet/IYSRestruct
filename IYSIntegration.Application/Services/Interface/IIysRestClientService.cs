@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Base;
+﻿using IYSIntegration.Application.Services.Models.Base;
 
 namespace IYSIntegration.Application.Services.Interface
 {

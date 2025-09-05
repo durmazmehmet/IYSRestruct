@@ -1,11 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using IYSIntegration.Application.Services.Models.Base;
+using Newtonsoft.Json;
 
-namespace IYSIntegration.Application.Response.RetailerAccess
+namespace IYSIntegration.Application.Services.Models.Response.RetailerAccess
 {
     public class QueryRetailerAccessResult
     {
         [JsonProperty("pagination")]
-        public Base.Pagination Pagination { get; set; }
+        public Pagination Pagination { get; set; }
 
         [JsonProperty("list")]
         public List<Base.Retailer> Retailers { get; set; }
