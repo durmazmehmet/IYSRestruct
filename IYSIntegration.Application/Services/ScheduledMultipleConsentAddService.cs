@@ -14,15 +14,15 @@ public class ScheduledMultipleConsentAddService
     private readonly ILogger<ScheduledMultipleConsentAddService> _logger;
     private readonly IDbService _dbService;
     private readonly IConfiguration _configuration;
-    private readonly IysClient _client;
+    private readonly ISimpleRestClient _client;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper)
+    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, ISimpleRestClient client)
     {
         _configuration = configuration;
         _logger = logger;
         _dbService = dbHelper;
-        _client = new IysClient(_configuration);
+        _client = client;
     }
 
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)

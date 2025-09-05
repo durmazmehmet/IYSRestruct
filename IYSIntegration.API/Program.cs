@@ -18,7 +18,7 @@ internal class Program
         builder.Services.AddScoped<IIysHelper, IysHelper>();
         builder.Services.AddSingleton<IDbService, DbService>();
         builder.Services.AddSingleton<SalesforceClient>();
-        builder.Services.AddSingleton<IysClient>();
+        builder.Services.AddSingleton<ISimpleRestClient, IysClient>();
 
         builder.Services.AddScoped<ScheduledMultipleConsentQueryService>();
         builder.Services.AddScoped<ScheduledSingleConsentAddService>();
