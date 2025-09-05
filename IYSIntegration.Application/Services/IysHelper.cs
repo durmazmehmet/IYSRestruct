@@ -1,14 +1,8 @@
 ﻿using IYSIntegration.Application.Base;
+using IYSIntegration.Application.Services.Interface;
 using Microsoft.Extensions.Configuration;
 
-namespace IYSIntegration.Application.Services.Helpers;
-
-public interface IIysHelper
-{
-    ConsentParams GetIysCode(string companyCode);
-    string? GetCompanyCode(int code);
-    bool IsOlderThanBusinessDays(DateTime consentDate, int maxBusinessDays);
-}
+namespace IYSIntegration.Application.Services;
 
 public sealed class IysHelper : IIysHelper
 {

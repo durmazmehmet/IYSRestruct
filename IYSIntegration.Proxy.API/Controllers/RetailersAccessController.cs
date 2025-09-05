@@ -1,7 +1,7 @@
 ﻿using IYSIntegration.Application.Base;
 using IYSIntegration.Application.Request.RetailerAccess;
 using IYSIntegration.Application.Response.RetailerAccess;
-using IYSIntegration.Application.Services.Helpers;
+using IYSIntegration.Application.Services;
 using IYSIntegration.Application.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 

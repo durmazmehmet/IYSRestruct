@@ -2,7 +2,7 @@
 using IYSIntegration.Application.Request;
 using IYSIntegration.Application.Request.Consent;
 using IYSIntegration.Application.Response.Consent;
-using IYSIntegration.Application.Services.Helpers;
+using IYSIntegration.Application.Services;
 using IYSIntegration.Application.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 

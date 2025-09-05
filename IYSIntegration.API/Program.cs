@@ -3,7 +3,6 @@ using IYSIntegration.Application.Middleware.Exceptions;
 using IYSIntegration.Application.Middleware.LoggingService;
 using IYSIntegration.Application.Middleware.LoggingService.Loggers;
 using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Services.Helpers;
 using IYSIntegration.Application.Services.Interface;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
