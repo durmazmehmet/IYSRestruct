@@ -1,8 +1,9 @@
-﻿using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Base;
+﻿using IYSIntegration.Application.Base;
 using IYSIntegration.Application.Error;
 using IYSIntegration.Application.Request.Consent;
 using IYSIntegration.Application.Response.Consent;
+using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
@@ -12,74 +13,46 @@ namespace IYSIntegration.API.Controllers
     [Route("api/[controller]")]
     public class CommonController : ControllerBase
     {
-        private readonly IConsentService _consentManager;
-        private readonly ISfConsentService _SfconsentManager;
         private readonly IDbService _dbService;
         private readonly IConfiguration _config;
-        private object obj = new Object();
+        private readonly IysClient _client;
+        private readonly SalesforceClient _sfClient;
 
-        public CommonController(IConsentService consentManager, IDbService dbHelper, IConfiguration config, ISfConsentService SfconsentManager)
+        public CommonController(IDbService dbHelper, IConfiguration config)
         {
-            _consentManager = consentManager;
             _dbService = dbHelper;
             _config = config;
-            _SfconsentManager = SfconsentManager;
+            _client = new IysClient(_config);
+            _sfClient = new SalesforceClient(_config);
         }
 
         [Route("addConsent")]
         [HttpPost]
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
-            if (request.IysCode == 0)
-            {
-                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
+            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)
             {
                 var id = await _dbService.InsertConsentRequest(request);
-                var response = await _consentManager.AddConsent(request);
                 response.Id = id;
                 await _dbService.UpdateConsentResponseFromCommon(response);
                 response.OriginalError = null;
-                return response;
             }
-            else
-            {
-                return await _consentManager.AddConsent(request);
-            }
+
+            return response;
         }
 
         [Route("addConsentAsync")]
         [HttpPost]
         public async Task<int> AddConsentAsync([FromBody] AddConsentRequest request)
-        {
-            if (request.IysCode == 0)
-            {
-                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
-
-            return await _dbService.InsertConsentRequest(request);
-        }
+            => await _dbService.InsertConsentRequest(request);
+        
 
         [Route("queryConsent")]
         [HttpPost]
-        public async Task<ResponseBase<QueryConsentResult>> QueryConsent([FromBody] QueryConsentRequest request)
-        {
-            if (request.IysCode == 0)
-            {
-                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
-
-            var response = await _consentManager.QueryConsent(request);
-            return response;
-        }
+        public async Task<ResponseBase<QueryConsentResult>> QueryConsent([FromBody] QueryConsentRequest request) 
+            => await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"{request.CompanyCode}/queryConsent", request.RecipientKey);
 
         [Route("queryConsentAsync/{id}")]
         [HttpGet]
@@ -135,13 +108,6 @@ namespace IYSIntegration.API.Controllers
         {
             var response = new ResponseBase<MultipleConsentResult>();
 
-            if (request.IysCode == 0)
-            {
-                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
-
             foreach (var consent in request.Consents)
             {
                 var addConsentRequest = new AddConsentRequest
@@ -171,55 +137,70 @@ namespace IYSIntegration.API.Controllers
         [Route("sendMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<MultipleConsentResult>> SendMultipleConsent([FromBody] MultipleConsentRequest request)
-        {
-            if (request.IysCode == 0)
-            {
-                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
-
-            var response = await _consentManager.AddMultipleConsent(request);
-            return response;
-        }
+            => await _client.PostJsonAsync<MultipleConsentRequest, MultipleConsentResult>($"{request.CompanyCode}/addMultipleConsent", request);
 
 
         [Route("queryMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(QueryMultipleConsentRequest request)
-        {
-            if (request.IysCode == 0)
-            {
-                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
-
-            return await _consentManager.QueryMultipleConsent(request);
-        }
+           => await _client.PostJsonAsync<QueryMultipleConsentRequest, List<QueryMultipleConsentResult>>($"{request.CompanyCode}/queryMultipleConsent", request);
 
 
         [Route("pullConsent")]
         [HttpPost]
         public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
-        {
-            if (request.IysCode == 0)
-            {
-                var consentParams = _consentManager.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
+            => await _client.PostJsonAsync<PullConsentRequest, PullConsentResult>($"{request.CompanyCode}/pullConsent", request);
 
-            return await _consentManager.PullConsent(request);
-        }
 
         [Route("sfaddconsent")]
         [HttpPost]
         public async Task<SfConsentAddResponse> SalesforceAddConsent(SfConsentAddRequest request)
         {
-            return await _SfconsentManager.AddConsent(request);
-        }
+            var requestBody = new SfConsentAddRequest
+            {
+                Request = new SfConsentBase
+                {
+                    CompanyCode = request.Request.CompanyCode,
+                    Consents = [.. request.Request.Consents.Select(x => new Consent
+                    {
+                        ConsentDate = x.ConsentDate,
+                        Source = x.Source,
+                        Recipient = x.Recipient,
+                        RecipientType = x.RecipientType,
+                        Status = x.Status,
+                        Type = x.Type,
+                    })]
+                }
+            };
 
-       
+            var logId = await _dbService.InsertLog(new IysRequest<SfConsentAddRequest>
+            {
+                Url = "/apexrest/iys",
+                Body = requestBody,
+                Action = "Salesforce Add Consent"
+            });
+
+            var response = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("AddConsent", requestBody);
+
+            await _dbService.UpdateLogFromResponseBase<SfConsentAddResponse>(response, logId);
+
+            if (response.IsSuccessful())
+            {
+                var result = response.Data;
+                result.LogId = logId;
+                return result;
+            }
+            else
+            {
+                var errorResponse = JsonConvert.DeserializeObject<List<SfConsentAddErrorResponse>>("s");
+                return new SfConsentAddResponse
+                {
+                    LogId = logId,
+                    WsStatus = "ERROR",
+                    WsDescription = $"{errorResponse.FirstOrDefault().errorCode}-{errorResponse.FirstOrDefault().message}"
+                };
+            }
+        }
+ 
     }
 }

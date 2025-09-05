@@ -18,6 +18,8 @@ namespace IYSIntegration.Application.Response.Consent
 
         [JsonProperty("logid")]
         public long LogId { get; set; }
+
+
     }
 
     public class SfConsentAddErrorResponse

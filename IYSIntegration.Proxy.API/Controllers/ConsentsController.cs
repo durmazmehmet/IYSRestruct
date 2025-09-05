@@ -1,22 +1,23 @@
-﻿using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Base;
+﻿using IYSIntegration.Application.Base;
 using IYSIntegration.Application.Request;
+using IYSIntegration.Application.Request.Consent;
 using IYSIntegration.Application.Response.Consent;
-using Microsoft.AspNetCore.Mvc;
 using IYSIntegration.Application.Services.Helpers;
+using IYSIntegration.Application.Services.Interface;
+using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.Proxy.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]/{companyCode}")]
-public class IYSProxyController : ControllerBase
+public class ConsentsController : ControllerBase
 {
     private readonly IConfiguration _config;
-    private readonly IRestClientService _clientHelper;
+    private readonly IIysRestClientService _clientHelper;
     private readonly IIysHelper _iysHelper;
     private readonly string _baseUrl;
 
-    public IYSProxyController(IConfiguration config, IRestClientService clientHelper, IIysHelper iysHelper)
+    public ConsentsController(IConfiguration config, IIysRestClientService clientHelper, IIysHelper iysHelper)
     {
         _config = config;
         _clientHelper = clientHelper;
@@ -79,7 +80,7 @@ public class IYSProxyController : ControllerBase
     [HttpPost("addMultipleConsent")]
     public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsent(
         [FromRoute] string companyCode, 
-        [FromBody] MultipleConsentRequestDto request)
+        [FromBody] MultipleConsentRequest request)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 

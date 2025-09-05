@@ -2,7 +2,7 @@
 
 namespace IYSIntegration.Application.Services.Interface
 {
-    public interface IIdentityService
+    public interface IIysIdentityService
     {
         Task<Token> GetToken(int IysCode, bool isReset);
     }

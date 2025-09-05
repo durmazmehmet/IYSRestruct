@@ -18,7 +18,7 @@ namespace IYSIntegration.Application.Services
         private readonly IysClient _client;
         private readonly IIysHelper _iysHelper;
 
-        public ScheduledSingleConsentAddService(IConfiguration config, ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IRestClientService clientHelper, IIysHelper iysHelper)
+        public ScheduledSingleConsentAddService(IConfiguration config, ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IIysRestClientService clientHelper, IIysHelper iysHelper)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger;

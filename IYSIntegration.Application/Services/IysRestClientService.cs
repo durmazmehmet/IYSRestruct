@@ -10,13 +10,13 @@ using System.Net;
 
 namespace IYSIntegration.Application.Services
 {
-    public class RestClientService : IRestClientService
+    public class IysRestClientService : IIysRestClientService
     {
-        private readonly IIdentityService _identityManager;
+        private readonly IIysIdentityService _identityManager;
         private readonly IDbService _dbService;
         private readonly LoggerServiceBase loggerService;
 
-        public RestClientService(IIdentityService identityManager, IDbService dbHelper, LoggerServiceBase loggerService)
+        public IysRestClientService(IIysIdentityService identityManager, IDbService dbHelper, LoggerServiceBase loggerService)
         {
             _identityManager = identityManager;
             _dbService = dbHelper;

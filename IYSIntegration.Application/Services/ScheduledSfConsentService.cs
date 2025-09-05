@@ -1,7 +1,9 @@
-using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Base;
 using IYSIntegration.Application.Request.Consent;
+using IYSIntegration.Application.Response.Consent;
+using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace IYSIntegration.Application.Services
@@ -10,13 +12,15 @@ namespace IYSIntegration.Application.Services
     {
         private readonly ILogger<ScheduledSfConsentService> _logger;
         private readonly IDbService _dbService;
-        private readonly ISfConsentService _sfConsentService;
+        private readonly SalesforceClient _client;
+        private readonly IConfiguration _config;
 
-        public ScheduledSfConsentService(ILogger<ScheduledSfConsentService> logger, IDbService dbHelper, ISfConsentService sfCconsentService)
+        public ScheduledSfConsentService(ILogger<ScheduledSfConsentService> logger, IConfiguration config, IDbService dbHelper)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _sfConsentService = sfCconsentService;
+            _config = config;
+            _client = new SalesforceClient(_config);
         }
 
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
@@ -80,19 +84,21 @@ namespace IYSIntegration.Application.Services
                             consent
                         };
 
-                        var addConsentResult = await _sfConsentService.AddConsent(new SfConsentAddRequest { Request = request });
+                        var addConsentResult = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("AddConsent", new SfConsentAddRequest { Request = request });
 
-                        if (!string.IsNullOrEmpty(addConsentResult?.WsStatus))
+
+                        if (addConsentResult.IsSuccessful())
                         {
                             var result = new SfConsentResult
                             {
                                 Id = consent.Id,
-                                IsSuccess = addConsentResult.WsStatus == "OK",
+                                IsSuccess = addConsentResult.IsSuccessful(),
                                 LogId = addConsentResult.LogId,
-                                Error = (addConsentResult.WsStatus != "OK") ? addConsentResult.WsDescription : null
+                                Error = (addConsentResult.IsSuccessful()) ? string.Empty : addConsentResult.OriginalError?.Message ?? "Unknown error",
                             };
 
                             _dbService.UpdateSfConsentResponse(result).Wait();
+
                             if (result.IsSuccess)
                                 successCount++;
                             else

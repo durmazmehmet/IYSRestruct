@@ -11,17 +11,20 @@ using System;
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Constants;
 using IYSIntegration.Application.Services.Models;
+using IYSIntegration.Application.Services.Helpers;
 namespace IYSIntegration.Application.Services
 {
     public class DbService : IDbService
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<DbService> _logger;
+        private readonly IIysHelper _iysHelper;
 
-        public DbService(IConfiguration configuration, ILogger<DbService> loggerServiceBase)
+        public DbService(IConfiguration configuration, ILogger<DbService> loggerServiceBase, IIysHelper iysHelper   )
         {
             _configuration = configuration;
             _logger = loggerServiceBase;
+            _iysHelper = iysHelper;
         }
 
         public async Task<int> InsertLog<TRequest>(IysRequest<TRequest> request)
@@ -64,8 +67,36 @@ namespace IYSIntegration.Application.Services
             }
         }
 
+        public async Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id)
+        {
+            var connStr = _configuration.GetValue<string>("ConnectionStrings:SfdcMasterData");
+
+            using (var connection = new SqlConnection(connStr))
+            {
+                await connection.OpenAsync();
+
+                var result = await connection.ExecuteAsync(QueryStrings.UpdateRequest, new
+                {
+                    Id = id,
+                    Response = JsonConvert.SerializeObject(response.Data),
+                    IsSuccess = response.IsSuccessful() ? 1 : 0,
+                    ResponseCode = response.HttpStatusCode
+                });
+
+                return response.Data;
+            }
+        }
+
+
         public async Task<int> InsertConsentRequest(AddConsentRequest request)
         {
+            if (request.IysCode == 0)
+            {
+                var consentParams = _iysHelper.GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
+            }
+
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();

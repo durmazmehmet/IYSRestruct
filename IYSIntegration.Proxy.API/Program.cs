@@ -34,9 +34,9 @@ internal class Program
         builder.Services.AddSingleton<ICacheService, CacheService>();
 
         // Domain services
-        builder.Services.AddSingleton<IIdentityService, IdentityService>();
+        builder.Services.AddSingleton<IIysIdentityService, IysIdentityService>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
-        builder.Services.AddSingleton<IRestClientService, RestClientService>();
+        builder.Services.AddSingleton<IIysRestClientService, IysRestClientService>();
         builder.Services.AddSingleton<IDbService, DbService>();
         builder.Services.AddSingleton<IIysHelper, IysHelper>();
 

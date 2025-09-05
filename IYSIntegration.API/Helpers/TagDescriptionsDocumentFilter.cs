@@ -20,23 +20,7 @@ namespace IYSIntegration.API.Helpers
                 new() {
                     Name = "Common",
                     Description = "Ortak İşlevler"
-                },
-                new() {
-                    Name = "Consent",
-                    Description = "Consent İşlemleri için"
-                },
-                new() {
-                    Name = "Info",
-                    Description = "IYS Lokasyon bilgileri için"
-                },
-                new() {
-                    Name = "RetailerAccess",
-                    Description = "Retailer Access işlemleri servisi"
-                },
-                new() {
-                    Name = "Retailer",
-                    Description = "Retailer işlemleri servisi"
-                }
+                }                
             ];
         }
     }

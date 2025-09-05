@@ -17,7 +17,7 @@ public class ScheduledMultipleConsentAddService
     private readonly IysClient _client;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IConsentService consentService)
+    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper)
     {
         _configuration = configuration;
         _logger = logger;
