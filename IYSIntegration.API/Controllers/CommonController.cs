@@ -15,9 +15,9 @@ namespace IYSIntegration.API.Controllers
     {
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
-        private readonly IysHelper _iysHelper;
+        private readonly IIysHelper _iysHelper;
 
-        public CommonController(IDbService dbHelper, IysProxy iysClient, IysHelper iysHelper)
+        public CommonController(IDbService dbHelper, IysProxy iysClient, IIysHelper iysHelper)
         {
             _dbService = dbHelper;
             _client = iysClient;
