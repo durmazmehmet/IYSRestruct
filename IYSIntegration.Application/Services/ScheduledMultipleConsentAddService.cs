@@ -24,7 +24,7 @@ public class ScheduledMultipleConsentAddService
         _client = client;
     }
 
-    public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
+    public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchCount, int diffInSeconds)
     {
         var response = new ResponseBase<ScheduledJobStatistics>();
         response.Success();
@@ -40,7 +40,7 @@ public class ScheduledMultipleConsentAddService
 
             foreach (var companyCode in companyList)
             {
-                await _dbService.UpdateBatchId(companyCode, batchSize);
+                await _dbService.UpdateBatchId(companyCode, batchCount);
                 var batchList = await _dbService.GetBatchSummary(batchCount);
 
                 foreach (var batch in batchList)
@@ -72,7 +72,7 @@ public class ScheduledMultipleConsentAddService
                                 BatchId = batch.BatchId,
                                 LogId = result.LogId,
                                 RequestId = result.Data.RequestId.ToString(),
-                                CheckAfter = checkAfterInSeconds
+                                CheckAfter = diffInSeconds
                             };
 
                             await _semaphore.WaitAsync();

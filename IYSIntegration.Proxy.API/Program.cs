@@ -42,8 +42,9 @@ internal class Program
         builder.Services.AddSingleton<IIysIdentityService, IysIdentityService>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
         builder.Services.AddSingleton<IIysRestClientService, IysRestClientService>();
-        builder.Services.AddSingleton<IDbService, DbService>();
         builder.Services.AddSingleton<IIysHelper, IysHelper>();
+
+        builder.Services.AddScoped<IDbService, DbService>();
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();

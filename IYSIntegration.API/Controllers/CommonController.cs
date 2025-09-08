@@ -14,20 +14,22 @@ namespace IYSIntegration.API.Controllers
     public class CommonController : ControllerBase
     {
         private readonly IDbService _dbService;
-        private readonly IConfiguration _config;
         private readonly IysProxy _client;
+        private readonly IysHelper _iysHelper;
 
-        public CommonController(IDbService dbHelper, IysProxy iysClient)
+        public CommonController(IDbService dbHelper, IysProxy iysClient, IysHelper iysHelper)
         {
             _dbService = dbHelper;
             _client = iysClient;
+            _iysHelper = iysHelper;
         }
 
         [Route("addConsent")]
         [HttpPost]
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
-            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consent/{request.CompanyCode}/addConsent", request.Consent);
+            request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)
             {
@@ -49,7 +51,11 @@ namespace IYSIntegration.API.Controllers
         [Route("queryConsent")]
         [HttpPost]
         public async Task<ResponseBase<QueryConsentResult>> QueryConsent([FromBody] QueryConsentRequest request)
-            => await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consent/{request.CompanyCode}/queryConsent", request.RecipientKey);
+        {
+            request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            return await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{request.CompanyCode}/queryConsent", request.RecipientKey);
+        }
+           
 
         [Route("queryConsentAsync/{id}")]
         [HttpGet]
@@ -103,13 +109,16 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsent([FromBody] MultipleConsentRequest request)
         {
+            var count = 0;
+            var requestCount = request.Consents.Count;
             var response = new ResponseBase<MultipleConsentResult>();
 
             foreach (var consent in request.Consents)
             {
+                var companyCode = _iysHelper.GetCompanyCode(request.IysCode);
                 var addConsentRequest = new AddConsentRequest
                 {
-                    CompanyCode = request.CompanyCode,
+                    CompanyCode = companyCode,
                     SalesforceId = consent.SalesforceId,
                     IysCode = request.IysCode,
                     BrandCode = request.BrandCode,
@@ -124,9 +133,11 @@ namespace IYSIntegration.API.Controllers
                     }
                 };
 
-                await _dbService.InsertConsentRequest(addConsentRequest);
+                var result = await _dbService.InsertConsentRequest(addConsentRequest);
+                count += result;
             }
 
+            response.AddMessage("Success", $"{count}/{requestCount} kayıt başarı ile eklendi");
             response.Success();
             return response;
         }
@@ -134,19 +145,31 @@ namespace IYSIntegration.API.Controllers
         [Route("sendMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<MultipleConsentResult>> SendMultipleConsent([FromBody] MultipleConsentRequest request)
-            => await _client.PostJsonAsync<MultipleConsentRequest, MultipleConsentResult>($"consent/{request.CompanyCode}/addMultipleConsent", request);
+        {
+            request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            return await _client.PostJsonAsync<MultipleConsentRequest, MultipleConsentResult>($"consents/{request.CompanyCode}/sendMultipleConsent", request);
+        }
+          
 
 
         [Route("queryMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(QueryMultipleConsentRequest request)
-           => await _client.PostJsonAsync<QueryMultipleConsentRequest, List<QueryMultipleConsentResult>>($"consent/{request.CompanyCode}/queryMultipleConsent", request);
+        {
+            request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            return await _client.PostJsonAsync<QueryMultipleConsentRequest, List<QueryMultipleConsentResult>>($"consents/{request.CompanyCode}/queryMultipleConsent", request);
+        }
+
 
 
         [Route("pullConsent")]
         [HttpPost]
         public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
-            => await _client.PostJsonAsync<PullConsentRequest, PullConsentResult>($"consent/{request.CompanyCode}/pullConsent", request);
+        {
+            request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            return await _client.PostJsonAsync<PullConsentRequest, PullConsentResult>($"consents/{request.CompanyCode}/pullConsent", request);
+        }
+      
 
 
         [Route("sfaddconsent")]
