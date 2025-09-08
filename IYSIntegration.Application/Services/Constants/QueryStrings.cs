@@ -107,10 +107,16 @@
             END";
 
         public static string CheckConsentRequest = @"
-            IF @Status IN ('RED', 'RET')
+        IF @Status IN ('RED', 'RET')
             BEGIN
-                IF EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK) WHERE Recipient = @Recipient)
-                   OR EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK) WHERE Recipient = @Recipient AND IsProcessed = 1 AND IsOverDue != 1))
+                IF EXISTS (SELECT 1 
+                           FROM SfdcMasterData.dbo.IysPullConsent WITH (NOLOCK) 
+                           WHERE Recipient = @Recipient)
+                   OR EXISTS (SELECT 1 
+                              FROM SfdcMasterData.dbo.IYSConsentRequest WITH (NOLOCK) 
+                              WHERE Recipient = @Recipient 
+                                AND IsProcessed = 1 
+                                AND IsOverDue != 1)
                     SELECT 1;
                 ELSE
                     SELECT 0;

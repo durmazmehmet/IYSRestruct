@@ -34,13 +34,6 @@ namespace IYSIntegration.API.Controllers
             if (string.IsNullOrEmpty(request.CompanyCode))
                 request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
 
-            if (request.IysCode == 0)
-            {
-                var consentParams = _iysHelper.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
-
             if (string.IsNullOrWhiteSpace(request.Consent?.ConsentDate))
             {
                 response.Error("Hata", "ConsentDate alanı zorunludur");
