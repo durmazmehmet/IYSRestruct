@@ -40,15 +40,14 @@ namespace IYSIntegration.API.Controllers
                 return response;
             }
 
-            if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
-                   DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
-                   _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
-            {
-                response.Error("Hata", "3 iş gününden eski rıza gönderilemez");
-                return response;
-            }
-
             response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
+
+            if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
+                        DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
+                        _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
+            {
+                response.Error("Hata","3 iş gününden eski rıza gönderilemez");
+            }
 
             if (!request.WithoutLogging)
             {
