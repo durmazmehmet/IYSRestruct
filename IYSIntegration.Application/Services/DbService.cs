@@ -168,6 +168,23 @@ namespace IYSIntegration.Application.Services
             }
         }
 
+        public async Task<string?> GetPulledConsentStatus(string companyCode, string recipient)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteScalarAsync<string>(QueryStrings.GetPulledConsentStatus,
+                    new
+                    {
+                        CompanyCode = companyCode,
+                        Recipient = recipient
+                    });
+                connection.Close();
+
+                return result;
+            }
+        }
+
         public async Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))

@@ -13,6 +13,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task<int> InsertConsentRequest(AddConsentRequest request);
         Task<bool> CheckConsentRequest(AddConsentRequest request);
         Task<DateTime?> GetLastConsentDate(string companyCode, string recipient);
+        Task<string?> GetPulledConsentStatus(string companyCode, string recipient);
         Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response);
         Task<ConsentResultLog> GetConsentRequest(long id);
         Task<int> GetMaxBatchId();

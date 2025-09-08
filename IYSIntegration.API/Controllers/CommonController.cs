@@ -49,27 +49,35 @@ namespace IYSIntegration.API.Controllers
                 if (lastConsentDate.HasValue && parsedDate < lastConsentDate.Value)
                 {
                     response.Error("Validation", "Sistemdeki izinden eski tarihli rıza gönderilemez");
-                    return invalidResponse;
+                    return response;
                 }
             }
-            
+
             if (consentDate.HasValue && _iysHelper.IsOlderThanBusinessDays(consentDate.Value, 3))
             {
                 response.Error("Hata","3 iş gününden eski consent gönderilemez");
-                return invalidResponse;
+                return response;
             }
 
-            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
+            var existingStatus = await _dbService.GetPulledConsentStatus(request.CompanyCode, request.Consent.Recipient);
+            if (!string.IsNullOrEmpty(existingStatus) &&
+                string.Equals(existingStatus, request.Consent.Status, StringComparison.OrdinalIgnoreCase))
+            {
+                response.Error("Validation", "Gönderilecek rıza ile mevcut rıza aynı olduğu için gönderim yapılmadı");
+                return response;
+            }
+
+            var consentResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)
             {
                 var id = await _dbService.InsertConsentRequest(request);
-                response.Id = id;
-                await _dbService.UpdateConsentResponseFromCommon(response);
-                response.OriginalError = null;
+                consentResponse.Id = id;
+                await _dbService.UpdateConsentResponseFromCommon(consentResponse);
+                consentResponse.OriginalError = null;
             }
 
-            return response;
+            return consentResponse;
         }
 
         [Route("addConsentAsync")]

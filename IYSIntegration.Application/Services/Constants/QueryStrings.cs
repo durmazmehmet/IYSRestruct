@@ -172,6 +172,12 @@
             ) AS Consents
             ORDER BY ConsentDate DESC";
 
+        public static string GetPulledConsentStatus = @"
+            SELECT TOP 1 Status
+            FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)
+            WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient
+            ORDER BY ConsentDate DESC";
+
         public static string InsertConsentRequestWitBatch = @"
             INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
                 (
