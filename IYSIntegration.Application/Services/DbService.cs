@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using System.Data.SqlClient;
+using System.Collections.Generic;
+using System.Linq;
 namespace IYSIntegration.Application.Services
 {
     public class DbService : IDbService
@@ -181,6 +183,17 @@ namespace IYSIntegration.Application.Services
                     });
                 connection.Close();
 
+                return result;
+            }
+        }
+
+        public async Task<List<Consent>> GetLastConsents(string companyCode, IEnumerable<string> recipients)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = (await connection.QueryAsync<Consent>(QueryStrings.GetLastConsents, new { CompanyCode = companyCode, Recipients = recipients })).ToList();
+                connection.Close();
                 return result;
             }
         }
