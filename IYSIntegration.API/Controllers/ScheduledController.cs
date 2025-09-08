@@ -32,49 +32,49 @@ namespace IYSIntegration.API.Controllers
         /// <summary>
         /// IYS'den toplu rıza sorgulama sonuçları çekilir ve DB'de güncellenir.
         /// </summary>
-        /// <param name="batchCount"></param>
+        /// <param name="batchSize"></param>
         /// <returns></returns>
         [HttpGet("bulkConsentQuery")]
-        public async Task<IActionResult> MultipleConsentQuery([FromQuery] int batchCount)
+        public async Task<IActionResult> MultipleConsentQuery([FromQuery] int batchSize)
         {
-            var result = await _multipleConsentQueryService.RunAsync(batchCount);
+            var result = await _multipleConsentQueryService.RunAsync(batchSize);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
         /// <summary>
         /// SF'dan gelip sıralanan rızalar toplu IYS'ye eklenir.
         /// </summary>
-        /// <param name="batchCount"></param>
+        /// <param name="batchSize"></param>
         /// <param name="diffInSeconds"></param>
         /// <returns></returns>
         [HttpGet("pushBulkConsentToIys")]
-        public async Task<IActionResult> MultipleConsentAdd([FromQuery] int batchCount, int diffInSeconds)
+        public async Task<IActionResult> MultipleConsentAdd([FromQuery] int batchSize, int diffInSeconds)
         {
-            var result = await _multipleConsentAddService.RunAsync(batchCount, diffInSeconds);
+            var result = await _multipleConsentAddService.RunAsync(batchSize, diffInSeconds);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
         /// <summary>
         /// SF'dan gelip sıralanan rızalar tek tek IYS'ye eklenir.
         /// </summary>
-        /// <param name="batchCount"></param>
+        /// <param name="batchSize"></param>
         /// <returns></returns>
         [HttpGet("pushConsentsToIys")]
-        public async Task<IActionResult> SingleConsentAdd([FromQuery] int batchCount)
+        public async Task<IActionResult> SingleConsentAdd([FromQuery] int batchSize)
         {
-            var result = await _singleConsentAddService.RunAsync(batchCount);
+            var result = await _singleConsentAddService.RunAsync(batchSize);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
         /// <summary>
         /// IYS'den gelen rıza kayıtları çekilir ve DB'de saklanır.
         /// </summary>
-        /// <param name="batchCount"></param>
+        /// <param name="batchSize"></param>
         /// <param name="resetAfter"></param>
         /// <returns></returns>
         [HttpGet("pullConsent")]
-        public async Task<IActionResult> PullConsent([FromQuery] int batchCount, bool resetAfter = false)
+        public async Task<IActionResult> PullConsent([FromQuery] int batchSize, bool resetAfter = false)
         {
-            var result = await _pullConsentService.RunAsync(batchCount, resetAfter);
+            var result = await _pullConsentService.RunAsync(batchSize, resetAfter);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
         /// <summary>
@@ -83,9 +83,9 @@ namespace IYSIntegration.API.Controllers
         /// <param name="batchCount"></param>
         /// <returns></returns>
         [HttpGet("pushConsentToSf")]
-        public async Task<IActionResult> SfConsent([FromQuery] int batchCount)
+        public async Task<IActionResult> SfConsent([FromQuery] int batchSize)
         {
-            var result = await _sfConsentService.RunAsync(batchCount);
+            var result = await _sfConsentService.RunAsync(batchSize);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
