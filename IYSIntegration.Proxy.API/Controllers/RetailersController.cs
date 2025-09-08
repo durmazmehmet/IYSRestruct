@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request;
 using IYSIntegration.Application.Services.Models.Response.Retailer;
@@ -30,20 +30,23 @@ public class RetailersController : ControllerBase
     /// <param name="retailer"></param>
     /// <returns></returns>
     [HttpPost("addRetailer")]
-    public async Task<ResponseBase<AddRetailerResponse>> AddConsent(
+    public async Task<ActionResult<ResponseBase<AddRetailerResponse>>> AddConsent(
         [FromRoute] string companyCode,
         [FromBody] Retailer retailer)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<AddRetailerResponse, Retailer>(new IysRequest<Retailer>
+        var iysRequest = new IysRequest<Retailer>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/retailers",
             Body = retailer,
             Action = "Add Retailer"
-        });
+        };
 
+        var result = await _clientHelper.Execute<AddRetailerResponse, Retailer>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -53,19 +56,23 @@ public class RetailersController : ControllerBase
     /// <param name="retailerCode"></param>
     /// <returns></returns>
     [HttpGet("getRetailer")]
-    public async Task<ResponseBase<GetRetailerResponse>> GetRetailer(
+    public async Task<ActionResult<ResponseBase<GetRetailerResponse>>> GetRetailer(
         [FromRoute] string companyCode,
         [FromQuery] string retailerCode
         )
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<GetRetailerResponse, DummyRequest>(new IysRequest<DummyRequest>
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/retailers/{retailerCode}",
             Action = "Get Retailer"
-        });
+        };
+
+        var result = await _clientHelper.Execute<GetRetailerResponse, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -74,16 +81,20 @@ public class RetailersController : ControllerBase
     /// <param name="companyCode"></param>
     /// <returns></returns>
     [HttpGet("getAllRetailers")]
-    public async Task<ResponseBase<GetAllRetailersResponse>> GetAllRetailers([FromRoute] string companyCode)
+    public async Task<ActionResult<ResponseBase<GetAllRetailersResponse>>> GetAllRetailers([FromRoute] string companyCode)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<GetAllRetailersResponse, DummyRequest>(new IysRequest<DummyRequest>
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/retailers",
             Action = "Get All Retailers"
-        });
+        };
+
+        var result = await _clientHelper.Execute<GetAllRetailersResponse, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -93,19 +104,21 @@ public class RetailersController : ControllerBase
     /// <param name="retailerCode"></param>
     /// <returns></returns>
     [HttpGet("deleteRetailer")]
-    public async Task<ResponseBase<DeleteRetailerResponse>> DeleteRetailer(
+    public async Task<ActionResult<ResponseBase<DeleteRetailerResponse>>> DeleteRetailer(
         [FromRoute] string companyCode,
         [FromQuery] string retailerCode)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<DeleteRetailerResponse, DummyRequest>(new IysRequest<DummyRequest>
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/retailers/{retailerCode}",
             Action = "Delete Retailer"
-        });
+        };
+
+        var result = await _clientHelper.Execute<DeleteRetailerResponse, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
-
-
 }
