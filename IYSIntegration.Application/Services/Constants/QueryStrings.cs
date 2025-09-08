@@ -36,7 +36,7 @@
             IF @Status IN ('RED', 'RET')
             BEGIN
                 IF EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK) WHERE Recipient = @Recipient)
-                   OR EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK) WHERE Recipient = @Recipient)
+                   OR EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK) WHERE Recipient = @Recipient AND IsProcessed = 1)
                 BEGIN
                     INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
                         (
@@ -106,10 +106,22 @@
                 SELECT SCOPE_IDENTITY();
             END";
 
+        public static string CheckConsentRequest = @"
+            IF @Status IN ('RED', 'RET')
+            BEGIN
+                IF EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK) WHERE Recipient = @Recipient)
+                   OR EXISTS (SELECT 1 FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK) WHERE Recipient = @Recipient AND IsProcessed = 1)
+                    SELECT 1;
+                ELSE
+                    SELECT 0;
+            END
+            ELSE
+                SELECT 1;";
+
         public static string UpdateConsentRequestFromCommon = @"
             UPDATE SfdcMasterData.dbo.IYSConsentRequest
             SET IsSuccess = @IsSuccess,
-                LogId = @LogId,    
+                LogId = @LogId,
                 UpdateDate = GETDATE(),
                 IsProcessed = 1,
                 TransactionId = @TransactionId,

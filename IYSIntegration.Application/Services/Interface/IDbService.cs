@@ -11,6 +11,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task<int> InsertLog<TRequest>(IysRequest<TRequest> request);
         Task UpdateLog(RestResponse response, int id);
         Task<int> InsertConsentRequest(AddConsentRequest request);
+        Task<bool> CheckConsentRequest(AddConsentRequest request);
         Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response);
         Task<ConsentResultLog> GetConsentRequest(long id);
         Task<int> GetMaxBatchId();
