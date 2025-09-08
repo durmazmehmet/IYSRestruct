@@ -29,6 +29,14 @@ namespace IYSIntegration.API.Controllers
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
             request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+
+            if (!await _dbService.CheckConsentRequest(request))
+            {
+                var invalidResponse = new ResponseBase<AddConsentResult>();
+                invalidResponse.Error("Validation", "Consent request not allowed");
+                return invalidResponse;
+            }
+
             var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)

@@ -134,6 +134,23 @@ namespace IYSIntegration.Application.Services
             }
         }
 
+        public async Task<bool> CheckConsentRequest(AddConsentRequest request)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.CheckConsentRequest,
+                    new
+                    {
+                        request.Consent.Status,
+                        request.Consent.Recipient
+                    });
+                connection.Close();
+
+                return result == 1;
+            }
+        }
+
         public async Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
