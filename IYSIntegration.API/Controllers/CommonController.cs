@@ -29,23 +29,26 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
-            request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            var response = new ResponseBase<AddConsentResult>();
+
+            if (string.IsNullOrEmpty(request.CompanyCode))
+                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
 
             if (!await _dbService.CheckConsentRequest(request))
             {
-                var invalidResponse = new ResponseBase<AddConsentResult>();
-                invalidResponse.Error("Validation", "Consent request not allowed");
-                return invalidResponse;
+                response.Error("Hata", "İlk defa giden rıza red gönderilemez");
+                return response;
             }
-
-            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
-                        DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
-                        _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
+                   DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
+                   _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
             {
-                response.Error("Hata","3 iş gününden eski consent gönderilemez");
+                response.Error("Hata", "3 iş gününden eski rıza gönderilemez");
+                return response;
             }
+
+            response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)
             {
