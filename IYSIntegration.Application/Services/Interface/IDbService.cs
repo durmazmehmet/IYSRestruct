@@ -3,6 +3,7 @@ using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using RestSharp;
+using System.Collections.Generic;
 
 namespace IYSIntegration.Application.Services.Interface
 {
@@ -14,6 +15,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task<bool> CheckConsentRequest(AddConsentRequest request);
         Task<bool> PullConsentExists(string companyCode, string recipient);
         Task<DateTime?> GetLastConsentDate(string companyCode, string recipient);
+        Task<List<Consent>> GetLastConsents(string companyCode, IEnumerable<string> recipients);
         Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response);
         Task<ConsentResultLog> GetConsentRequest(long id);
         Task<int> GetMaxBatchId();

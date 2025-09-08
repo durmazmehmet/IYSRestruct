@@ -178,6 +178,22 @@
                 WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient
             ) THEN 1 ELSE 0 END;";
 
+        public static string GetLastConsents = @"
+            SELECT CompanyCode, Recipient, Status, convert(varchar, ConsentDate, 20) as ConsentDate
+            FROM (
+                SELECT CompanyCode, Recipient, Status, ConsentDate,
+                       ROW_NUMBER() OVER(PARTITION BY CompanyCode, Recipient ORDER BY ConsentDate DESC) AS RN
+                FROM (
+                    SELECT CompanyCode, Recipient, Status, ConsentDate
+                    FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK)
+                    WHERE IsProcessed = 1
+                    UNION ALL
+                    SELECT CompanyCode, Recipient, Status, ConsentDate
+                    FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)
+                ) AS AllConsents
+            ) AS Ranked
+            WHERE RN = 1 AND CompanyCode = @CompanyCode AND Recipient IN @Recipients;";
+
         public static string InsertConsentRequestWitBatch = @"
             INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
                 (
