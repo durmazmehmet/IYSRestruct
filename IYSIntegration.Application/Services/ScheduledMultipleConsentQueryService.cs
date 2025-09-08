@@ -75,7 +75,7 @@ namespace IYSIntegration.Application.Services
                     }
                     catch (Exception ex)
                     {
-                        results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Status = "Error", Message = $"IYSConsentRequest tablosuna bakın: {ex.Message}" });
+                        results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
                         Interlocked.Increment(ref failedCount);
                     }
                 });
@@ -83,7 +83,7 @@ namespace IYSIntegration.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError("MultipleConsentQueryService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-                results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Error", Message = $"IYSConsentRequest tablosuna bakın: {ex.Message} {ex.InnerException?.Message ?? "None"}" });
+                results.Add(new LogResult { Id = 0, CompanyCode = "", Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
             }
 
             response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };

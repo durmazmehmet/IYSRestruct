@@ -125,7 +125,7 @@ public class ConsentsController : ControllerBase
     /// <param name="source"></param>
     /// <returns></returns>
     [HttpGet("pullConsent")]
-    public async Task<ResponseBase<PullConsentResult>> PullConsent(
+    public async Task<ActionResult<ResponseBase<PullConsentResult>>> PullConsent(
         [FromRoute] string companyCode,
         [FromQuery] string? after = null, int limit = 0, string source = "IYS")
     {
@@ -144,6 +144,8 @@ public class ConsentsController : ControllerBase
             Action = "Pull Consent"
         };
 
-        return await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest);
+        var result = await _clientHelper.Execute<PullConsentResult, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 }

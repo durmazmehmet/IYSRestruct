@@ -50,6 +50,28 @@ namespace IYSIntegration.Application.Services.Models.Base
             }
         }
 
+        public void AddMessage(Dictionary<string, string> messagesToAdd)
+        {
+            if (messagesToAdd == null || messagesToAdd.Count == 0)
+                return;
+
+            if (Messages == null)
+                Messages = new Dictionary<string, string>();
+
+            foreach (var kvp in messagesToAdd)
+            {
+                if (!Messages.ContainsKey(kvp.Key))
+                {
+                    Messages[kvp.Key] = kvp.Value;
+                }
+                else
+                {
+                    Messages[kvp.Key] = $"{Messages[kvp.Key]}, {kvp.Value}";
+                }
+            }
+        }
+
+
         public bool IsSuccessful()
         {
             return Status == ServiceResponseStatuses.Success;

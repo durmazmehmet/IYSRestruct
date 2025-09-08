@@ -63,13 +63,15 @@ public class ScheduledSingleConsentAddService
                         DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
                         _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
                     {
-                        results.Add(new LogResult { Id = log.Id, CompanyCode = request.CompanyCode, Status = "Skipped", Message = "Consent older than 3 business days" });
+                        results.Add(new LogResult { Id = log.Id, CompanyCode = request.CompanyCode, Messages = new Dictionary<string, string> { { "Skipped", "Consent older than 3 business days" } } });
                         Interlocked.Increment(ref failedCount);
                         _logger.LogWarning("Consent ID {Id} skipped: older than 3 business days", log.Id);
                         return;
                     }
 
-                    var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"{companyCode}/addConsent", request.Consent);
+                    var addResponseResult = await _client.PostJsonAsync<Consent, ResponseBase<AddConsentResult>> ($"{companyCode}/addConsent", request.Consent);
+
+                    var addResponse = addResponseResult.Data;
 
                     if (!request.WithoutLogging)
                     {
@@ -81,7 +83,7 @@ public class ScheduledSingleConsentAddService
 
                     if (addResponse.HttpStatusCode == 0 || addResponse.HttpStatusCode >= 500)
                     {
-                        results.Add(new LogResult { Id = log.Id, Status = "Failed", Message = $"IYS error {addResponse.HttpStatusCode}" });
+                        results.Add(new LogResult { Id = log.Id, Status = "Failed", Messages = response.Messages });
                         Interlocked.Increment(ref failedCount);
                         _logger.LogError("AddConsent failed (status: {Status}) for log ID {Id}", addResponse.HttpStatusCode, log.Id);
                         return;
@@ -94,7 +96,7 @@ public class ScheduledSingleConsentAddService
                 }
                 catch (Exception ex)
                 {
-                    results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Status = "Exception", Message = ex.Message });
+                    results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
                     Interlocked.Increment(ref failedCount);
                     _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
                 }
@@ -105,7 +107,7 @@ public class ScheduledSingleConsentAddService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Fatal error in SingleConsentAddService");
-            results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Failed", Message = $"{ex.Message}" });
+            results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Failed", Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
             response.Error("SINGLE_CONSENT_ADD_FATAL", "Service failed with an unexpected exception.");
         }
 
@@ -117,9 +119,7 @@ public class ScheduledSingleConsentAddService
 
         foreach (var result in results)
         {
-            var msgKey = $"Consent_{result.Id}_{result.CompanyCode}";
-            var msg = $"{result.Status}{(string.IsNullOrWhiteSpace(result.Message) ? "" : $": {result.Message}")}";
-            response.AddMessage(msgKey, msg);
+            response.AddMessage(result.GetMessages());
         }
 
         return response;

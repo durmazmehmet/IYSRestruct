@@ -116,13 +116,13 @@ public class ScheduledMultipleConsentAddService
 
                             Interlocked.Increment(ref failedCount);
                             _logger.LogError($"MultipleConsentAddService {batch.BatchId} hata aldı. IYSConsentRequest tablosuna göz atın");
-                            results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Status = "Failed", Message = $"BatchId {batch.BatchId} ile IYSConsentRequest tablosuna göz atın." });
+                            results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Status = "Failed", Messages = response.Messages});
                         }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError($"MultipleConsentAddService {companyCode} hata aldı. IYSConsentRequest tablosuna göz atın");
-                        results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Status = "Failed", Message = $"{companyCode} hata aldı. IYSConsentRequest tablosuna göz atın." });
+                        results.Add(new LogResult { Id = batch.BatchId, CompanyCode = companyCode, Status = "Failed", Messages = response.Messages });
                         Interlocked.Increment(ref failedCount);
                     }
                 }
@@ -131,14 +131,12 @@ public class ScheduledMultipleConsentAddService
         catch (Exception ex)
         {
             _logger.LogError(ex, "MultipleConsentAddService genel hata");
-            results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Failed", Message = $"Genel hata. {ex.Message}" });
+            results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Failed", Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
         }
 
         foreach (var result in results)
         {
-            var msgKey = result.CompanyCode;
-            var msg = $"{result.Status}{(string.IsNullOrWhiteSpace(result.Message) ? "" : $": {result.Message}")}";
-            response.AddMessage(msgKey, msg);
+            response.AddMessage(result.GetMessages());
         }
 
         response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };

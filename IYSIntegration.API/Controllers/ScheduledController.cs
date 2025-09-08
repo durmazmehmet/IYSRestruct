@@ -78,9 +78,9 @@ namespace IYSIntegration.API.Controllers
         /// <param name="batchSize"></param>
         /// <returns></returns>
         [HttpGet("pull-consent")]
-        public async Task<IActionResult> PullConsent([FromQuery] int batchSize)
+        public async Task<IActionResult> PullConsent([FromQuery] int batchSize, bool resetAfter = false)
         {
-            var result = await _pullConsentService.RunAsync(batchSize);
+            var result = await _pullConsentService.RunAsync(batchSize, resetAfter);
             if (!result.IsSuccessful())
                 return StatusCode(500, result);
             return Ok(result);
