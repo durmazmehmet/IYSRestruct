@@ -172,6 +172,12 @@
             ) AS Consents
             ORDER BY ConsentDate DESC";
 
+        public static string CheckPullConsent = @"
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)
+                WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient
+            ) THEN 1 ELSE 0 END;";
+
         public static string InsertConsentRequestWitBatch = @"
             INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
                 (
