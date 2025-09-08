@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.RetailerAccess;
 using IYSIntegration.Application.Services.Models.Response.RetailerAccess;
@@ -30,19 +30,23 @@ public class RetailersAccessController : ControllerBase
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("addRetailerAccess")]
-    public async Task<ResponseBase<AddRetailerAccessResult>> AddRetailerAccess(
+    public async Task<ActionResult<ResponseBase<AddRetailerAccessResult>>> AddRetailerAccess(
         [FromRoute] string companyCode,
         [FromBody] RetailerRecipientAccess request)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<AddRetailerAccessResult, RetailerRecipientAccess>(new IysRequest<RetailerRecipientAccess>
+        var iysRequest = new IysRequest<RetailerRecipientAccess>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/retailers/access",
             Body = request,
             Action = "Add Retailer Access"
-        });
+        };
+
+        var result = await _clientHelper.Execute<AddRetailerAccessResult, RetailerRecipientAccess>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -52,20 +56,24 @@ public class RetailersAccessController : ControllerBase
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("deleteAllRetailersAccess")]
-    public async Task<ResponseBase<DeleteAllRetailersAccessResult>> DeleteAllRetailersAccess(
+    public async Task<ActionResult<ResponseBase<DeleteAllRetailersAccessResult>>> DeleteAllRetailersAccess(
         [FromRoute] string companyCode,
         [FromBody] RetailerRecipientAccess request
         )
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<DeleteAllRetailersAccessResult, RetailerRecipientAccess>(new IysRequest<RetailerRecipientAccess>
+        var iysRequest = new IysRequest<RetailerRecipientAccess>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/retailers/access/remove/all",
             Body = request,
             Action = "Delete All Retailers Access"
-        });
+        };
+
+        var result = await _clientHelper.Execute<DeleteAllRetailersAccessResult, RetailerRecipientAccess>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -75,20 +83,24 @@ public class RetailersAccessController : ControllerBase
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("updateRetailerAccess")]
-    public async Task<ResponseBase<UpdateRetailerAccessResult>> UpdateRetailerAccess(
+    public async Task<ActionResult<ResponseBase<UpdateRetailerAccessResult>>> UpdateRetailerAccess(
         [FromRoute] string companyCode,
         [FromBody] RetailerRecipientAccess request
         )
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<UpdateRetailerAccessResult, RetailerRecipientAccess>(new IysRequest<RetailerRecipientAccess>
+        var iysRequest = new IysRequest<RetailerRecipientAccess>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/retailers/access",
             Body = request,
             Action = "Update Retailer Access"
-        });
+        };
+
+        var result = await _clientHelper.Execute<UpdateRetailerAccessResult, RetailerRecipientAccess>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -97,7 +109,7 @@ public class RetailersAccessController : ControllerBase
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("deleteRetailerAccess")]
-    public async Task<ResponseBase<DeleteRetailerAccessResult>> DeleteRetailerAccess(DeleteRetailerAccessRequest request)
+    public async Task<ActionResult<ResponseBase<DeleteRetailerAccessResult>>> DeleteRetailerAccess(DeleteRetailerAccessRequest request)
     {
         var iysRequest = new IysRequest<RetailerRecipientAccess>
         {
@@ -107,7 +119,9 @@ public class RetailersAccessController : ControllerBase
             Action = "Delete Retailer Access"
         };
 
-        return await _clientHelper.Execute<DeleteRetailerAccessResult, RetailerRecipientAccess>(iysRequest);
+        var result = await _clientHelper.Execute<DeleteRetailerAccessResult, RetailerRecipientAccess>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -117,20 +131,23 @@ public class RetailersAccessController : ControllerBase
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("queryRetailerAccess")]
-    public async Task<ResponseBase<QueryRetailerAccessResult>> QueryRetailerAccess(
+    public async Task<ActionResult<ResponseBase<QueryRetailerAccessResult>>> QueryRetailerAccess(
         [FromRoute] string companyCode,
         [FromBody] RecipientKey request
         )
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<QueryRetailerAccessResult, RecipientKey>(new IysRequest<RecipientKey>
+        var iysRequest = new IysRequest<RecipientKey>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consent/retailers/access/list",
             Body = request,
             Action = "Query Retailer Access"
-        });
-    }
+        };
 
+        var result = await _clientHelper.Execute<QueryRetailerAccessResult, RecipientKey>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
+    }
 }

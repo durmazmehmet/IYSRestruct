@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request;
 using IYSIntegration.Application.Services.Models.Request.Consent;
@@ -31,20 +31,24 @@ public class ConsentsController : ControllerBase
     /// <param name="consent"></param>
     /// <returns></returns>
     [HttpPost("addConsent")]
-    public async Task<ResponseBase<AddConsentResult>> AddConsent(
+    public async Task<ActionResult<ResponseBase<AddConsentResult>>> AddConsent(
         [FromRoute] string companyCode,
         [FromBody] Consent consent)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<AddConsentResult, Consent>(new IysRequest<Consent>
+        var iysRequest = new IysRequest<Consent>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents",
             Body = consent,
             Action = "Add Consent",
             Method = RestSharp.Method.Post
-        });
+        };
+
+        var result = await _clientHelper.Execute<AddConsentResult, Consent>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -54,20 +58,24 @@ public class ConsentsController : ControllerBase
     /// <param name="recipientKey"></param>
     /// <returns></returns>
     [HttpPost("queryConsent")]
-    public async Task<ResponseBase<QueryConsentResult>> QueryConsent(
+    public async Task<ActionResult<ResponseBase<QueryConsentResult>>> QueryConsent(
         [FromRoute] string companyCode,
         [FromBody] RecipientKey recipientKey)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<QueryConsentResult, RecipientKey>(new IysRequest<RecipientKey>
+        var iysRequest = new IysRequest<RecipientKey>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/status",
             Body = recipientKey,
             Action = "Query Consent",
             Method = RestSharp.Method.Post
-        });
+        };
+
+        var result = await _clientHelper.Execute<QueryConsentResult, RecipientKey>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -77,20 +85,24 @@ public class ConsentsController : ControllerBase
     /// <param name="request"></param>
     /// <returns></returns>
     [HttpPost("addMultipleConsent")]
-    public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsent(
+    public async Task<ActionResult<ResponseBase<MultipleConsentResult>>> AddMultipleConsent(
         [FromRoute] string companyCode,
         [FromBody] MultipleConsentRequest request)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<MultipleConsentResult, List<Consent>>(new IysRequest<List<Consent>>
+        var iysRequest = new IysRequest<List<Consent>>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request",
             Body = request.Consents,
             Action = "Add Multiple Consent",
             BatchId = request.BatchId
-        });
+        };
+
+        var result = await _clientHelper.Execute<MultipleConsentResult, List<Consent>>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>
@@ -101,19 +113,23 @@ public class ConsentsController : ControllerBase
     /// <param name="batchId"></param>
     /// <returns></returns>
     [HttpGet("queryMultipleConsent")]
-    public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(
+    public async Task<ActionResult<ResponseBase<List<QueryMultipleConsentResult>>>> QueryMultipleConsent(
         [FromRoute] string companyCode,
         [FromQuery] string requestId, int? batchId = null)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<List<QueryMultipleConsentResult>, DummyRequest>(new IysRequest<DummyRequest>
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{Uri.EscapeDataString(requestId)}",
             Action = "Query Multiple Consent",
             BatchId = batchId
-        });
+        };
+
+        var result = await _clientHelper.Execute<List<QueryMultipleConsentResult>, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     /// <summary>

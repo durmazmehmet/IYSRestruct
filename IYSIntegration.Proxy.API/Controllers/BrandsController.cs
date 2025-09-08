@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request;
 using IYSIntegration.Application.Services.Models.Response.Brand;
@@ -29,17 +29,21 @@ public class BrandsController : ControllerBase
     /// <param name="companyCode"></param>
     /// <returns></returns>
     [HttpGet("GetAll")]
-    public async Task<ResponseBase<List<Brand>>> GetAll(
+    public async Task<ActionResult<ResponseBase<List<Brand>>>> GetAll(
         [FromRoute] string companyCode
         )
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        return await _clientHelper.Execute<List<Brand>, DummyRequest>(new IysRequest<DummyRequest>
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands",
             Action = "Get Brands"
-        });
+        };
+
+        var result = await _clientHelper.Execute<List<Brand>, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 }

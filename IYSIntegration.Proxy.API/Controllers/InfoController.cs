@@ -1,4 +1,4 @@
-﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request;
 using Microsoft.AspNetCore.Mvc;
@@ -23,50 +23,70 @@ public class InfoController : ControllerBase
     }
 
     [HttpGet("getCities")]
-    public async Task<ResponseBase<List<City>>> GetCities([FromRoute] string companyCode)
+    public async Task<ActionResult<ResponseBase<List<City>>>> GetCities([FromRoute] string companyCode)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
-        return await _clientHelper.Execute<List<City>, DummyRequest>(new IysRequest<DummyRequest>
+
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/info/cities",
             Action = "Get Cities"
-        });
+        };
+
+        var result = await _clientHelper.Execute<List<City>, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     [HttpGet("getCity")]
-    public async Task<ResponseBase<City>> GetCity([FromRoute] string companyCode, [FromQuery] string code)
+    public async Task<ActionResult<ResponseBase<City>>> GetCity([FromRoute] string companyCode, [FromQuery] string code)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
-        return await _clientHelper.Execute<City, DummyRequest>(new IysRequest<DummyRequest>
+
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/info/cities/{code}",
             Action = "Get City"
-        });
+        };
+
+        var result = await _clientHelper.Execute<City, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     [HttpGet("getTown")]
-    public async Task<ResponseBase<Town>> GetTown([FromRoute] string companyCode, [FromQuery] string townCode)
+    public async Task<ActionResult<ResponseBase<Town>>> GetTown([FromRoute] string companyCode, [FromQuery] string townCode)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
-        return await _clientHelper.Execute<Town, DummyRequest>(new IysRequest<DummyRequest>
+
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/info/town/{townCode}",
             Action = "Get Town"
-        });
+        };
+
+        var result = await _clientHelper.Execute<Town, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
     [HttpGet("getTowns")]
-    public async Task<ResponseBase<List<Town>>> GetTowns([FromRoute] string companyCode)
+    public async Task<ActionResult<ResponseBase<List<Town>>>> GetTowns([FromRoute] string companyCode)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
-        return await _clientHelper.Execute<List<Town>, DummyRequest>(new IysRequest<DummyRequest>
+
+        var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}/info/town",
             Action = "Get Towns"
-        });
+        };
+
+        var result = await _clientHelper.Execute<List<Town>, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 }
