@@ -29,13 +29,15 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
-            request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            var response = new ResponseBase<AddConsentResult>();
+
+            if (string.IsNullOrEmpty(request.CompanyCode))
+                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
 
             if (!await _dbService.CheckConsentRequest(request))
             {
-                var invalidResponse = new ResponseBase<AddConsentResult>();
-                invalidResponse.Error("Validation", "Consent request not allowed");
-                return invalidResponse;
+                response.Error("Hata", "İlk defa giden rıza red gönderilemez");
+                return response;
             }
 
             DateTime? consentDate = null;
@@ -46,18 +48,18 @@ namespace IYSIntegration.API.Controllers
                 var lastConsentDate = await _dbService.GetLastConsentDate(request.CompanyCode, request.Consent.Recipient);
                 if (lastConsentDate.HasValue && parsedDate < lastConsentDate.Value)
                 {
-                    var invalidResponse = new ResponseBase<AddConsentResult>();
-                    invalidResponse.Error("Validation", "Sistemdeki izinden eski tarihli rıza gönderilemez");
+                    response.Error("Validation", "Sistemdeki izinden eski tarihli rıza gönderilemez");
                     return invalidResponse;
                 }
             }
-
-            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
-
+            
             if (consentDate.HasValue && _iysHelper.IsOlderThanBusinessDays(consentDate.Value, 3))
             {
                 response.Error("Hata","3 iş gününden eski consent gönderilemez");
+                return invalidResponse;
             }
+
+            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)
             {
