@@ -34,32 +34,34 @@ namespace IYSIntegration.API.Controllers
             if (string.IsNullOrEmpty(request.CompanyCode))
                 request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
 
+            if (string.IsNullOrWhiteSpace(request.Consent?.ConsentDate))
+            {
+                response.Error("Hata", "ConsentDate alanı zorunludur");
+            }
+
+            DateTime.TryParse(request.Consent.ConsentDate, out var parsedDate);
+
             if (!await _dbService.CheckConsentRequest(request))
             {
                 response.Error("Hata", "İlk defa giden rıza red gönderilemez");
                 return response;
             }
 
-            DateTime? consentDate = null;
-            if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
-                DateTime.TryParse(request.Consent.ConsentDate, out var parsedDate))
+            var lastConsentDate = await _dbService.GetLastConsentDate(request.CompanyCode, request.Consent.Recipient);
+
+            if (lastConsentDate.HasValue && parsedDate < lastConsentDate.Value)
             {
-                consentDate = parsedDate;
-                var lastConsentDate = await _dbService.GetLastConsentDate(request.CompanyCode, request.Consent.Recipient);
-                if (lastConsentDate.HasValue && parsedDate < lastConsentDate.Value)
-                {
-                    response.Error("Validation", "Sistemdeki izinden eski tarihli rıza gönderilemez");
-                    return invalidResponse;
-                }
-            }
-            
-            if (consentDate.HasValue && _iysHelper.IsOlderThanBusinessDays(consentDate.Value, 3))
-            {
-                response.Error("Hata","3 iş gününden eski consent gönderilemez");
-                return invalidResponse;
+                response.Error("Validation", "Sistemdeki izinden eski tarihli rıza gönderilemez");
+                return response;
             }
 
-            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
+            if (_iysHelper.IsOlderThanBusinessDays(parsedDate, 3))
+            {
+                response.Error("Hata","3 iş gününden eski consent gönderilemez");
+                return response;
+            }
+
+            response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)
             {
