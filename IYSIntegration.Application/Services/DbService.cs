@@ -151,6 +151,23 @@ namespace IYSIntegration.Application.Services
             }
         }
 
+        public async Task<DateTime?> GetLastConsentDate(string companyCode, string recipient)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteScalarAsync<DateTime?>(QueryStrings.GetLastConsentDate,
+                    new
+                    {
+                        CompanyCode = companyCode,
+                        Recipient = recipient
+                    });
+                connection.Close();
+
+                return result;
+            }
+        }
+
         public async Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))

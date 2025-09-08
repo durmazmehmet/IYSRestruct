@@ -159,6 +159,19 @@
             WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient AND IsProcessed = 1
             ORDER BY CreateDate DESC";
 
+        public static string GetLastConsentDate = @"
+            SELECT TOP 1 ConsentDate
+            FROM (
+                SELECT ConsentDate
+                FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK)
+                WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient AND IsProcessed = 1
+                UNION ALL
+                SELECT ConsentDate
+                FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)
+                WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient
+            ) AS Consents
+            ORDER BY ConsentDate DESC";
+
         public static string InsertConsentRequestWitBatch = @"
             INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
                 (
