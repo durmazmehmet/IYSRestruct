@@ -40,14 +40,26 @@ namespace IYSIntegration.API.Controllers
                 return response;
             }
 
-            response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
-
+            DateTime? consentDate = null;
             if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
-                        DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
-                        _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
+                DateTime.TryParse(request.Consent.ConsentDate, out var parsedDate))
             {
-                response.Error("Hata","3 iş gününden eski rıza gönderilemez");
+                consentDate = parsedDate;
+                var lastConsentDate = await _dbService.GetLastConsentDate(request.CompanyCode, request.Consent.Recipient);
+                if (lastConsentDate.HasValue && parsedDate < lastConsentDate.Value)
+                {
+                    response.Error("Validation", "Sistemdeki izinden eski tarihli rıza gönderilemez");
+                    return invalidResponse;
+                }
             }
+            
+            if (consentDate.HasValue && _iysHelper.IsOlderThanBusinessDays(consentDate.Value, 3))
+            {
+                response.Error("Hata","3 iş gününden eski consent gönderilemez");
+                return invalidResponse;
+            }
+
+            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
             if (!request.WithoutLogging)
             {
