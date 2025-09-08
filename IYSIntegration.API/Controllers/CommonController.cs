@@ -34,12 +34,61 @@ namespace IYSIntegration.API.Controllers
             if (string.IsNullOrEmpty(request.CompanyCode))
                 request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
 
+            if (request.IysCode == 0)
+            {
+                var consentParams = _iysHelper.GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Consent?.ConsentDate))
             {
                 response.Error("Hata", "ConsentDate alanı zorunludur");
             }
 
             DateTime.TryParse(request.Consent.ConsentDate, out var parsedDate);
+
+            var pullConsentExists = await _dbService.PullConsentExists(request.CompanyCode, request.Consent.Recipient);
+            if (!pullConsentExists)
+            {
+                var queryRequest = new QueryConsentRequest
+                {
+                    CompanyCode = request.CompanyCode,
+                    IysCode = request.IysCode,
+                    BrandCode = request.BrandCode,
+                    RecipientKey = new RecipientKey
+                    {
+                        Recipient = request.Consent.Recipient,
+                        RecipientType = request.Consent.RecipientType,
+                        Type = request.Consent.Type
+                    }
+                };
+
+                var queryResponse = await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{request.CompanyCode}/queryConsent", queryRequest.RecipientKey);
+                if (queryResponse.IsSuccessful() && queryResponse.Data != null && !string.IsNullOrEmpty(queryResponse.Data.ConsentDate))
+                {
+                    var pullInsertRequest = new AddConsentRequest
+                    {
+                        CompanyCode = request.CompanyCode,
+                        SalesforceId = request.SalesforceId,
+                        IysCode = request.IysCode,
+                        BrandCode = request.BrandCode,
+                        Consent = new Consent
+                        {
+                            Recipient = queryResponse.Data.Recipient,
+                            Type = queryResponse.Data.Type,
+                            Source = queryResponse.Data.Source,
+                            Status = queryResponse.Data.Status,
+                            ConsentDate = queryResponse.Data.ConsentDate,
+                            RecipientType = queryResponse.Data.RecipientType,
+                            CreationDate = queryResponse.Data.CreationDate,
+                            TransactionId = queryResponse.Data.TransactionId
+                        }
+                    };
+
+                    await _dbService.InsertPullConsent(pullInsertRequest);
+                }
+            }
 
             if (!await _dbService.CheckConsentRequest(request))
             {

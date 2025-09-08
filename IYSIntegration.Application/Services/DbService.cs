@@ -151,6 +151,23 @@ namespace IYSIntegration.Application.Services
             }
         }
 
+        public async Task<bool> PullConsentExists(string companyCode, string recipient)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.CheckPullConsent,
+                    new
+                    {
+                        CompanyCode = companyCode,
+                        Recipient = recipient
+                    });
+                connection.Close();
+
+                return result == 1;
+            }
+        }
+
         public async Task<DateTime?> GetLastConsentDate(string companyCode, string recipient)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
