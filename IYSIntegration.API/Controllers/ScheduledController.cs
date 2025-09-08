@@ -50,7 +50,7 @@ namespace IYSIntegration.API.Controllers
         /// <param name="batchCount"></param>
         /// <param name="checkAfter"></param>
         /// <returns></returns>
-        [HttpPost("multiple-consent-add")]
+        [HttpPost("pushBulkConsentToIys")]
         public async Task<IActionResult> MultipleConsentAdd([FromQuery] int batchSize, [FromQuery] int batchCount, [FromQuery] int checkAfter)
         {
             var result = await _multipleConsentAddService.RunAsync(batchSize, batchCount, checkAfter);
@@ -64,7 +64,7 @@ namespace IYSIntegration.API.Controllers
         /// </summary>
         /// <param name="rowCount"></param>
         /// <returns></returns>
-        [HttpPost("single-consent-add")]
+        [HttpPost("pushConsentsToIys")]
         public async Task<IActionResult> SingleConsentAdd([FromQuery] int rowCount)
         {
             var result = await _singleConsentAddService.RunAsync(rowCount);
@@ -73,11 +73,11 @@ namespace IYSIntegration.API.Controllers
             return Ok(result);
         }
         /// <summary>
-        /// IYS'den rıza kayıtlarını çekilir ve SF'a aktarılır.
+        /// IYS'den gelen rıza kayıtları çekilir ve DB'de saklanır.
         /// </summary>
         /// <param name="batchSize"></param>
         /// <returns></returns>
-        [HttpGet("pull-consent")]
+        [HttpGet("pullconsent")]
         public async Task<IActionResult> PullConsent([FromQuery] int batchSize, bool resetAfter = false)
         {
             var result = await _pullConsentService.RunAsync(batchSize, resetAfter);
@@ -86,11 +86,11 @@ namespace IYSIntegration.API.Controllers
             return Ok(result);
         }
         /// <summary>
-        /// SF'dan gelen consentler sıraya alınır
+        /// IYS'den toplanan rıza kayıtları ve SF'a aktarılır.
         /// </summary>
         /// <param name="rowCount"></param>
         /// <returns></returns>
-        [HttpPost("sf-consent")]
+        [HttpPost("pushConsentToSF")]
         public async Task<IActionResult> SfConsent([FromQuery] int rowCount)
         {
             var result = await _sfConsentService.RunAsync(rowCount);
@@ -104,7 +104,7 @@ namespace IYSIntegration.API.Controllers
         /// </summary>
         /// <param name="date"></param>
         /// <returns></returns>
-        [HttpGet("consent-error-excel")]
+        [HttpGet("GetErrorReportInExcel")]
         public async Task<IActionResult> GetConsentErrorExcel([FromQuery] DateTime? date)
         {
             var result = await _sendConsentErrorService.GetErrorsExcelBase64Async(date);
@@ -116,7 +116,7 @@ namespace IYSIntegration.API.Controllers
         /// </summary>
         /// <param name="date"></param>
         /// <returns></returns>
-        [HttpGet("consent-error-json")]
+        [HttpGet("GetErrorReport")]
         public async Task<IActionResult> GetConsentErrorJson([FromQuery] DateTime? date)
         {
             var result = await _sendConsentErrorService.GetErrorsJsonAsync(date);

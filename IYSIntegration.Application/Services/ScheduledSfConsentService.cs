@@ -2,9 +2,11 @@ using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
+using IYSIntegration.Application.Services.Models.Response.Brand;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace IYSIntegration.Application.Services
 {
@@ -26,7 +28,7 @@ namespace IYSIntegration.Application.Services
             var response = new ResponseBase<ScheduledJobStatistics>();
             int successCount = 0;
             int failedCount = 0;
-            bool errorFlag = false;
+            var results = new ConcurrentBag<LogResult>();
 
             _logger.LogInformation("SfConsentService running at: {time}", DateTimeOffset.Now);
             var consentRequests = await _dbService.GetPullConsentRequests(false, rowCount);
@@ -95,31 +97,41 @@ namespace IYSIntegration.Application.Services
                                 Error = (addConsentResult.IsSuccessful()) ? string.Empty : addConsentResult.OriginalError?.Message ?? "Unknown error",
                             };
 
-                            _dbService.UpdateSfConsentResponse(result).Wait();
+                            await _dbService.UpdateSfConsentResponse(result);
 
                             if (result.IsSuccess)
+                            {
                                 successCount++;
+                                results.Add(new LogResult { Id = consent.Id, CompanyCode = consent.CompanyCode, Messages = new Dictionary<string, string> { { "Success", addConsentResult.Data.WsDescription } } });
+                            }         
                             else
                             {
-                                errorFlag = true;
+                                response.Error();
                                 failedCount++;
+                                results.Add(new LogResult { Id = consent.Id, CompanyCode = consent.CompanyCode, Messages = new Dictionary<string, string> { { "Error", addConsentResult.Data.WsDescription } } });
                             }
+                        }
+                        else
+                        {
+                            response.Error();
+                            results.Add(new LogResult { Id = consent.Id, CompanyCode = consent.CompanyCode, Messages = addConsentResult.Messages });
                         }
                     }
                     catch (Exception ex)
                     {
-                        errorFlag = true;
+                        response.Error();
                         failedCount++;
                         _logger.LogError("SfConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+                        results.Add(new LogResult { Id = consent.Id, CompanyCode = consent.CompanyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
                     }
                 }
             }
 
-            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
-            if (errorFlag || failedCount > 0)
+            foreach (var result in results)
             {
-                response.Error("SF_CONSENT", "Some consents failed to send to SF.");
+                response.AddMessage(result.GetMessages());
             }
+            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
             return response;
         }
     }

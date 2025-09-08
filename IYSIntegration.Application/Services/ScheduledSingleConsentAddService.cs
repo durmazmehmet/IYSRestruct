@@ -3,6 +3,7 @@ using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
@@ -16,11 +17,11 @@ public class ScheduledSingleConsentAddService
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
 
-    public ScheduledSingleConsentAddService(ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IysProxy client, IIysHelper iysHelper)
+    public ScheduledSingleConsentAddService(ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IIysHelper iysHelper, IConfiguration config)
     {
         _logger = logger;
         _dbService = dbHelper;
-        _client = client;
+        _client = new IysProxy(config.GetValue<string>("BaseIysProxyUrl"));
         _iysHelper = iysHelper;
     }
 
@@ -69,9 +70,7 @@ public class ScheduledSingleConsentAddService
                         return;
                     }
 
-                    var addResponseResult = await _client.PostJsonAsync<Consent, ResponseBase<AddConsentResult>> ($"{companyCode}/addConsent", request.Consent);
-
-                    var addResponse = addResponseResult.Data;
+                    var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult> ($"consents/{companyCode}/addConsent", request.Consent);
 
                     if (!request.WithoutLogging)
                     {
@@ -92,7 +91,8 @@ public class ScheduledSingleConsentAddService
                     addResponse.Id = log.Id;
                     await _dbService.UpdateConsentResponse(addResponse);
                     Interlocked.Increment(ref successCount);
-                    results.Add(new LogResult { Id = log.Id, Status = "Success" });
+
+                   results.Add(new LogResult { Id = log.Id, Messages = new Dictionary<string, string> { {log.Id.ToString(), addResponse.Data.TransactionId.ToString() } } });
                 }
                 catch (Exception ex)
                 {

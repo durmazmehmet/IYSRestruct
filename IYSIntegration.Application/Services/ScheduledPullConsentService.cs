@@ -16,7 +16,7 @@ namespace IYSIntegration.Application.Services
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
 
-        public ScheduledPullConsentService(ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IIysHelper iysHelper, IysProxy iysClient, IConfiguration config)
+        public ScheduledPullConsentService(ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IIysHelper iysHelper, IConfiguration config)
         {
             _logger = logger;
             _dbService = dbHelper;
@@ -24,7 +24,7 @@ namespace IYSIntegration.Application.Services
             _iysHelper = iysHelper;
         }
 
-        public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int limit, bool resetAfter = false)
+        public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int limit = 999, bool resetAfter = false)
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
             var results = new ConcurrentBag<LogResult>();
@@ -64,6 +64,7 @@ namespace IYSIntegration.Application.Services
                             results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Messages = pullConsentResult.Messages });
                             Interlocked.Increment(ref failedCount);
                             _logger.LogError("pullconsent failed (status: {Status}) for company {companyCode}", pullConsentResult.HttpStatusCode, companyCode);
+                            response.Error();
                             continue;
                         }
 
@@ -109,6 +110,7 @@ namespace IYSIntegration.Application.Services
                     {
                         results.Add(new LogResult { Id = 0, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
                         Interlocked.Increment(ref failedCount);
+                        response.Error();
                     }
                 }
             }
@@ -122,12 +124,14 @@ namespace IYSIntegration.Application.Services
                     SuccessCount = successCount,
                     FailedCount = failedCount
                 };
-
-                foreach (var result in results)
-                {
-                    response.AddMessage(result.GetMessages());
-                }
+                response.Error();
             }
+
+            foreach (var result in results)
+            {
+                response.AddMessage(result.GetMessages());
+            }
+
 
             return response;
         }

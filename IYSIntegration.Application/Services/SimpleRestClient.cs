@@ -8,8 +8,6 @@ namespace IYSIntegration.Application.Services;
 public class SimpleRestClient : ISimpleRestClient
 {
     private readonly RestClient _client;
-    private string? _authScheme;
-    private string? _authToken;
 
     public SimpleRestClient(string baseUrl)
     {
@@ -23,127 +21,122 @@ public class SimpleRestClient : ISimpleRestClient
         });
     }
 
-    public SimpleRestClient AddAuthorization(string scheme, string token)
-    {
-        _authScheme = scheme;
-        _authToken = token;
-        return this;
-    }
-
-    private void ApplyAuthorization(RestRequest req)
-    {
-        if (!string.IsNullOrWhiteSpace(_authScheme) && !string.IsNullOrWhiteSpace(_authToken))
-            req.AddOrUpdateHeader("Authorization", $"{_authScheme} {_authToken}");
-    }
-
-    // GET
-    public async Task<ResponseBase<T>> GetAsync<T>(
+    public async Task<ResponseBase<TResp>> GetAsync<TResp>(
         string path,
         IDictionary<string, string?>? query = null,
         CancellationToken ct = default)
     {
         var req = new RestRequest(path, Method.Get);
-        ApplyDefaultsForGet(req);
-        ApplyAuthorization(req);
+        req.AddOrUpdateHeader("Accept", "application/json");
 
         if (query != null)
-            foreach (var q in query)
-                req.AddQueryParameter(q.Key, q.Value ?? string.Empty);
+            foreach (var kv in query)
+                req.AddQueryParameter(kv.Key, kv.Value ?? string.Empty);
 
         var resp = await _client.ExecuteAsync(req, ct);
-        return ParseResponse<T>(resp);
+        return ParseEnvelope<TResp>(resp);
     }
 
-    // POST JSON
     public async Task<ResponseBase<TResp>> PostJsonAsync<TReq, TResp>(
         string path,
         TReq body,
         CancellationToken ct = default)
     {
         var req = new RestRequest(path, Method.Post);
-        ApplyDefaultsForJson(req);
-        ApplyAuthorization(req);
+        req.AddOrUpdateHeader("Accept", "application/json");
+        req.AddOrUpdateHeader("Content-Type", "application/json");
         req.AddStringBody(JsonConvert.SerializeObject(body), ContentType.Json);
 
         var resp = await _client.ExecuteAsync(req, ct);
-        return ParseResponse<TResp>(resp);
+        return ParseEnvelope<TResp>(resp);
     }
 
-    // POST Form
-    public async Task<ResponseBase<T>> PostFormAsync<T>(
+    public async Task<ResponseBase<TResp>> PostFormAsync<TResp>(
         string path,
         IDictionary<string, string> form,
         CancellationToken ct = default)
     {
         var req = new RestRequest(path, Method.Post);
-        ApplyDefaultsForForm(req);
-        ApplyAuthorization(req);
+        req.AddOrUpdateHeader("Accept", "application/json");
+        req.AddOrUpdateHeader("Content-Type", "application/x-www-form-urlencoded");
 
         foreach (var kv in form)
             req.AddParameter(kv.Key, kv.Value, ParameterType.GetOrPost);
 
         var resp = await _client.ExecuteAsync(req, ct);
-        return ParseResponse<T>(resp);
+        return ParseEnvelope<TResp>(resp);
     }
 
-    // ---- Defaults by method ----
-    private static void ApplyDefaultsForGet(RestRequest req)
+    public async Task<ResponseBase<TResp>> PutJsonAsync<TReq, TResp>(
+        string path,
+        TReq body,
+        CancellationToken ct = default)
     {
-        req.AddOrUpdateHeader("Accept", "application/json");
-    }
-
-    private static void ApplyDefaultsForJson(RestRequest req)
-    {
+        var req = new RestRequest(path, Method.Put);
         req.AddOrUpdateHeader("Accept", "application/json");
         req.AddOrUpdateHeader("Content-Type", "application/json");
+        req.AddStringBody(JsonConvert.SerializeObject(body), ContentType.Json);
+
+        var resp = await _client.ExecuteAsync(req, ct);
+        return ParseEnvelope<TResp>(resp);
     }
 
-    private static void ApplyDefaultsForForm(RestRequest req)
-    {
-        req.AddOrUpdateHeader("Accept", "application/json");
-        req.AddOrUpdateHeader("Content-Type", "application/x-www-form-urlencoded");
-    }
 
-    // ---- Parse to ResponseBase<T> ----
-    private static ResponseBase<T> ParseResponse<T>(RestResponse resp)
-    {
-        var result = new ResponseBase<T>
-        {
-            HttpStatusCode = (int)resp.StatusCode,
-            SendDate = DateTime.UtcNow.ToString("o") // ISO 8601
-        };
 
-        if (resp.IsSuccessful && !string.IsNullOrWhiteSpace(resp.Content))
+
+    private static ResponseBase<T> ParseEnvelope<T>(RestResponse resp)
+    {
+        var code = (int)resp.StatusCode;
+        var now = DateTime.UtcNow.ToString("o");
+        var body = resp.Content;
+
+        // 204 ise özel case
+        if (code == 204 || string.IsNullOrWhiteSpace(body))
         {
-            try
+            return new ResponseBase<T>
             {
-                var data = JsonConvert.DeserializeObject<T>(resp.Content!);
-                result.Success(data!);
-                return result;
-            }
-            catch (Exception ex)
-            {
-                result.Error("JSON_PARSE_ERROR", $"JSON parse error: {ex.Message}");
-                if (!string.IsNullOrEmpty(resp.Content))
-                    result.AddMessage("raw", Truncate(resp.Content, 4000));
-                return result;
-            }
+                HttpStatusCode = code,
+                SendDate = now,
+                Status = ServiceResponseStatuses.Success,
+                Data = default,
+                Messages = new Dictionary<string, string> { { "Info", "No content" } }
+            };
         }
 
-        var code = (int)resp.StatusCode;
-        var msg = string.IsNullOrWhiteSpace(resp.ErrorMessage)
-            ? $"HTTP {code} {resp.StatusDescription}"
-            : $"HTTP {code} {resp.StatusDescription} | {resp.ErrorMessage}";
+        try
+        {
+            var rb = JsonConvert.DeserializeObject<ResponseBase<T>>(body!);
+            if (rb == null)
+                return Fail<T>(code, "EMPTY_DESERIALIZED", "ResponseBase<T> null deserialize edildi.", now, body);
 
-        result.Error("HTTP_ERROR", msg);
+            if (rb.HttpStatusCode == 0) rb.HttpStatusCode = code;
+            if (string.IsNullOrWhiteSpace(rb.SendDate)) rb.SendDate = now;
+            rb.Messages ??= [];
+            return rb;
+        }
+        catch (Exception ex)
+        {
+            return Fail<T>(code, "DESERIALIZE_ERROR", ex.Message, now, body);
+        }
+    }
 
-        if (!string.IsNullOrWhiteSpace(resp.Content))
-            result.AddMessage("raw", Truncate(resp.Content, 4000));
 
-        return result;
+
+    private static ResponseBase<T> Fail<T>(int httpCode, string key, string message, string nowIso, string? raw = null)
+    {
+        var r = new ResponseBase<T>
+        {
+            HttpStatusCode = httpCode,
+            SendDate = nowIso,
+            Status = ServiceResponseStatuses.Error,
+            Messages = new Dictionary<string, string>()
+        };
+        r.AddMessage(key, message);
+        if (!string.IsNullOrWhiteSpace(raw))
+            r.AddMessage("raw", raw.Length > 4000 ? raw[..4000] : raw);
+        return r;
     }
 
     private static string Truncate(string s, int max)
         => s.Length <= max ? s : s.Substring(0, max);
 }
-

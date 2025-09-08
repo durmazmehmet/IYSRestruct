@@ -275,7 +275,7 @@ namespace IYSIntegration.Application.Services
 
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
-                bool isConsentOverdue = response.OriginalError.Errors.Any(x => overdueErrors.Contains(x.Code));
+                bool isConsentOverdue = response.OriginalError?.Errors.Any(x => overdueErrors.Contains(x.Code)) ?? false;
 
                 errorCodeList = response.OriginalError?.Errors?.Select(x => x.Code).ToList();
 

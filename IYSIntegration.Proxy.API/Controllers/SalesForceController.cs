@@ -3,6 +3,9 @@ using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using RestSharp;
+using RestSharp.Authenticators;
 
 namespace IYSIntegration.Proxy.API.Controllers;
 
@@ -11,30 +14,62 @@ namespace IYSIntegration.Proxy.API.Controllers;
 public class SalesForceController : ControllerBase
 {
     private readonly IConfiguration _config;
-    private readonly ISimpleRestClient _clientHelper;
-    private readonly IIysHelper _iysHelper;
     private readonly ISfIdentityService _identityManager;
     private readonly string _baseUrl;
 
-    public SalesForceController(IConfiguration config, ISimpleRestClient clientHelper, IIysHelper iysHelper, ISfIdentityService identityManager)
+    public SalesForceController(IConfiguration config, ISfIdentityService identityManager)
     {
         _config = config;
-        _clientHelper = clientHelper;
-        _baseUrl = _config.GetValue<string>($"SalesforceBaseUrl");
-        _iysHelper = iysHelper;
+        _baseUrl = _config.GetValue<string>($"Salesforce:BaseUrl");
         _identityManager = identityManager;
     }
 
-
+    /// <summary>
+    /// IYS'den gelen onay bilgisini Salesforce'a ekler.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
     [HttpPost("AddConsent")]
-    public async Task<ResponseBase<SfConsentAddResponse>> SalesfoceAddConsent([FromBody] SfConsentAddRequest request)
+    public async Task<ActionResult<ResponseBase<SfConsentAddResponse>>> SalesfoceAddConsent([FromBody] SfConsentAddRequest request)
     {
-        var token = await _identityManager.GetToken(true);
+        var response = new ResponseBase<SfConsentAddResponse>();
 
-        _clientHelper.AddAuthorization("Bearer", token.AccessToken);
+        try
+        {
+            var token = await _identityManager.GetToken(true);
 
-        // new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }),????
+            var client = new RestClient(new RestClientOptions(_baseUrl + "/apexrest/iys")
+            {
+                Authenticator = new JwtAuthenticator(token.AccessToken)
+            });
 
-        return await _clientHelper.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>($"{_baseUrl}/apexrest/iys", request);
+
+            var httpRequest = new RestRequest();
+
+            httpRequest.AddParameter("application/json", JsonConvert.SerializeObject(request,
+                                         Formatting.None,
+                                         new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }),
+                                         ParameterType.RequestBody);
+
+            var httpResponse = await client.PostAsync(httpRequest);
+
+            if (httpResponse.IsSuccessful)
+            {
+                var result = JsonConvert.DeserializeObject<SfConsentAddResponse>(httpResponse.Content);
+                response.Data = result;
+                response.Status = ServiceResponseStatuses.Success;
+            }
+            else
+            {
+                var errorResponse = JsonConvert.DeserializeObject<List<SfConsentAddErrorResponse>>(httpResponse.Content);
+                response.Error("Hata",$"{errorResponse.FirstOrDefault().errorCode}-{errorResponse.FirstOrDefault().message}");                
+            }
+        }
+        catch (Exception ex)
+        {
+            response.Error("Hata", $"{ex.Message}");
+        }
+
+        return StatusCode(response.HttpStatusCode == 0 ? 500 : response.HttpStatusCode, response);
     }
 }

@@ -15,11 +15,11 @@ namespace IYSIntegration.Application.Services
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
 
-        public ScheduledMultipleConsentQueryService(ILogger<ScheduledMultipleConsentQueryService> logger, IDbService dbHelper, IIysHelper iysHelper, IysProxy iysClient)
+        public ScheduledMultipleConsentQueryService(ILogger<ScheduledMultipleConsentQueryService> logger, IDbService dbHelper, IIysHelper iysHelper, IConfiguration config)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _client = iysClient;
+            _client = new IysProxy(config.GetValue<string>("BaseIysProxyUrl"));
             _iysHelper = iysHelper;
         }
 
@@ -48,7 +48,7 @@ namespace IYSIntegration.Application.Services
                             ["batchId"] = batch.BatchId.ToString()
                         };
 
-                        var result = await _client.GetAsync<List<QueryMultipleConsentResult>>("{companyCode}/queryMultipleConsent", queryParams);
+                        var result = await _client.GetAsync<List<QueryMultipleConsentResult>>($"consents/{companyCode}/queryMultipleConsent", queryParams);
 
                         if (result.IsSuccessful())
                         {

@@ -17,12 +17,12 @@ public class ScheduledMultipleConsentAddService
     private readonly IysProxy _client;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IysProxy client)
+    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IConfiguration config)
     {
         _configuration = configuration;
         _logger = logger;
         _dbService = dbHelper;
-        _client = client;
+        _client = new IysProxy(config.GetValue<string>("BaseIysProxyUrl"));
     }
 
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
@@ -61,7 +61,7 @@ public class ScheduledMultipleConsentAddService
                             Type = x.Type
                         }).ToList();
 
-                        var result = await _client.PostJsonAsync<List<Consent>, MultipleConsentResult>($"{companyCode}/multipleConsent", consents);
+                        var result = await _client.PostJsonAsync<List<Consent>, MultipleConsentResult>($"consents/{companyCode}/multipleConsent", consents);
 
                         if (result.IsSuccessful())
                         {
