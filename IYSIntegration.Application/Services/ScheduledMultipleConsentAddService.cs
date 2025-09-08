@@ -17,12 +17,11 @@ public class ScheduledMultipleConsentAddService
     private readonly IysProxy _client;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public ScheduledMultipleConsentAddService(IConfiguration configuration, ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IConfiguration config)
+    public ScheduledMultipleConsentAddService(ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IysProxy client)
     {
-        _configuration = configuration;
         _logger = logger;
         _dbService = dbHelper;
-        _client = new IysProxy(config.GetValue<string>("BaseIysProxyUrl"));
+        _client = client;
     }
 
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)

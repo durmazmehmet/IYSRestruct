@@ -3,7 +3,6 @@ using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
@@ -17,11 +16,11 @@ public class ScheduledSingleConsentAddService
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
 
-    public ScheduledSingleConsentAddService(ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IIysHelper iysHelper, IConfiguration config)
+    public ScheduledSingleConsentAddService(ILogger<ScheduledSingleConsentAddService> logger, IDbService dbHelper, IIysHelper iysHelper, IysProxy client)
     {
         _logger = logger;
         _dbService = dbHelper;
-        _client = new IysProxy(config.GetValue<string>("BaseIysProxyUrl"));
+        _client = client;
         _iysHelper = iysHelper;
     }
 

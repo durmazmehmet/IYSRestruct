@@ -16,11 +16,11 @@ namespace IYSIntegration.Application.Services
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
 
-        public ScheduledPullConsentService(ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IIysHelper iysHelper, IConfiguration config)
+        public ScheduledPullConsentService(ILogger<ScheduledPullConsentService> logger, IDbService dbHelper, IIysHelper iysHelper, IysProxy client)
         {
             _logger = logger;
             _dbService = dbHelper;
-            _client = new IysProxy(config.GetValue<string>("BaseIysProxyUrl"));
+            _client = client;
             _iysHelper = iysHelper;
         }
 

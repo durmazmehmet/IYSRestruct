@@ -80,6 +80,7 @@ namespace IYSIntegration.Application.Services.Models.Base
         public void Error()
         {
             Status = ServiceResponseStatuses.Error;
+            HttpStatusCode = 500;
         }
 
         public void Error(string messageKey, string message)
@@ -106,6 +107,7 @@ namespace IYSIntegration.Application.Services.Models.Base
         public void Success()
         {
             Status = ServiceResponseStatuses.Success;
+            HttpStatusCode = 200;
         }
 
         /// <summary>
