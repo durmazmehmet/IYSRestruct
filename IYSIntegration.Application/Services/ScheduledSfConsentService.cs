@@ -26,6 +26,7 @@ namespace IYSIntegration.Application.Services
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
+            response.Success();
             int successCount = 0;
             int failedCount = 0;
             var results = new ConcurrentBag<LogResult>();
@@ -131,7 +132,11 @@ namespace IYSIntegration.Application.Services
             {
                 response.AddMessage(result.GetMessages());
             }
-            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
+            response.Data = new ScheduledJobStatistics
+            {
+                SuccessCount = successCount,
+                FailedCount = failedCount
+            };
             return response;
         }
     }

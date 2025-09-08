@@ -26,6 +26,7 @@ namespace IYSIntegration.Application.Services
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchCount)
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
+            response.Success();
             var results = new ConcurrentBag<LogResult>();
             int successCount = 0;
             int failedCount = 0;
@@ -86,8 +87,15 @@ namespace IYSIntegration.Application.Services
                 results.Add(new LogResult { Id = 0, CompanyCode = "", Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
             }
 
-            response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
-
+            foreach (var result in results)
+            {
+                response.AddMessage(result.GetMessages());
+            }
+            response.Data = new ScheduledJobStatistics
+            {
+                SuccessCount = successCount,
+                FailedCount = failedCount
+            };
             return response;
         }
     }

@@ -28,6 +28,7 @@ public class ScheduledMultipleConsentAddService
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchSize, int batchCount, int checkAfterInSeconds)
     {
         var response = new ResponseBase<ScheduledJobStatistics>();
+        response.Success();
         var successCount = 0;
         var failedCount = 0;
         var results = new ConcurrentBag<LogResult>();
@@ -138,9 +139,11 @@ public class ScheduledMultipleConsentAddService
         {
             response.AddMessage(result.GetMessages());
         }
-
-        response.Data = new ScheduledJobStatistics { SuccessCount = successCount, FailedCount = failedCount };
-
+        response.Data = new ScheduledJobStatistics
+        {
+            SuccessCount = successCount,
+            FailedCount = failedCount
+        };
         return response;
     }
 }

@@ -27,6 +27,7 @@ namespace IYSIntegration.Application.Services
         public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int limit = 999, bool resetAfter = false)
         {
             var response = new ResponseBase<ScheduledJobStatistics>();
+            response.Success();
             var results = new ConcurrentBag<LogResult>();
             int failedCount = 0;
             int successCount = 0;
@@ -118,12 +119,6 @@ namespace IYSIntegration.Application.Services
             {
                 _logger.LogError("PullConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
                 results.Add(new LogResult { Id = 0, CompanyCode = "", Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
-
-                response.Data = new ScheduledJobStatistics
-                {
-                    SuccessCount = successCount,
-                    FailedCount = failedCount
-                };
                 response.Error();
             }
 
@@ -131,8 +126,11 @@ namespace IYSIntegration.Application.Services
             {
                 response.AddMessage(result.GetMessages());
             }
-
-
+            response.Data = new ScheduledJobStatistics
+            {
+                SuccessCount = successCount,
+                FailedCount = failedCount
+            };
             return response;
         }
     }

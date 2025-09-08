@@ -28,6 +28,7 @@ public class ScheduledSingleConsentAddService
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
     {
         var response = new ResponseBase<ScheduledJobStatistics>();
+        response.Success();
         var results = new ConcurrentBag<LogResult>();
         int failedCount = 0;
         int successCount = 0;
@@ -99,6 +100,7 @@ public class ScheduledSingleConsentAddService
                     results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
                     Interlocked.Increment(ref failedCount);
                     _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
+                    response.Error();
                 }
             });
 
@@ -111,17 +113,15 @@ public class ScheduledSingleConsentAddService
             response.Error("SINGLE_CONSENT_ADD_FATAL", "Service failed with an unexpected exception.");
         }
 
+        foreach (var result in results)
+        {
+            response.AddMessage(result.GetMessages());
+        }
         response.Data = new ScheduledJobStatistics
         {
             SuccessCount = successCount,
             FailedCount = failedCount
         };
-
-        foreach (var result in results)
-        {
-            response.AddMessage(result.GetMessages());
-        }
-
         return response;
     }
 
