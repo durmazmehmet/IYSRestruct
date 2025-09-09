@@ -91,7 +91,7 @@ public class SimpleRestClient : ISimpleRestClient
         var body = resp.Content;
 
         // 204 ise özel case
-        if (code == 204 || string.IsNullOrWhiteSpace(body))
+        if (code == 204)
         {
             return new ResponseBase<T>
             {

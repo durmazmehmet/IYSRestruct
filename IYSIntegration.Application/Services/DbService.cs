@@ -192,10 +192,15 @@ namespace IYSIntegration.Application.Services
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
-                var result = (await connection.QueryAsync<Consent>(QueryStrings.GetLastConsents, new { CompanyCode = companyCode, Recipients = recipients })).ToList();
+                var result = (await connection.QueryAsync<Consent>(
+    QueryStrings.GetLastConsents,
+    new { CompanyCode = companyCode, Recipients = recipients } // IEnumerable<string>
+)).ToList();
                 connection.Close();
                 return result;
             }
+
+            
         }
 
         public async Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response)

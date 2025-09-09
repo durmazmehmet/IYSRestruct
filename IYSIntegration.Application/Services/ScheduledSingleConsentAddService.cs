@@ -1,4 +1,4 @@
-using IYSIntegration.Application.Services.Interface;
+﻿using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
@@ -116,8 +116,6 @@ public class ScheduledSingleConsentAddService
 
                 if ((log.Status == "RED" || log.Status == "RET") && existingConsent == null)
                 {
-                    results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Skipped", "First time red/ret" } } });
-                    Interlocked.Increment(ref failedCount);
                     continue;
                 }
 
@@ -126,22 +124,25 @@ public class ScheduledSingleConsentAddService
                     DateTime.TryParse(log.ConsentDate, out var reqDate) &&
                     lastDate > reqDate)
                 {
-                    results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Skipped", "Consent date older than existing" } } });
-                    Interlocked.Increment(ref failedCount);
                     continue;
                 }
 
                 if (existingConsent != null && existingConsent.Status == "RET" && log.Status == "RET")
                 {
-                    results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Skipped", "Already ret" } } });
-                    Interlocked.Increment(ref failedCount);
+                    continue;
+                }
+
+                if (existingConsent != null && !string.IsNullOrWhiteSpace(existingConsent.ConsentDate) &&
+                        DateTime.TryParse(existingConsent.ConsentDate, out var consentDate) &&
+                        _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
+                {
                     continue;
                 }
 
                 validLogs.Add(log);
             }
 
-            var tasks = validLogs.Select(async log =>
+            foreach (var log in validLogs)
             {
                 var companyCode = _iysHelper.GetCompanyCode(log.IysCode);
 
@@ -163,39 +164,20 @@ public class ScheduledSingleConsentAddService
                         }
                     };
 
-                    if (!string.IsNullOrWhiteSpace(request.Consent?.ConsentDate) &&
-                        DateTime.TryParse(request.Consent.ConsentDate, out var consentDate) &&
-                        _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
-                    {
-                        results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Skipped", "Consent older than 3 business days" } } });
-                        Interlocked.Increment(ref failedCount);
-                        _logger.LogWarning("Consent ID {Id} skipped: older than 3 business days", log.Id);
-                        return;
-                    }
-
-                    var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult> ($"consents/{companyCode}/addConsent", request.Consent);
-
-                    if (!request.WithoutLogging)
+                    var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{companyCode}/addConsent", request.Consent);
+                   
+                    if (addResponse.HttpStatusCode >= 200 || addResponse.HttpStatusCode < 300)
                     {
                         var id = await _dbService.InsertConsentRequest(request);
                         addResponse.Id = id;
-                        await _dbService.UpdateConsentResponseFromCommon(addResponse);
-                        addResponse.OriginalError = null;
+                        await _dbService.UpdateConsentResponse(addResponse);
+                        Interlocked.Increment(ref successCount);
                     }
-
-                    if (addResponse.HttpStatusCode == 0 || addResponse.HttpStatusCode >= 500)
+                    else
                     {
-                        results.Add(new LogResult { Id = log.Id, Status = "Failed", Messages = response.Messages });
                         Interlocked.Increment(ref failedCount);
-                        _logger.LogError("AddConsent failed (status: {Status}) for log ID {Id}", addResponse.HttpStatusCode, log.Id);
-                        return;
                     }
 
-                    addResponse.Id = log.Id;
-                    await _dbService.UpdateConsentResponse(addResponse);
-                    Interlocked.Increment(ref successCount);
-
-                    results.Add(new LogResult { Id = log.Id, Messages = new Dictionary<string, string> { { log.Id.ToString(), addResponse.Data.TransactionId.ToString() } } });
                 }
                 catch (Exception ex)
                 {
@@ -204,9 +186,8 @@ public class ScheduledSingleConsentAddService
                     _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
                     response.Error();
                 }
-            });
+            }
 
-            await Task.WhenAll(tasks);
         }
         catch (Exception ex)
         {
