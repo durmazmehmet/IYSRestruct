@@ -23,18 +23,12 @@ internal class Program
             var url = config.GetValue<string>("BaseIysProxyUrl");
             return new IysProxy(url);
         });
-        builder.Services.AddScoped<ScheduledDuplicateConsentCleanupService>();
-        builder.Services.AddScoped<ScheduledPendingConsentSyncService>();
-        builder.Services.AddScoped<IDuplicateCleanerService, DuplicateCleanerService>();
-        builder.Services.AddScoped<IPendingSyncService, PendingSyncService>();
         builder.Services.AddScoped<ISyncConsentService, SyncConsentService>();
-        builder.Services.AddScoped<IOverdueOldConsentsService, OverdueOldConsentsService>();
-        builder.Services.AddScoped<ScheduledMultipleConsentQueryService>();
         builder.Services.AddScoped<ScheduledSingleConsentAddService>();
         builder.Services.AddScoped<ScheduledMultipleConsentAddService>();
         builder.Services.AddScoped<ScheduledPullConsentService>();
         builder.Services.AddScoped<ScheduledSfConsentService>();
-        builder.Services.AddScoped<ScheduledSendConsentErrorService>();
+        builder.Services.AddScoped<SendConsentErrorService>();
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();

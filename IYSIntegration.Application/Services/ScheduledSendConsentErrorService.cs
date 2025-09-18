@@ -7,13 +7,13 @@ using System.Drawing;
 
 namespace IYSIntegration.Application.Services
 {
-    public class ScheduledSendConsentErrorService
+    public class SendConsentErrorService
     {
-        private readonly ILogger<ScheduledSendConsentErrorService> _logger;
+        private readonly ILogger<SendConsentErrorService> _logger;
         private readonly IDbService _dbService;
         private string SmallDateFormat => "yyyy.MM.dd";
 
-        public ScheduledSendConsentErrorService(ILogger<ScheduledSendConsentErrorService> logger, IDbService dbHelper)
+        public SendConsentErrorService(ILogger<SendConsentErrorService> logger, IDbService dbHelper)
         {
             _logger = logger;
             _dbService = dbHelper;

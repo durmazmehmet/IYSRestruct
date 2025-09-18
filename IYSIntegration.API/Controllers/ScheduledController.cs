@@ -12,7 +12,7 @@ namespace IYSIntegration.API.Controllers
         private readonly ScheduledMultipleConsentAddService _multipleConsentAddService;
         private readonly ScheduledPullConsentService _pullConsentService;
         private readonly ScheduledSfConsentService _sfConsentService;
-        private readonly ScheduledSendConsentErrorService _sendConsentErrorService;
+        private readonly SendConsentErrorService _sendConsentErrorService;
         private readonly IPendingSyncService _pendingSyncService;
 
         public ScheduledController(
@@ -20,7 +20,7 @@ namespace IYSIntegration.API.Controllers
                                    ScheduledMultipleConsentAddService multipleConsentAddService,
                                    ScheduledPullConsentService pullConsentService,
                                    ScheduledSfConsentService sfConsentService,
-                                   ScheduledSendConsentErrorService sendConsentErrorService,
+                                   SendConsentErrorService sendConsentErrorService,
                                    IPendingSyncService pendingSyncService)
         {
             _singleConsentAddService = singleConsentAddService;
@@ -31,12 +31,6 @@ namespace IYSIntegration.API.Controllers
             _pendingSyncService = pendingSyncService;
         }
 
-        [HttpGet("pushBulkConsentToIys")]
-        public async Task<IActionResult> MultipleConsentAdd([FromQuery] int batchSize, int diffInSeconds)
-        {
-            var result = await _multipleConsentAddService.RunAsync(batchSize, diffInSeconds);
-            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
-        }
 
         [HttpGet("pushConsentsToIys")]
         public async Task<IActionResult> SingleConsentAdd([FromQuery] int batchSize)
@@ -52,13 +46,6 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
-        [HttpGet("syncPendingConsents")]
-        public async Task<IActionResult> SyncPendingConsents([FromQuery] int batchSize = 900)
-        {
-            var result = await _pendingSyncService.RunBatchAsync(batchSize);
-            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
-        }
-
         [HttpGet("pushConsentToSf")]
         public async Task<IActionResult> SfConsent([FromQuery] int batchSize)
         {
@@ -70,13 +57,6 @@ namespace IYSIntegration.API.Controllers
         public async Task<IActionResult> GetConsentErrorExcel([FromQuery] DateTime? date)
         {
             var result = await _sendConsentErrorService.GetErrorsExcelBase64Async(date);
-            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
-        }
-
-        [HttpGet("GetErrorReport")]
-        public async Task<IActionResult> GetConsentErrorJson([FromQuery] DateTime? date)
-        {
-            var result = await _sendConsentErrorService.GetErrorsJsonAsync(date);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
     }

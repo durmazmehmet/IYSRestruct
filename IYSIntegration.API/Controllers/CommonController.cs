@@ -20,14 +20,18 @@ namespace IYSIntegration.API.Controllers
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
+        private readonly SendConsentErrorService _sendConsentErrorService;
         public CommonController(
             IDbService dbHelper,
             IysProxy iysClient,
-            IIysHelper iysHelper)
+            IIysHelper iysHelper,
+            SendConsentErrorService sendConsentErrorService
+            )
         {
             _dbService = dbHelper;
             _client = iysClient;
             _iysHelper = iysHelper;
+            _sendConsentErrorService = sendConsentErrorService;
         }
 
         /// <summary>
@@ -346,6 +350,18 @@ namespace IYSIntegration.API.Controllers
                     WsDescription = $"{errorResponse.FirstOrDefault().errorCode}-{errorResponse.FirstOrDefault().message}"
                 };
             }
+        }
+
+        /// <summary>
+        /// COnsent hatalarını tarih bazlı getirir.
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
+        [HttpGet("GetErrorReport")]
+        public async Task<IActionResult> GetConsentErrorJson([FromQuery] DateTime? date)
+        {
+            var result = await _sendConsentErrorService.GetErrorsJsonAsync(date);
+            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
     }
