@@ -270,6 +270,7 @@
             WHERE
                                 ISNULL(IsProcessed, 0) = @IsProcessed
                                 AND IsOverdue IS NULL
+                                AND ISNULL(IsPulled, 0) = 1
             ORDER BY
                                 Id DESC;
            ";
