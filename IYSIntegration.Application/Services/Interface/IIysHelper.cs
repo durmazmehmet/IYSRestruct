@@ -12,12 +12,10 @@ public interface IIysHelper
     bool IsOlderThanBusinessDays(DateTime consentDate, int maxBusinessDays);
     List<string> GetAllCompanyCodes();
     Task<(bool IsValid, ResponseBase<AddConsentResult> Response)> ValidateConsentRequestAsync(
-        AddConsentRequest request,
-        IDbService dbService);
+        AddConsentRequest request);
 
     Task<List<ConsentProcessingResult>> ValidateMultipleConsentsAsync(
-        MultipleConsentRequest request,
-        IDbService dbService);
+        MultipleConsentRequest request);
 
     void AppendValidationMessages(
         ResponseBase<MultipleConsentResult> response,
@@ -26,15 +24,11 @@ public interface IIysHelper
     Task LogConsentAsync(
         AddConsentRequest request,
         ResponseBase<AddConsentResult> response,
-        IDbService dbService,
-        IDuplicateCleanerService duplicateCleanerService,
-        IPendingSyncService pendingSyncService);
+        bool runPendingSync = true);
 
     Task<int> LogConsentRequestAsync(
         AddConsentRequest request,
-        IDbService dbService,
-        IDuplicateCleanerService duplicateCleanerService,
-        IPendingSyncService pendingSyncService);
+        bool runPendingSync = true);
 
     string? ResolveCompanyCode(string? companyCode, string? companyName, int iysCode);
 }

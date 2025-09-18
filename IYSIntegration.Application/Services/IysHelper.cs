@@ -4,6 +4,7 @@ using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -13,10 +14,19 @@ namespace IYSIntegration.Application.Services;
 public sealed class IysHelper : IIysHelper
 {
     private readonly IConfiguration _config;
+    private readonly IDbService _dbService;
+    private readonly IServiceProvider _serviceProvider;
+    private IDuplicateCleanerService? _duplicateCleanerService;
+    private IPendingSyncService? _pendingSyncService;
 
-    public IysHelper(IConfiguration config)
+    public IysHelper(
+        IConfiguration config,
+        IDbService dbService,
+        IServiceProvider serviceProvider)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
+        _dbService = dbService ?? throw new ArgumentNullException(nameof(dbService));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
     public List<string> GetAllCompanyCodes() => _config.GetSection("CompanyCodes").Get<List<string>>() ?? [];
@@ -90,8 +100,7 @@ public sealed class IysHelper : IIysHelper
     }
 
     public async Task<(bool IsValid, ResponseBase<AddConsentResult> Response)> ValidateConsentRequestAsync(
-        AddConsentRequest request,
-        IDbService dbService)
+        AddConsentRequest request)
     {
         var response = new ResponseBase<AddConsentResult>();
 
@@ -115,13 +124,13 @@ public sealed class IysHelper : IIysHelper
             return (false, response);
         }
 
-        if (!await dbService.CheckConsentRequest(request))
+        if (!await _dbService.CheckConsentRequest(request))
         {
             response.Error("Hata", "İlk defa giden rıza red gönderilemez");
             return (false, response);
         }
 
-        var lastConsentDate = await dbService.GetLastConsentDate(request.CompanyCode!, request.Consent.Recipient);
+        var lastConsentDate = await _dbService.GetLastConsentDate(request.CompanyCode!, request.Consent.Recipient);
 
         if (lastConsentDate.HasValue && parsedDate < lastConsentDate.Value)
         {
@@ -139,8 +148,7 @@ public sealed class IysHelper : IIysHelper
     }
 
     public async Task<List<ConsentProcessingResult>> ValidateMultipleConsentsAsync(
-        MultipleConsentRequest request,
-        IDbService dbService)
+        MultipleConsentRequest request)
     {
         request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
@@ -170,7 +178,7 @@ public sealed class IysHelper : IIysHelper
                 }
             };
 
-            var (isValid, validationResponse) = await ValidateConsentRequestAsync(addConsentRequest, dbService);
+            var (isValid, validationResponse) = await ValidateConsentRequestAsync(addConsentRequest);
 
             results.Add(new ConsentProcessingResult
             {
@@ -201,33 +209,31 @@ public sealed class IysHelper : IIysHelper
     public async Task LogConsentAsync(
         AddConsentRequest request,
         ResponseBase<AddConsentResult> response,
-        IDbService dbService,
-        IDuplicateCleanerService duplicateCleanerService,
-        IPendingSyncService pendingSyncService)
+        bool runPendingSync = true)
     {
         if (request.WithoutLogging)
         {
             return;
         }
 
-        var id = await LogConsentRequestAsync(request, dbService, duplicateCleanerService, pendingSyncService);
+        var id = await LogConsentRequestAsync(request, runPendingSync);
         response.Id = id;
-        await dbService.UpdateConsentResponseFromCommon(response);
+        await _dbService.UpdateConsentResponseFromCommon(response);
         response.OriginalError = null;
     }
 
     public async Task<int> LogConsentRequestAsync(
         AddConsentRequest request,
-        IDbService dbService,
-        IDuplicateCleanerService duplicateCleanerService,
-        IPendingSyncService pendingSyncService)
+        bool runPendingSync = true)
     {
         if (request.WithoutLogging)
         {
             return 0;
         }
 
-        var id = await dbService.InsertConsentRequest(request);
+        NormalizeConsentRequest(request);
+
+        var id = await _dbService.InsertConsentRequest(request);
 
         if (id > 0 && request.Consent != null)
         {
@@ -247,11 +253,79 @@ public sealed class IysHelper : IIysHelper
 
             var insertedConsents = new List<Consent> { insertedConsent };
 
-            await duplicateCleanerService.CleanAsync(insertedConsents);
-            await pendingSyncService.SyncAsync(insertedConsents);
+            var duplicateCleanerService = GetDuplicateCleanerService();
+            if (duplicateCleanerService != null)
+            {
+                await duplicateCleanerService.CleanAsync(insertedConsents);
+            }
+
+            if (runPendingSync)
+            {
+                QueuePendingSync(insertedConsents);
+            }
         }
 
         return id;
+    }
+
+    private void NormalizeConsentRequest(AddConsentRequest request)
+    {
+        if (request == null)
+        {
+            return;
+        }
+
+        request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
+
+        if (request.IysCode == 0 && !string.IsNullOrWhiteSpace(request.CompanyCode))
+        {
+            var consentParams = GetIysCode(request.CompanyCode);
+            request.IysCode = consentParams.IysCode;
+            request.BrandCode = consentParams.BrandCode;
+        }
+    }
+
+    private IDuplicateCleanerService? GetDuplicateCleanerService()
+    {
+        if (_duplicateCleanerService != null)
+        {
+            return _duplicateCleanerService;
+        }
+
+        _duplicateCleanerService = _serviceProvider.GetService<IDuplicateCleanerService>();
+        return _duplicateCleanerService;
+    }
+
+    private IPendingSyncService? GetPendingSyncService()
+    {
+        if (_pendingSyncService != null)
+        {
+            return _pendingSyncService;
+        }
+
+        _pendingSyncService = _serviceProvider.GetService<IPendingSyncService>();
+        return _pendingSyncService;
+    }
+
+    private void QueuePendingSync(IEnumerable<Consent> consents)
+    {
+        var pendingSyncService = GetPendingSyncService();
+        if (pendingSyncService == null)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await pendingSyncService.SyncAsync(consents).ConfigureAwait(false);
+            }
+            catch
+            {
+                // arka planda tetiklenen senkronizasyon hataları isteği engellememelidir.
+            }
+        });
     }
 
     public string? ResolveCompanyCode(string? companyCode, string? companyName, int iysCode)

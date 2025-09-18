@@ -13,7 +13,8 @@ namespace IYSIntegration.Application.Services.Interface
         Task UpdateLog(RestResponse response, int id);
         Task<int> InsertConsentRequest(AddConsentRequest request);
         Task<bool> CheckConsentRequest(AddConsentRequest request);
-        Task<bool> PullConsentExists(string companyCode, string recipient);
+        Task<bool> PullConsentExists(string companyCode, string recipient, string? type = null);
+        Task<bool> SuccessfulConsentRequestExists(string companyCode, string recipient, string? type = null);
         Task<DateTime?> GetLastConsentDate(string companyCode, string recipient);
         Task<List<Consent>> GetLastConsents(string companyCode, IEnumerable<string> recipients);
         Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response);

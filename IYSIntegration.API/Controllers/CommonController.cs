@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace IYSIntegration.API.Controllers
 {
@@ -20,20 +21,17 @@ namespace IYSIntegration.API.Controllers
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
-        private readonly IDuplicateCleanerService _duplicateCleanerService;
         private readonly IPendingSyncService _pendingSyncService;
 
         public CommonController(
             IDbService dbHelper,
             IysProxy iysClient,
             IIysHelper iysHelper,
-            IDuplicateCleanerService duplicateCleanerService,
             IPendingSyncService pendingSyncService)
         {
             _dbService = dbHelper;
             _client = iysClient;
             _iysHelper = iysHelper;
-            _duplicateCleanerService = duplicateCleanerService;
             _pendingSyncService = pendingSyncService;
         }
 
@@ -41,16 +39,86 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
-            var (isValid, validationResponse) = await _iysHelper.ValidateConsentRequestAsync(request, _dbService);
+            var (isValid, validationResponse) = await _iysHelper.ValidateConsentRequestAsync(request);
 
             if (!isValid)
             {
                 return validationResponse;
             }
 
+            var consent = request.Consent;
+            var shouldRunPendingSync = true;
+
+            if (consent != null
+                && !string.IsNullOrWhiteSpace(consent.Recipient)
+                && !string.IsNullOrWhiteSpace(request.CompanyCode))
+            {
+                var hasPullRecord = await _dbService.PullConsentExists(request.CompanyCode, consent.Recipient, consent.Type);
+                var hasSuccessfulRequest = await _dbService.SuccessfulConsentRequestExists(request.CompanyCode, consent.Recipient, consent.Type);
+
+                if (!hasPullRecord && !hasSuccessfulRequest)
+                {
+                    const string syncMessageKey = "CONSENT_NOT_SYNCHRONIZED";
+                    const string syncMessage = "İzin kaydı IYS üzerinden bulunamadığı için senkronizasyon başlatıldı.";
+
+                    if (!request.WithoutLogging)
+                    {
+                        var loggedId = await _iysHelper.LogConsentRequestAsync(request);
+
+                        var syncResponse = new ResponseBase<AddConsentResult>();
+
+                        if (loggedId > 0)
+                        {
+                            syncResponse.Id = loggedId;
+                        }
+
+                        syncResponse.Error(syncMessageKey, syncMessage);
+                        return syncResponse;
+                    }
+
+                    var pendingConsent = new Consent
+                    {
+                        Id = consent.Id,
+                        CompanyCode = request.CompanyCode,
+                        Recipient = consent.Recipient,
+                        RecipientType = consent.RecipientType,
+                        Type = consent.Type,
+                        Status = consent.Status,
+                        Source = consent.Source,
+                        ConsentDate = consent.ConsentDate
+                    };
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _pendingSyncService.SyncAsync(new[] { pendingConsent }).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            // arka planda tetiklenen senkronizasyon hataları isteği engellememelidir.
+                        }
+                    });
+
+                    var syncResponseWithoutLogging = new ResponseBase<AddConsentResult>();
+                    syncResponseWithoutLogging.Error(syncMessageKey, syncMessage);
+                    return syncResponseWithoutLogging;
+                }
+
+                shouldRunPendingSync = hasPullRecord;
+            }
+
+            if (request.WithoutLogging)
+            {
+                return await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
+            }
+
             var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
 
-            await _iysHelper.LogConsentAsync(request, response, _dbService, _duplicateCleanerService, _pendingSyncService);
+            await _iysHelper.LogConsentAsync(
+                request,
+                response,
+                shouldRunPendingSync);
 
             return response;
         }
@@ -120,7 +188,7 @@ namespace IYSIntegration.API.Controllers
         {
             var requestCount = request.Consents.Count;
             var response = new ResponseBase<MultipleConsentResult>();
-            var validatedConsents = await _iysHelper.ValidateMultipleConsentsAsync(request, _dbService);
+            var validatedConsents = await _iysHelper.ValidateMultipleConsentsAsync(request);
             var successCount = 0;
             var hasError = false;
 
@@ -139,10 +207,7 @@ namespace IYSIntegration.API.Controllers
                 }
 
                 var result = await _iysHelper.LogConsentRequestAsync(
-                    consentResult.Request,
-                    _dbService,
-                    _duplicateCleanerService,
-                    _pendingSyncService);
+                    consentResult.Request);
 
                 if (result > 0 && consentResult.Request.Consent != null)
                 {

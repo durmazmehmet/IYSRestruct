@@ -77,7 +77,7 @@ namespace IYSIntegration.Application.Services
 
                 if (!pullStatusCache.TryGetValue(recipientKey, out var hasPulled))
                 {
-                    hasPulled = await _dbService.PullConsentExists(companyCode, consentLog.Recipient);
+                    hasPulled = await _dbService.PullConsentExists(companyCode, consentLog.Recipient, consentLog.Type);
                     pullStatusCache[recipientKey] = hasPulled;
                 }
 
