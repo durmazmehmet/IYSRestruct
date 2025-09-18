@@ -2,38 +2,41 @@
 
 namespace IYSIntegration.Application.Services.Models.Base
 {
-    public class Consent
+    public class IysBaseConsent
     {
-        [JsonProperty("recipient")]
-        public string Recipient { get; set; }
-
-        [JsonProperty("type")]
-        public string Type { get; set; }
+        [JsonProperty("consentDate")]
+        public string ConsentDate { get; set; }
 
         [JsonProperty("source")]
         public string Source { get; set; }
 
-        [JsonProperty("status")]
-        public string Status { get; set; }
-
-        [JsonProperty("consentDate")]
-        public string ConsentDate { get; set; }
+        [JsonProperty("recipient")]
+        public string Recipient { get; set; }
 
         [JsonProperty("recipientType")]
         public string RecipientType { get; set; }
 
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("type")]
+        public string Type { get; set; }
+
         [JsonProperty("retailerCode", NullValueHandling = NullValueHandling.Ignore)]
         public int? RetailerCode { get; set; }
 
+        [JsonProperty("retailerAccess", NullValueHandling = NullValueHandling.Ignore)]
+        public int[]? RetailerAccess { get; set; }
+    }
+
+    public class Consent : IysBaseConsent
+    {  
         [JsonProperty("creationDate", NullValueHandling = NullValueHandling.Ignore)]
         public string? CreationDate { get; set; }
 
         [JsonProperty("transactionId", NullValueHandling = NullValueHandling.Ignore)]
         public string? TransactionId { get; set; }
-
-        [JsonProperty("retailerAccess", NullValueHandling = NullValueHandling.Ignore)]
-        public int[]? RetailerAccess { get; set; }
-
+        
         [JsonIgnore]
         public long Id { get; set; }
 

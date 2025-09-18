@@ -2,7 +2,7 @@
 
 namespace IYSIntegration.Application.Services.Models.Response.Consent
 {
-    public class QueryConsentResult : Base.Consent
+    public class QueryConsentResult : Base.IysBaseConsent
     {
         [JsonProperty("creationDate")]
         public string CreationDate { get; set; }
@@ -12,5 +12,18 @@ namespace IYSIntegration.Application.Services.Models.Response.Consent
 
         [JsonProperty("retailerTitle")]
         public string RetailerTitle { get; set; }
+
+        [JsonProperty("transactionId")]
+        public string TransactionId { get; set; }
+    }
+
+    public class MultipleQueryConsentResult
+    {
+
+        [JsonProperty("requestId")]
+        public string RequestId { get; set; }
+
+        [JsonProperty("list")]
+        public List<string> List { get; set; }
     }
 }
