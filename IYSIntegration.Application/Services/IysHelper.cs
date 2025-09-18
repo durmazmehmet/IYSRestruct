@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace IYSIntegration.Application.Services;
@@ -106,6 +107,11 @@ public sealed class IysHelper : IIysHelper
 
         request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
+        if (request.ForceSend)
+        {
+            return (true, response);
+        }
+
         if (request.Consent == null)
         {
             response.Error("Hata", "Consent bilgisi zorunludur");
@@ -164,6 +170,7 @@ public sealed class IysHelper : IIysHelper
                 IysCode = request.IysCode,
                 BrandCode = request.BrandCode,
                 SalesforceId = consent.SalesforceId,
+                ForceSend = request.ForceSend,
                 Consent = new Consent
                 {
                     ConsentDate = consent.ConsentDate,
@@ -177,6 +184,17 @@ public sealed class IysHelper : IIysHelper
                     SalesforceId = consent.SalesforceId
                 }
             };
+
+            if (request.ForceSend)
+            {
+                results.Add(new ConsentProcessingResult
+                {
+                    Index = i + 1,
+                    Request = addConsentRequest,
+                    ErrorResponse = null
+                });
+                continue;
+            }
 
             var (isValid, validationResponse) = await ValidateConsentRequestAsync(addConsentRequest);
 
@@ -206,12 +224,27 @@ public sealed class IysHelper : IIysHelper
         }
     }
 
+    public string BuildAddConsentErrorMessage(ResponseBase<AddConsentResult> addResponse)
+    {
+        if (addResponse.Messages is { Count: > 0 })
+        {
+            return string.Join(" | ", addResponse.Messages.Select(kv => $"{kv.Key}: {kv.Value}"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(addResponse.OriginalError?.Message))
+        {
+            return addResponse.OriginalError.Message;
+        }
+
+        return $"HTTP {addResponse.HttpStatusCode}";
+    }
+
     public async Task LogConsentAsync(
         AddConsentRequest request,
         ResponseBase<AddConsentResult> response,
         bool runPendingSync = true)
     {
-        if (request.WithoutLogging)
+        if (request.ForceSend)
         {
             return;
         }
@@ -226,7 +259,7 @@ public sealed class IysHelper : IIysHelper
         AddConsentRequest request,
         bool runPendingSync = true)
     {
-        if (request.WithoutLogging)
+        if (request.ForceSend)
         {
             return 0;
         }
