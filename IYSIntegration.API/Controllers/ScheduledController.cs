@@ -13,22 +13,20 @@ namespace IYSIntegration.API.Controllers
         private readonly ScheduledPullConsentService _pullConsentService;
         private readonly ScheduledSfConsentService _sfConsentService;
         private readonly SendConsentErrorService _sendConsentErrorService;
-        private readonly IPendingSyncService _pendingSyncService;
 
         public ScheduledController(
                                    ScheduledSingleConsentAddService singleConsentAddService,
                                    ScheduledMultipleConsentAddService multipleConsentAddService,
                                    ScheduledPullConsentService pullConsentService,
                                    ScheduledSfConsentService sfConsentService,
-                                   SendConsentErrorService sendConsentErrorService,
-                                   IPendingSyncService pendingSyncService)
+                                   SendConsentErrorService sendConsentErrorService
+                                   )
         {
             _singleConsentAddService = singleConsentAddService;
             _multipleConsentAddService = multipleConsentAddService;
             _pullConsentService = pullConsentService;
             _sfConsentService = sfConsentService;
             _sendConsentErrorService = sendConsentErrorService;
-            _pendingSyncService = pendingSyncService;
         }
 
 

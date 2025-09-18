@@ -18,20 +18,17 @@ public class ScheduledSingleConsentAddService
     private readonly IDbService _dbService;
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
-    private readonly IOverdueOldConsentsService _overdueOldConsentsService;
 
     public ScheduledSingleConsentAddService(
         ILogger<ScheduledSingleConsentAddService> logger,
         IDbService dbHelper,
         IIysHelper iysHelper,
-        IysProxy client,
-        IOverdueOldConsentsService overdueOldConsentsService)
+        IysProxy client)
     {
         _logger = logger;
         _dbService = dbHelper;
         _client = client;
         _iysHelper = iysHelper;
-        _overdueOldConsentsService = overdueOldConsentsService;
     }
 
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
@@ -47,7 +44,7 @@ public class ScheduledSingleConsentAddService
 
         try
         {
-            await _overdueOldConsentsService.MarkOverdueAsync();
+          
             var logs = await _dbService.GetConsentRequests(false, rowCount);
 
             foreach (var log in logs)
