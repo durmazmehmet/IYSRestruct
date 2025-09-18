@@ -289,14 +289,22 @@
             FROM dbo.IYSConsentRequest cr WITH (NOLOCK)
             WHERE ISNULL(cr.IsProcessed, 0) = 0
               AND ISNULL(cr.IsOverdue, 0) = 0
-              AND NOT EXISTS (
-                    SELECT 1
-                    FROM dbo.IysPullConsent pc WITH (NOLOCK)
-                    WHERE pc.CompanyCode = cr.CompanyCode
-                      AND pc.Recipient = cr.Recipient
-                      AND ISNULL(pc.RecipientType, '') = ISNULL(cr.RecipientType, '')
-              )
+              AND ISNULL(cr.IsPulled, 1) = 0
             ORDER BY cr.Id DESC;
+            ";
+
+        public static string MarkConsentsAsNotPulled = @"
+            UPDATE dbo.IYSConsentRequest
+            SET IsPulled = 0,
+                UpdateDate = GETDATE()
+            WHERE Id IN @Ids;
+            ";
+
+        public static string MarkConsentsAsPulled = @"
+            UPDATE dbo.IYSConsentRequest
+            SET IsPulled = 1,
+                UpdateDate = GETDATE()
+            WHERE Id IN @Ids;
             ";
 
         public static string MarkConsentsOverdue = @"
@@ -319,6 +327,30 @@
                     FROM dbo.IYSConsentRequest WITH (NOLOCK)
                     WHERE ISNULL(IsProcessed, 0) = 0
                       AND ISNULL(IsOverdue, 0) = 0
+                ) Ranked
+                WHERE RN > 1
+            )
+            UPDATE target
+            SET IsOverdue = 1,
+                UpdateDate = GETDATE()
+            FROM dbo.IYSConsentRequest AS target
+            INNER JOIN DuplicateRows AS dup ON target.Id = dup.Id;
+            ";
+
+        public static string MarkDuplicateConsentsOverdueForRecipient = @"
+            WITH DuplicateRows AS (
+                SELECT Id
+                FROM (
+                    SELECT Id,
+                           ROW_NUMBER() OVER(
+                                PARTITION BY CompanyCode, Recipient, ISNULL(RecipientType, '')
+                                ORDER BY CreateDate DESC, Id DESC) AS RN
+                    FROM dbo.IYSConsentRequest WITH (NOLOCK)
+                    WHERE ISNULL(IsProcessed, 0) = 0
+                      AND ISNULL(IsOverdue, 0) = 0
+                      AND CompanyCode = @CompanyCode
+                      AND Recipient = @Recipient
+                      AND ISNULL(RecipientType, '') = ISNULL(@RecipientType, '')
                 ) Ranked
                 WHERE RN > 1
             )

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace IYSIntegration.Application.Services;
 
@@ -15,13 +16,19 @@ public class ScheduledMultipleConsentAddService
     private readonly IDbService _dbService;
     private readonly IConfiguration _configuration;
     private readonly IysProxy _client;
+    private readonly IOverdueOldConsentsService _overdueOldConsentsService;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public ScheduledMultipleConsentAddService(ILogger<ScheduledMultipleConsentAddService> logger, IDbService dbHelper, IysProxy client)
+    public ScheduledMultipleConsentAddService(
+        ILogger<ScheduledMultipleConsentAddService> logger,
+        IDbService dbHelper,
+        IysProxy client,
+        IOverdueOldConsentsService overdueOldConsentsService)
     {
         _logger = logger;
         _dbService = dbHelper;
         _client = client;
+        _overdueOldConsentsService = overdueOldConsentsService;
     }
 
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int batchCount, int diffInSeconds)
@@ -36,6 +43,7 @@ public class ScheduledMultipleConsentAddService
 
         try
         {
+            await _overdueOldConsentsService.MarkOverdueAsync();
             var companyList = _configuration.GetSection("CompanyCodes").Get<List<string>>() ?? new();
 
             foreach (var companyCode in companyList)

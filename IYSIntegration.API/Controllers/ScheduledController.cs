@@ -1,4 +1,5 @@
-﻿using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Services;
+using IYSIntegration.Application.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.API.Controllers
@@ -13,13 +14,15 @@ namespace IYSIntegration.API.Controllers
         private readonly ScheduledPullConsentService _pullConsentService;
         private readonly ScheduledSfConsentService _sfConsentService;
         private readonly ScheduledSendConsentErrorService _sendConsentErrorService;
+        private readonly IPendingSyncService _pendingSyncService;
 
         public ScheduledController(ScheduledMultipleConsentQueryService multipleConsentQueryService,
                                    ScheduledSingleConsentAddService singleConsentAddService,
                                    ScheduledMultipleConsentAddService multipleConsentAddService,
                                    ScheduledPullConsentService pullConsentService,
                                    ScheduledSfConsentService sfConsentService,
-                                   ScheduledSendConsentErrorService sendConsentErrorService)
+                                   ScheduledSendConsentErrorService sendConsentErrorService,
+                                   IPendingSyncService pendingSyncService)
         {
             _multipleConsentQueryService = multipleConsentQueryService;
             _singleConsentAddService = singleConsentAddService;
@@ -27,6 +30,7 @@ namespace IYSIntegration.API.Controllers
             _pullConsentService = pullConsentService;
             _sfConsentService = sfConsentService;
             _sendConsentErrorService = sendConsentErrorService;
+            _pendingSyncService = pendingSyncService;
         }
 
         /// <summary>
@@ -75,6 +79,13 @@ namespace IYSIntegration.API.Controllers
         public async Task<IActionResult> PullConsent([FromQuery] int batchSize, bool resetAfter = false)
         {
             var result = await _pullConsentService.RunAsync(batchSize, resetAfter);
+            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
+        }
+
+        [HttpGet("syncPendingConsents")]
+        public async Task<IActionResult> SyncPendingConsents([FromQuery] int batchSize = 900)
+        {
+            var result = await _pendingSyncService.RunBatchAsync(batchSize);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
         /// <summary>
