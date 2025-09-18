@@ -146,7 +146,7 @@ namespace IYSIntegration.Application.Services
                                 && queryResponse.Data.SubRequests.Length > 0)
                             {
                                 var subRequests = queryResponse.Data.SubRequests;
-                                var processedIds = new List<long>();
+                                var consentIdsToMarkPulled = new List<long>();
                                 var maxLoop = Math.Min(subRequests.Length, chunk.Count);
 
                                 for (var i = 0; i < maxLoop; i++)
@@ -187,7 +187,7 @@ namespace IYSIntegration.Application.Services
                                     };
 
                                     await _dbService.InsertPullConsent(insertRequest);
-                                    processedIds.Add(sourceConsent.Id);
+                                    consentIdsToMarkPulled.Add(sourceConsent.Id);
                                     Interlocked.Increment(ref successCount);
                                 }
 
@@ -206,14 +206,15 @@ namespace IYSIntegration.Application.Services
                                             }
                                         });
                                         Interlocked.Increment(ref failedCount);
+                                        consentIdsToMarkPulled.Add(missing.Id);
                                     }
                                 }
 
-                                if (processedIds.Count > 0)
+                                if (consentIdsToMarkPulled.Count > 0)
                                 {
                                     try
                                     {
-                                        await _dbService.MarkConsentsAsPulled(processedIds);
+                                        await _dbService.MarkConsentsAsPulled(consentIdsToMarkPulled);
                                     }
                                     catch (Exception ex)
                                     {
