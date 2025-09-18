@@ -696,6 +696,45 @@ namespace IYSIntegration.Application.Services
 
         }
 
+        public async Task UpdatePullConsentStatuses(string companyCode, string recipientType, string type, IEnumerable<string> recipients, string status)
+        {
+            if (string.IsNullOrWhiteSpace(companyCode)
+                || string.IsNullOrWhiteSpace(recipientType)
+                || string.IsNullOrWhiteSpace(type)
+                || string.IsNullOrWhiteSpace(status))
+            {
+                return;
+            }
+
+            var recipientList = recipients?
+                .Where(recipient => !string.IsNullOrWhiteSpace(recipient))
+                .Select(recipient => recipient.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (recipientList == null || recipientList.Count == 0)
+            {
+                return;
+            }
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                await connection.ExecuteAsync(QueryStrings.UpdatePullConsentStatuses,
+                    new
+                    {
+                        CompanyCode = companyCode,
+                        RecipientType = recipientType,
+                        Type = type,
+                        Status = status.ToUpperInvariant(),
+                        Recipients = recipientList
+                    });
+
+                connection.Close();
+            }
+        }
+
         public async Task UpdateSfConsentResponse(SfConsentResult consentResult)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))

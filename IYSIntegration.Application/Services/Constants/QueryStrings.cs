@@ -578,35 +578,45 @@
 		";
 
         public static string GetPullConsentRequests = @"
-            SELECT TOP {0} 
-				Id, 
-				CompanyCode, 
-				SalesforceId, 
-				IysCode, 
-				BrandCode, 
-				convert(varchar, ConsentDate, 120) as ConsentDate, 
-				convert(varchar, CreationDate, 120) as CreationDate, 
-				[Source], 
-				Recipient, 
-				RecipientType, 
-				Status, 
-				[Type], 
-				TransactionId, 
-				IsSuccess, 
-				CreateDate, 
-				UpdateDate, 
-				LogId, 
-				IsProcessed, 
-				Error
-			FROM dbo.IysPullConsent (nolock)
+            SELECT TOP {0}
+                                Id,
+                                CompanyCode,
+                                SalesforceId,
+                                IysCode,
+                                BrandCode,
+                                convert(varchar, ConsentDate, 120) as ConsentDate,
+                                convert(varchar, CreationDate, 120) as CreationDate,
+                                [Source],
+                                Recipient,
+                                RecipientType,
+                                Status,
+                                [Type],
+                                TransactionId,
+                                IsSuccess,
+                                CreateDate,
+                                UpdateDate,
+                                LogId,
+                                IsProcessed,
+                                Error
+                        FROM dbo.IysPullConsent (nolock)
                 WHERE ISNULL(IsProcessed, 0) = @IsProcessed
                 ORDER BY CreateDate ASC;
-		";
+                ";
+
+        public static string UpdatePullConsentStatuses = @"
+            UPDATE dbo.IysPullConsent
+            SET Status = @Status,
+                UpdateDate = GETDATE()
+            WHERE CompanyCode = @CompanyCode
+              AND RecipientType = @RecipientType
+              AND [Type] = @Type
+              AND Recipient IN @Recipients;
+            ";
 
         public static string UpdateSfConsentRequest = @"
             UPDATE dbo.IysPullConsent
             SET IsSuccess = @IsSuccess,
-                LogId = @LogId,    
+                LogId = @LogId,
                 UpdateDate = GETDATE(),
 				Error = @Error,
                 IsProcessed = 1

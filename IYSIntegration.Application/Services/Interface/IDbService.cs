@@ -40,6 +40,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task UpdateJustRequestDateOfPullRequestLog(PullRequestLog log);
         Task InsertPullConsent(AddConsentRequest request);
         Task<List<Consent>> GetPullConsentRequests(bool isProcessed, int rowCount);
+        Task UpdatePullConsentStatuses(string companyCode, string recipientType, string type, IEnumerable<string> recipients, string status);
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
         Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);
