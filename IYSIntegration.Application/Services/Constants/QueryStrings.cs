@@ -326,7 +326,7 @@
             FROM dbo.IYSConsentRequest cr WITH (NOLOCK)
             WHERE ISNULL(cr.IsProcessed, 0) = 0
               AND ISNULL(cr.IsOverdue, 0) = 0
-              AND ISNULL(cr.IsPulled, 1) = 0
+              --AND ISNULL(cr.IsPulled, 1) = 0
             ORDER BY cr.Id DESC;
             ";
 

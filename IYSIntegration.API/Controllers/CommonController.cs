@@ -54,6 +54,12 @@ namespace IYSIntegration.API.Controllers
                 return response;
             }
 
+            if (string.IsNullOrWhiteSpace(request.CompanyCode) && (request.IysCode == 0 || request.BrandCode == 0))
+            {
+                response.Error("QUEUE_FAILED", "Company bilgisi eksik (CompanyCode/IysCode/BrandCode).");
+                return response;
+            }
+
             if ((request.IysCode == 0 || request.BrandCode == 0) && !string.IsNullOrWhiteSpace(request.CompanyCode))
             {
                 var consentParams = _iysHelper.GetIysCode(request.CompanyCode);
