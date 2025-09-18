@@ -55,6 +55,7 @@ public class ConsentsController : ControllerBase
     /// <summary>
     /// Çoklu izin ekleme
     /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/request"
+    /// IYS Borusan Otomotiv için bunu desteklememektedir
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="request"></param>
@@ -69,7 +70,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<List<Consent>>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request",
+            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request",
             Body = request.Consents,
             Action = "Add Multiple Consent",
             BatchId = request.BatchId
@@ -83,6 +84,7 @@ public class ConsentsController : ControllerBase
     /// <summary>
     /// Çoklu izin ekleme tarihçesini verir. addMultipleConsent metodundan dönen requestId kullanılır.
     /// "{_baseUrl}/v2/sps/{IysCode}/brands/{BrandCode}/consents/request/{requestId}"
+    ///  IYS Borusan Otomotiv için bunu desteklememektedir
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="requestId"></param>
@@ -98,7 +100,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{Uri.EscapeDataString(requestId)}",
+            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{Uri.EscapeDataString(requestId)}",
             Action = "Query Multiple Consent",
             BatchId = batchId
         };

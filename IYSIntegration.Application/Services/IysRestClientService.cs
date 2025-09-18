@@ -56,6 +56,7 @@ namespace IYSIntegration.Application.Services
             }
             else
             {
+                response.AddMessage("Url:", iysRequest.Url);
                 try
                 {
                     var error = JsonConvert.DeserializeObject<GenericError>(httpResponse.Content);
@@ -79,7 +80,7 @@ namespace IYSIntegration.Application.Services
                                 response.AddMessage(detail.Code, detail.Message);
                             }
                         }
-                    }
+                    }           
 
                 }
                 catch (Exception ex)
