@@ -41,7 +41,7 @@ internal class Program
         // Domain services
         builder.Services.AddSingleton<IIysIdentityService, IysIdentityService>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
-        builder.Services.AddSingleton<IIysRestClientService, IysRestClientService>();
+        builder.Services.AddScoped<IIysRestClientService, IysRestClientService>();
         builder.Services.AddScoped<IIysHelper, IysHelper>();
 
         builder.Services.AddScoped<IDbService, DbService>();

@@ -189,16 +189,33 @@ namespace IYSIntegration.Application.Services
                 return json;
             }
 
-            var jsonObject = JObject.Parse(json);
+            var token = JToken.Parse(json);
 
-            if (jsonObject["recipient"] != null)
+            if (token.Type == JTokenType.Object)
             {
-                string recipient = jsonObject["recipient"].ToString();
-                jsonObject["recipient"] = MaskString(recipient);
+                MaskRecipientInJObject((JObject)token);
+            }
+            else if (token.Type == JTokenType.Array)
+            {
+                foreach (var item in (JArray)token)
+                {
+                    if (item is JObject obj)
+                    {
+                        MaskRecipientInJObject(obj);
+                    }
+                }
             }
 
-            return jsonObject.ToString(Formatting.None);
+            return token.ToString(Formatting.None);
+        }
 
+        private static void MaskRecipientInJObject(JObject jsonObject)
+        {
+            if (jsonObject["recipient"] != null)
+            {
+                string recipient = jsonObject["recipient"]!.ToString();
+                jsonObject["recipient"] = MaskString(recipient);
+            }
         }
     }
 }
