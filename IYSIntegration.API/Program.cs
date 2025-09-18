@@ -27,6 +27,7 @@ internal class Program
         builder.Services.AddScoped<ScheduledPendingConsentSyncService>();
         builder.Services.AddScoped<IDuplicateCleanerService, DuplicateCleanerService>();
         builder.Services.AddScoped<IPendingSyncService, PendingSyncService>();
+        builder.Services.AddScoped<ISyncConsentService, SyncConsentService>();
         builder.Services.AddScoped<IOverdueOldConsentsService, OverdueOldConsentsService>();
         builder.Services.AddScoped<ScheduledMultipleConsentQueryService>();
         builder.Services.AddScoped<ScheduledSingleConsentAddService>();
