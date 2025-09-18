@@ -12,15 +12,15 @@ using System.Threading;
 namespace IYSIntegration.Application.Services;
 
 
-public class ScheduledSingleConsentAddService
+public class SingleConsentAddService
 {
-    private readonly ILogger<ScheduledSingleConsentAddService> _logger;
+    private readonly ILogger<SingleConsentAddService> _logger;
     private readonly IDbService _dbService;
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
 
-    public ScheduledSingleConsentAddService(
-        ILogger<ScheduledSingleConsentAddService> logger,
+    public SingleConsentAddService(
+        ILogger<SingleConsentAddService> logger,
         IDbService dbHelper,
         IIysHelper iysHelper,
         IysProxy client)

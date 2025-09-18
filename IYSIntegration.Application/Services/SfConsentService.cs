@@ -11,13 +11,13 @@ using System.Linq;
 
 namespace IYSIntegration.Application.Services
 {
-    public class ScheduledSfConsentService
+    public class SfConsentService
     {
-        private readonly ILogger<ScheduledSfConsentService> _logger;
+        private readonly ILogger<SfConsentService> _logger;
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
 
-        public ScheduledSfConsentService(ILogger<ScheduledSfConsentService> logger, IDbService dbHelper, IysProxy client)
+        public SfConsentService(ILogger<SfConsentService> logger, IDbService dbHelper, IysProxy client)
         {
             _logger = logger;
             _dbService = dbHelper;

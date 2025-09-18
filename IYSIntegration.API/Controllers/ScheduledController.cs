@@ -9,21 +9,18 @@ namespace IYSIntegration.API.Controllers
     public class ScheduledController : ControllerBase
     {
         private readonly ScheduledSingleConsentAddService _singleConsentAddService;
-        private readonly ScheduledMultipleConsentAddService _multipleConsentAddService;
         private readonly ScheduledPullConsentService _pullConsentService;
         private readonly ScheduledSfConsentService _sfConsentService;
         private readonly SendConsentErrorService _sendConsentErrorService;
 
         public ScheduledController(
                                    ScheduledSingleConsentAddService singleConsentAddService,
-                                   ScheduledMultipleConsentAddService multipleConsentAddService,
                                    ScheduledPullConsentService pullConsentService,
                                    ScheduledSfConsentService sfConsentService,
                                    SendConsentErrorService sendConsentErrorService
                                    )
         {
             _singleConsentAddService = singleConsentAddService;
-            _multipleConsentAddService = multipleConsentAddService;
             _pullConsentService = pullConsentService;
             _sfConsentService = sfConsentService;
             _sendConsentErrorService = sendConsentErrorService;
@@ -37,7 +34,7 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
-        [HttpGet("pullConsent")]
+        [HttpGet("pullConsentFromIys")]
         public async Task<IActionResult> PullConsent([FromQuery] int batchSize, bool resetAfter = false)
         {
             var result = await _pullConsentService.RunAsync(batchSize, resetAfter);
@@ -51,7 +48,7 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
-        [HttpGet("GetErrorReportInExcel")]
+        [HttpGet("GetErrorReportFile")]
         public async Task<IActionResult> GetConsentErrorExcel([FromQuery] DateTime? date)
         {
             var result = await _sendConsentErrorService.GetErrorsExcelBase64Async(date);
