@@ -181,7 +181,22 @@
         public static string CheckPullConsent = @"
             SELECT CASE WHEN EXISTS (
                 SELECT 1 FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)
-                WHERE CompanyCode = @CompanyCode AND Recipient = @Recipient
+                WHERE CompanyCode = @CompanyCode
+                  AND Recipient = @Recipient
+                  AND (@Type IS NULL OR @Type = '' OR ISNULL(Type, '') = ISNULL(@Type, ''))
+            ) THEN 1 ELSE 0 END;";
+
+        public static string CheckSuccessfulConsentRequest = @"
+            SELECT CASE WHEN EXISTS (
+                SELECT 1
+                FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK)
+                WHERE CompanyCode = @CompanyCode
+                  AND Recipient = @Recipient
+                  AND (@Type IS NULL OR @Type = '' OR ISNULL(Type, '') = ISNULL(@Type, ''))
+                  AND ISNULL(IsProcessed, 0) = 1
+                  AND ISNULL(IsSuccess, 0) = 1
+                  AND ISNULL(IsOverdue, 0) = 0
+                  AND (BatchError IS NULL OR LTRIM(RTRIM(BatchError)) = '')
             ) THEN 1 ELSE 0 END;";
 
         public static string GetLastConsents = @"

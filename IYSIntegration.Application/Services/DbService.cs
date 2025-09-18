@@ -19,13 +19,11 @@ namespace IYSIntegration.Application.Services
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<DbService> _logger;
-        private readonly IIysHelper _iysHelper;
 
-        public DbService(IConfiguration configuration, ILogger<DbService> loggerServiceBase, IIysHelper iysHelper)
+        public DbService(IConfiguration configuration, ILogger<DbService> loggerServiceBase)
         {
             _configuration = configuration;
             _logger = loggerServiceBase;
-            _iysHelper = iysHelper;
         }
 
         internal sealed record DuplicateCleanupCandidate(
@@ -123,13 +121,6 @@ namespace IYSIntegration.Application.Services
                 request.CompanyCode = request.CompanyName;
             }
 
-            if (request.IysCode == 0)
-            {
-                var consentParams = _iysHelper.GetIysCode(request.CompanyCode);
-                request.IysCode = consentParams.IysCode;
-                request.BrandCode = consentParams.BrandCode;
-            }
-
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
@@ -186,7 +177,7 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-        public async Task<bool> PullConsentExists(string companyCode, string recipient)
+        public async Task<bool> PullConsentExists(string companyCode, string recipient, string? type = null)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
@@ -195,9 +186,30 @@ namespace IYSIntegration.Application.Services
                     new
                     {
                         CompanyCode = companyCode,
-                        Recipient = recipient
+                        Recipient = recipient,
+                        Type = string.IsNullOrWhiteSpace(type) ? null : type
                     });
                 connection.Close();
+
+                return result == 1;
+            }
+        }
+
+        public async Task<bool> SuccessfulConsentRequestExists(string companyCode, string recipient, string? type = null)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.CheckSuccessfulConsentRequest,
+                    new
+                    {
+                        CompanyCode = companyCode,
+                        Recipient = recipient,
+                        Type = string.IsNullOrWhiteSpace(type) ? null : type
+                    });
+
+                await connection.CloseAsync();
 
                 return result == 1;
             }
