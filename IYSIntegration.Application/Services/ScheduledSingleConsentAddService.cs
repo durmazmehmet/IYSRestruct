@@ -41,21 +41,25 @@ public class ScheduledSingleConsentAddService
             var logs = await _dbService.GetConsentRequests(false, rowCount);
 
             var groupedLogs = logs.GroupBy(l => _iysHelper.GetCompanyCode(l.IysCode));
-            var consentCache = new ConcurrentDictionary<string, Dictionary<string, Consent>>();
+            var consentCache = new ConcurrentDictionary<string, Dictionary<(string Recipient, string RecipientType), Consent>>();
 
             foreach (var group in groupedLogs)
             {
                 var companyCode = group.Key;
-                var recipients = group.Select(l => l.Recipient).Distinct().ToList();
-                var existing = await _dbService.GetLastConsents(companyCode, recipients);
-                var dict = existing.ToDictionary(c => c.Recipient, c => c);
-                var missing = recipients.Where(r => !dict.ContainsKey(r)).ToList();
+                var recipientKeys = group
+                    .Select(l => CreateRecipientKey(l.Recipient, l.RecipientType))
+                    .Distinct()
+                    .ToList();
+                var existingRecipients = recipientKeys.Select(r => r.Recipient).Distinct();
+                var existing = await _dbService.GetLastConsents(companyCode, existingRecipients);
+                var dict = existing.ToDictionary(c => CreateRecipientKey(c.Recipient, c.RecipientType), c => c);
+                var missing = recipientKeys.Where(r => !dict.ContainsKey(r)).ToList();
 
                 if (missing.Any())
                 {
-                    var queryTasks = missing.Select(async recipient =>
+                    var queryTasks = missing.Select(async recipientKey =>
                     {
-                        var log = group.First(l => l.Recipient == recipient);
+                        var log = group.First(l => CreateRecipientKey(l.Recipient, l.RecipientType) == recipientKey);
                         try
                         {
                             var queryReq = new QueryConsentRequest
@@ -92,12 +96,12 @@ public class ScheduledSingleConsentAddService
                                     }
                                 };
                                 await _dbService.InsertPullConsent(insertReq);
-                                dict[recipient] = insertReq.Consent;
+                                dict[recipientKey] = insertReq.Consent;
                             }
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Error querying consent for {Recipient}", recipient);
+                            _logger.LogError(ex, "Error querying consent for {Recipient}", recipientKey.Recipient);
                         }
                     });
                     await Task.WhenAll(queryTasks);
@@ -111,8 +115,12 @@ public class ScheduledSingleConsentAddService
             {
                 var companyCode = _iysHelper.GetCompanyCode(log.IysCode);
                 consentCache.TryGetValue(companyCode, out var companyConsents);
-                companyConsents ??= new Dictionary<string, Consent>();
-                companyConsents.TryGetValue(log.Recipient, out var existingConsent);
+                if (companyConsents == null)
+                {
+                    companyConsents = new Dictionary<(string Recipient, string RecipientType), Consent>();
+                    consentCache[companyCode] = companyConsents;
+                }
+                companyConsents.TryGetValue(CreateRecipientKey(log.Recipient, log.RecipientType), out var existingConsent);
 
                 if ((log.Status == "RED" || log.Status == "RET") && existingConsent == null)
                 {
@@ -208,4 +216,6 @@ public class ScheduledSingleConsentAddService
         return response;
     }
 
+    private static (string Recipient, string RecipientType) CreateRecipientKey(string recipient, string? recipientType)
+        => (recipient, recipientType ?? string.Empty);
 }
