@@ -1,5 +1,6 @@
 ﻿using IYSIntegration.Application.Services;
 using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Error;
 using IYSIntegration.Application.Services.Models.Request.Consent;
@@ -7,6 +8,8 @@ using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Serilog;
+using System;
+using System.Collections.Generic;
 
 namespace IYSIntegration.API.Controllers
 {
@@ -17,12 +20,21 @@ namespace IYSIntegration.API.Controllers
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
+        private readonly IDuplicateCleanerService _duplicateCleanerService;
+        private readonly IPendingSyncService _pendingSyncService;
 
-        public CommonController(IDbService dbHelper, IysProxy iysClient, IIysHelper iysHelper)
+        public CommonController(
+            IDbService dbHelper,
+            IysProxy iysClient,
+            IIysHelper iysHelper,
+            IDuplicateCleanerService duplicateCleanerService,
+            IPendingSyncService pendingSyncService)
         {
             _dbService = dbHelper;
             _client = iysClient;
             _iysHelper = iysHelper;
+            _duplicateCleanerService = duplicateCleanerService;
+            _pendingSyncService = pendingSyncService;
         }
 
         [Route("addConsent")]
@@ -31,8 +43,7 @@ namespace IYSIntegration.API.Controllers
         {
             var response = new ResponseBase<AddConsentResult>();
 
-            if (string.IsNullOrEmpty(request.CompanyCode))
-                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
             if (string.IsNullOrWhiteSpace(request.Consent?.ConsentDate))
             {
@@ -40,48 +51,6 @@ namespace IYSIntegration.API.Controllers
             }
 
             DateTime.TryParse(request.Consent.ConsentDate, out var parsedDate);
-
-            var pullConsentExists = await _dbService.PullConsentExists(request.CompanyCode, request.Consent.Recipient);
-            if (!pullConsentExists)
-            {
-                var queryRequest = new QueryConsentRequest
-                {
-                    CompanyCode = request.CompanyCode,
-                    IysCode = request.IysCode,
-                    BrandCode = request.BrandCode,
-                    RecipientKey = new RecipientKey
-                    {
-                        Recipient = request.Consent.Recipient,
-                        RecipientType = request.Consent.RecipientType,
-                        Type = request.Consent.Type
-                    }
-                };
-
-                var queryResponse = await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{request.CompanyCode}/queryConsent", queryRequest.RecipientKey);
-                if (queryResponse.IsSuccessful() && queryResponse.Data != null && !string.IsNullOrEmpty(queryResponse.Data.ConsentDate))
-                {
-                    var pullInsertRequest = new AddConsentRequest
-                    {
-                        CompanyCode = request.CompanyCode,
-                        SalesforceId = request.SalesforceId,
-                        IysCode = request.IysCode,
-                        BrandCode = request.BrandCode,
-                        Consent = new Consent
-                        {
-                            Recipient = queryResponse.Data.Recipient,
-                            Type = queryResponse.Data.Type,
-                            Source = queryResponse.Data.Source,
-                            Status = queryResponse.Data.Status,
-                            ConsentDate = queryResponse.Data.ConsentDate,
-                            RecipientType = queryResponse.Data.RecipientType,
-                            CreationDate = queryResponse.Data.CreationDate,
-                            TransactionId = queryResponse.Data.TransactionId
-                        }
-                    };
-
-                    await _dbService.InsertPullConsent(pullInsertRequest);
-                }
-            }
 
             if (!await _dbService.CheckConsentRequest(request))
             {
@@ -111,6 +80,28 @@ namespace IYSIntegration.API.Controllers
                 response.Id = id;
                 await _dbService.UpdateConsentResponseFromCommon(response);
                 response.OriginalError = null;
+
+                if (id > 0 && request.Consent != null)
+                {
+                    var insertedConsent = new ConsentRequestLog
+                    {
+                        Id = id,
+                        CompanyCode = request.CompanyCode,
+                        IysCode = request.IysCode,
+                        BrandCode = request.BrandCode,
+                        Recipient = request.Consent.Recipient,
+                        RecipientType = request.Consent.RecipientType,
+                        Type = request.Consent.Type,
+                        Status = request.Consent.Status,
+                        Source = request.Consent.Source,
+                        ConsentDate = request.Consent.ConsentDate
+                    };
+
+                    var insertedConsents = new List<Consent> { insertedConsent };
+
+                    await _duplicateCleanerService.CleanAsync(insertedConsents);
+                    await _pendingSyncService.SyncAsync(insertedConsents);
+                }
             }
 
             return response;
@@ -120,10 +111,9 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<int> AddConsentAsync([FromBody] AddConsentRequest request)
         {
-            if (string.IsNullOrEmpty(request.CompanyCode))
-                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
-           return await _dbService.InsertConsentRequest(request);
+            return await _dbService.InsertConsentRequest(request);
         }
 
 
@@ -132,8 +122,7 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<QueryConsentResult>> QueryConsent([FromBody] QueryConsentRequest request)
         {
-            if (string.IsNullOrEmpty(request.CompanyCode))
-                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            request.CompanyCode = ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
             return await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{request.CompanyCode}/queryConsent", request.RecipientKey);
         }
            
@@ -193,9 +182,9 @@ namespace IYSIntegration.API.Controllers
             var count = 0;
             var requestCount = request.Consents.Count;
             var response = new ResponseBase<MultipleConsentResult>();
+            var insertedConsents = new List<Consent>();
 
-            if (string.IsNullOrEmpty(request.CompanyCode))
-                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
             foreach (var consent in request.Consents)
             {
@@ -219,7 +208,32 @@ namespace IYSIntegration.API.Controllers
                 };
 
                 var result = await _dbService.InsertConsentRequest(addConsentRequest);
-                count += result;
+                if (result > 0)
+                {
+                    count++;
+                    if (addConsentRequest.Consent != null)
+                    {
+                        insertedConsents.Add(new ConsentRequestLog
+                        {
+                            Id = result,
+                            CompanyCode = addConsentRequest.CompanyCode,
+                            IysCode = addConsentRequest.IysCode,
+                            BrandCode = addConsentRequest.BrandCode,
+                            Recipient = addConsentRequest.Consent.Recipient,
+                            RecipientType = addConsentRequest.Consent.RecipientType,
+                            Type = addConsentRequest.Consent.Type,
+                            Status = addConsentRequest.Consent.Status,
+                            Source = addConsentRequest.Consent.Source,
+                            ConsentDate = addConsentRequest.Consent.ConsentDate
+                        });
+                    }
+                }
+            }
+
+            if (insertedConsents.Count > 0)
+            {
+                await _duplicateCleanerService.CleanAsync(insertedConsents);
+                await _pendingSyncService.SyncAsync(insertedConsents);
             }
 
             response.AddMessage("Success", $"{count}/{requestCount} kayıt başarı ile eklendi");
@@ -241,8 +255,7 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<MultipleConsentResult>> SendMultipleConsent([FromBody] MultipleConsentRequest request)
         {
-            if (string.IsNullOrEmpty(request.CompanyCode))
-                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
             return await _client.PostJsonAsync<MultipleConsentRequest, MultipleConsentResult>($"consents/{request.CompanyCode}/sendMultipleConsent", request);
         }
@@ -253,8 +266,7 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryMultipleConsent(QueryMultipleConsentRequest request)
         {
-            if (string.IsNullOrEmpty(request.CompanyCode))
-                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            request.CompanyCode = ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
 
             return await _client.PostJsonAsync<QueryMultipleConsentRequest, List<QueryMultipleConsentResult>>($"consents/{request.CompanyCode}/queryMultipleConsent", request);
         }
@@ -276,8 +288,7 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
         {
-            if (string.IsNullOrEmpty(request.CompanyCode))
-                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+            request.CompanyCode = ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
 
             return await _client.PostJsonAsync<PullConsentRequest, PullConsentResult>($"consents/{request.CompanyCode}/pullConsent", request);
         }
@@ -332,6 +343,23 @@ namespace IYSIntegration.API.Controllers
                     WsDescription = $"{errorResponse.FirstOrDefault().errorCode}-{errorResponse.FirstOrDefault().message}"
                 };
             }
+        }
+
+        private string? ResolveCompanyCode(string? companyCode, string? companyName, int iysCode)
+        {
+            if (!string.IsNullOrWhiteSpace(companyCode))
+            {
+                return companyCode.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(companyName))
+            {
+                return companyName.Trim();
+            }
+
+            return iysCode != 0
+                ? _iysHelper.GetCompanyCode(iysCode)
+                : null;
         }
 
     }

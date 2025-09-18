@@ -8,5 +8,6 @@ namespace IYSIntegration.Application.Services.Models.Request.Consent
         public bool WithoutLogging { get; set; }
         public string? SalesforceId { get; set; }
         public string? CompanyCode { get; set; }
+        public string? CompanyName { get; set; }
     }
 }

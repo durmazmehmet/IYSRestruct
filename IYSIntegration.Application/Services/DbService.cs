@@ -90,6 +90,12 @@ namespace IYSIntegration.Application.Services
 
         public async Task<int> InsertConsentRequest(AddConsentRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.CompanyCode)
+                && !string.IsNullOrWhiteSpace(request.CompanyName))
+            {
+                request.CompanyCode = request.CompanyName;
+            }
+
             if (request.IysCode == 0)
             {
                 var consentParams = _iysHelper.GetIysCode(request.CompanyCode);
@@ -252,6 +258,12 @@ namespace IYSIntegration.Application.Services
 
         public async Task<int> InsertConsentRequestWithBatch(AddConsentRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.CompanyCode)
+                && !string.IsNullOrWhiteSpace(request.CompanyName))
+            {
+                request.CompanyCode = request.CompanyName;
+            }
+
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
@@ -681,6 +693,102 @@ namespace IYSIntegration.Application.Services
                 connection.Close();
 
                 return affected;
+            }
+        }
+
+        public async Task<int> MarkDuplicateConsentsOverdueForConsents(IEnumerable<Consent> consents)
+        {
+            if (consents == null)
+            {
+                return 0;
+            }
+
+            var candidates = consents
+                .Where(c => !string.IsNullOrWhiteSpace(c.CompanyCode) && !string.IsNullOrWhiteSpace(c.Recipient))
+                .Select(c => new
+                {
+                    CompanyCode = c.CompanyCode!,
+                    Recipient = c.Recipient!,
+                    RecipientType = c.RecipientType ?? string.Empty
+                })
+                .Distinct()
+                .ToList();
+
+            if (candidates.Count == 0)
+            {
+                return 0;
+            }
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var totalAffected = 0;
+
+                foreach (var candidate in candidates)
+                {
+                    totalAffected += await connection.ExecuteAsync(
+                        QueryStrings.MarkDuplicateConsentsOverdueForRecipient,
+                        candidate);
+                }
+
+                await connection.CloseAsync();
+
+                return totalAffected;
+            }
+        }
+
+        public async Task MarkConsentsAsNotPulled(IEnumerable<long> consentIds)
+        {
+            if (consentIds == null)
+            {
+                return;
+            }
+
+            var ids = consentIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray();
+
+            if (ids.Length == 0)
+            {
+                return;
+            }
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                await connection.ExecuteAsync(QueryStrings.MarkConsentsAsNotPulled, new { Ids = ids });
+
+                await connection.CloseAsync();
+            }
+        }
+
+        public async Task MarkConsentsAsPulled(IEnumerable<long> consentIds)
+        {
+            if (consentIds == null)
+            {
+                return;
+            }
+
+            var ids = consentIds
+                .Where(id => id > 0)
+                .Distinct()
+                .ToArray();
+
+            if (ids.Length == 0)
+            {
+                return;
+            }
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                await connection.ExecuteAsync(QueryStrings.MarkConsentsAsPulled, new { Ids = ids });
+
+                await connection.CloseAsync();
             }
         }
     }

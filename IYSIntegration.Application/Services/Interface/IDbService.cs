@@ -43,5 +43,8 @@ namespace IYSIntegration.Application.Services.Interface
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);
         Task<int> MarkConsentsOverdue(int maxAgeInDays);
         Task<int> MarkDuplicateConsentsOverdue();
+        Task<int> MarkDuplicateConsentsOverdueForConsents(IEnumerable<Consent> consents);
+        Task MarkConsentsAsNotPulled(IEnumerable<long> consentIds);
+        Task MarkConsentsAsPulled(IEnumerable<long> consentIds);
     }
 }
