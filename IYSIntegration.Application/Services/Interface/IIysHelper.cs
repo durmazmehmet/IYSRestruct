@@ -31,4 +31,6 @@ public interface IIysHelper
         bool runPendingSync = true);
 
     string? ResolveCompanyCode(string? companyCode, string? companyName, int iysCode);
+
+    string BuildAddConsentErrorMessage(ResponseBase<AddConsentResult> addResponse);
 }

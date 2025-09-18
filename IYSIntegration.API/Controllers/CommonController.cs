@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace IYSIntegration.API.Controllers
@@ -21,18 +20,14 @@ namespace IYSIntegration.API.Controllers
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
-        private readonly IPendingSyncService _pendingSyncService;
-
         public CommonController(
             IDbService dbHelper,
             IysProxy iysClient,
-            IIysHelper iysHelper,
-            IPendingSyncService pendingSyncService)
+            IIysHelper iysHelper)
         {
             _dbService = dbHelper;
             _client = iysClient;
             _iysHelper = iysHelper;
-            _pendingSyncService = pendingSyncService;
         }
 
         /// <summary>
@@ -44,81 +39,42 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
-            var (isValid, validationResponse) = await _iysHelper.ValidateConsentRequestAsync(request);
+            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
-            if (!isValid)
+            var response = new ResponseBase<AddConsentResult>();
+
+            if (request.Consent == null)
             {
-                return validationResponse;
+                response.Error("QUEUE_FAILED", "Consent bilgisi zorunludur.");
+                return response;
             }
 
-            var consent = request.Consent;
-            var shouldRunPendingSync = true;
-
-            if (consent != null
-                && !string.IsNullOrWhiteSpace(consent.Recipient)
-                && !string.IsNullOrWhiteSpace(request.CompanyCode))
+            if ((request.IysCode == 0 || request.BrandCode == 0) && !string.IsNullOrWhiteSpace(request.CompanyCode))
             {
-                var hasPullRecord = await _dbService.PullConsentExists(request.CompanyCode, consent.Recipient, consent.Type);
-                var hasSuccessfulRequest = await _dbService.SuccessfulConsentRequestExists(request.CompanyCode, consent.Recipient, consent.Type);
-
-                if (!hasPullRecord && !hasSuccessfulRequest)
-                {
-                    const string syncMessageKey = "CONSENT_NOT_SYNCHRONIZED";
-                    const string syncMessage = "İzin kaydı IYS üzerinden bulunamadığı için senkronizasyon başlatıldı.";
-
-                    if (!request.WithoutLogging)
-                    {
-                        var loggedId = await _iysHelper.LogConsentRequestAsync(request);
-
-                        var syncResponse = new ResponseBase<AddConsentResult>();
-
-                        if (loggedId > 0)
-                        {
-                            syncResponse.Id = loggedId;
-                        }
-
-                        syncResponse.Error(syncMessageKey, syncMessage);
-                        return syncResponse;
-                    }
-
-                    var pendingConsent = new Consent
-                    {
-                        Id = consent.Id,
-                        CompanyCode = request.CompanyCode,
-                        Recipient = consent.Recipient,
-                        RecipientType = consent.RecipientType,
-                        Type = consent.Type,
-                        Status = consent.Status,
-                        Source = consent.Source,
-                        ConsentDate = consent.ConsentDate
-                    };
-
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await _pendingSyncService.SyncAsync(new[] { pendingConsent }).ConfigureAwait(false);
-                        }
-                        catch
-                        {
-                            // arka planda tetiklenen senkronizasyon hataları isteği engellememelidir.
-                        }
-                    });
-
-                    var syncResponseWithoutLogging = new ResponseBase<AddConsentResult>();
-                    syncResponseWithoutLogging.Error(syncMessageKey, syncMessage);
-                    return syncResponseWithoutLogging;
-                }
-
-                shouldRunPendingSync = hasPullRecord;
+                var consentParams = _iysHelper.GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
             }
 
-            var response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
+            var queuedId = await _dbService.InsertConsentRequest(request);
 
-            await _iysHelper.LogConsentAsync(
-                request,
-                response,
-                shouldRunPendingSync);
+            if (queuedId <= 0)
+            {
+                response.Error("QUEUE_FAILED", "İzin isteği sıraya alınamadı.");
+                return response;
+            }
+
+            if (request.ForceSend)
+            {
+                var sendResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
+                sendResponse.Id = queuedId;
+                await _dbService.UpdateConsentResponseFromCommon(sendResponse);
+                return sendResponse;
+            }
+
+            response.Id = queuedId;
+            response.Success();
+            response.AddMessage("Queued", "İzin isteği işlenmek üzere sıraya alındı.");
 
             return response;
         }
@@ -132,15 +88,27 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsent([FromBody] MultipleConsentRequest request)
         {
+            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
+
             var requestCount = request.Consents.Count;
             var response = new ResponseBase<MultipleConsentResult>();
-            var validatedConsents = await _iysHelper.ValidateMultipleConsentsAsync(request);
+
+            if ((request.IysCode == 0 || request.BrandCode == 0) && !string.IsNullOrWhiteSpace(request.CompanyCode))
+            {
+                var consentParams = _iysHelper.GetIysCode(request.CompanyCode);
+                request.IysCode = consentParams.IysCode;
+                request.BrandCode = consentParams.BrandCode;
+            }
+
             var successCount = 0;
+            var queuedCount = 0;
             var hasError = false;
 
-            foreach (var consentResult in validatedConsents)
+            for (var i = 0; i < request.Consents.Count; i++)
             {
-                if (!consentResult.IsValid)
+                var consent = request.Consents[i];
+
+                if (consent == null)
                 {
                     if (!hasError)
                     {
@@ -148,20 +116,79 @@ namespace IYSIntegration.API.Controllers
                         hasError = true;
                     }
 
-                    _iysHelper.AppendValidationMessages(response, consentResult);
+                    response.AddMessage($"Error_{i + 1}", "Consent bilgisi zorunludur.");
                     continue;
                 }
 
-                var result = await _iysHelper.LogConsentRequestAsync(
-                    consentResult.Request);
-
-                if (result > 0 && consentResult.Request.Consent != null)
+                var addConsentRequest = new AddConsentRequest
                 {
-                    successCount++;
+                    CompanyCode = request.CompanyCode,
+                    CompanyName = request.CompanyName,
+                    IysCode = request.IysCode,
+                    BrandCode = request.BrandCode,
+                    ForceSend = request.ForceSend,
+                    SalesforceId = consent.SalesforceId,
+                    Consent = new Consent
+                    {
+                        ConsentDate = consent.ConsentDate,
+                        Source = consent.Source,
+                        Recipient = consent.Recipient,
+                        RecipientType = consent.RecipientType,
+                        Status = consent.Status,
+                        Type = consent.Type,
+                        RetailerCode = consent.RetailerCode,
+                        RetailerAccess = consent.RetailerAccess,
+                        SalesforceId = consent.SalesforceId
+                    }
+                };
+
+                var result = await _dbService.InsertConsentRequest(addConsentRequest);
+
+                if (result > 0)
+                {
+                    if (request.ForceSend)
+                    {
+                        var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", consent);
+                        addResponse.Id = result;
+                        await _dbService.UpdateConsentResponseFromCommon(addResponse);
+
+                        if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
+                        {
+                            successCount++;
+                            continue;
+                        }
+
+                        if (!hasError)
+                        {
+                            response.Error();
+                            hasError = true;
+                        }
+
+                        response.AddMessage($"Error_{i + 1}", _iysHelper.BuildAddConsentErrorMessage(addResponse));
+                        continue;
+                    }
+
+                    queuedCount++;
+                    continue;
                 }
+
+                if (!hasError)
+                {
+                    response.Error();
+                    hasError = true;
+                }
+
+                response.AddMessage($"Error_{i + 1}", "İzin isteği sıraya alınamadı.");
             }
 
-            response.AddMessage("Success", $"{successCount}/{requestCount} kayıt başarı ile eklendi");
+            if (request.ForceSend)
+            {
+                response.AddMessage("Success", $"{successCount}/{requestCount} kayıt başarı ile gönderildi");
+            }
+            else
+            {
+                response.AddMessage("Success", $"{queuedCount}/{requestCount} kayıt başarı ile sıraya alındı");
+            }
 
             if (!hasError)
             {
