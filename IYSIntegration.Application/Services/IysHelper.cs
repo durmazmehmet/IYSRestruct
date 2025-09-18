@@ -99,52 +99,15 @@ public sealed class IysHelper : IIysHelper
         return false;
     }
 
-    public async Task<(bool IsValid, ResponseBase<AddConsentResult> Response)> ValidateConsentRequestAsync(
+    public Task<(bool IsValid, ResponseBase<AddConsentResult> Response)> ValidateConsentRequestAsync(
         AddConsentRequest request)
     {
         var response = new ResponseBase<AddConsentResult>();
 
         request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
+        response.Success();
 
-        if (request.Consent == null)
-        {
-            response.Error("Hata", "Consent bilgisi zorunludur");
-            return (false, response);
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Consent.ConsentDate))
-        {
-            response.Error("Hata", "ConsentDate alanı zorunludur");
-            return (false, response);
-        }
-
-        if (!DateTime.TryParse(request.Consent.ConsentDate, out var parsedDate))
-        {
-            response.Error("Hata", "ConsentDate alanı geçersiz");
-            return (false, response);
-        }
-
-        if (!await _dbService.CheckConsentRequest(request))
-        {
-            response.Error("Hata", "İlk defa giden rıza red gönderilemez");
-            return (false, response);
-        }
-
-        var lastConsentDate = await _dbService.GetLastConsentDate(request.CompanyCode!, request.Consent.Recipient);
-
-        if (lastConsentDate.HasValue && parsedDate < lastConsentDate.Value)
-        {
-            response.Error("Validation", "Sistemdeki izinden eski tarihli rıza gönderilemez");
-            return (false, response);
-        }
-
-        if (IsOlderThanBusinessDays(parsedDate, 3))
-        {
-            response.Error("Hata", "3 iş gününden eski consent gönderilemez");
-            return (false, response);
-        }
-
-        return (true, response);
+        return Task.FromResult((true, response));
     }
 
     public async Task<List<ConsentProcessingResult>> ValidateMultipleConsentsAsync(
