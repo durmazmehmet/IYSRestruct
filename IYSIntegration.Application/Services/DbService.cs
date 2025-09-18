@@ -327,6 +327,19 @@ namespace IYSIntegration.Application.Services
 
         }
 
+        public async Task<List<ConsentRequestLog>> GetPendingConsentsWithoutPull(int rowCount)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = (await connection.QueryAsync<ConsentRequestLog>(string.Format(QueryStrings.GetPendingConsentsWithoutPull, rowCount))).ToList();
+                connection.Close();
+
+                return result;
+            }
+
+        }
+
         public async Task UpdateBatchId(string companyCode, int batchSize)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
@@ -644,6 +657,30 @@ namespace IYSIntegration.Application.Services
                 connection.Close();
 
                 return result;
+            }
+        }
+
+        public async Task<int> MarkConsentsOverdue(int maxAgeInDays)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var affected = await connection.ExecuteAsync(QueryStrings.MarkConsentsOverdue, new { MaxAgeInDays = maxAgeInDays });
+                connection.Close();
+
+                return affected;
+            }
+        }
+
+        public async Task<int> MarkDuplicateConsentsOverdue()
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var affected = await connection.ExecuteAsync(QueryStrings.MarkDuplicateConsentsOverdue);
+                connection.Close();
+
+                return affected;
             }
         }
     }

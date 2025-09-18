@@ -253,25 +253,81 @@
             VALUES(@IysCode, @BrandCode, @BatchId, @RequestId, GETDATE(), DATEADD(SECOND, {0}, GETDATE()))";
 
         public static string GetConsentRequests = @"
-            SELECT TOP {0} 
-	            Id,
-	            IysCode,
-	            BrandCode,
-	            convert(varchar, ConsentDate,20) as ConsentDate,
-	            [Source],
-	            Recipient,
-	            RecipientType,
-	            Status,
+            SELECT TOP {0}
+                    CompanyCode,
+                    Id,
+                    IysCode,
+                    BrandCode,
+                    convert(varchar, ConsentDate,20) as ConsentDate,
+                    [Source],
+                    Recipient,
+                    RecipientType,
+                    Status,
                 Type,
-				ISNULL(BatchId,0) AS BatchId,
-				ISNULL([Index], 0) AS [Index]
-			FROM dbo.IYSConsentRequest (nolock)
-            WHERE 
-				ISNULL(IsProcessed, 0) = @IsProcessed 
-				AND IsOverdue IS NULL
-            ORDER BY 
-				Id DESC;
+                                ISNULL(BatchId,0) AS BatchId,
+                                ISNULL([Index], 0) AS [Index]
+                        FROM dbo.IYSConsentRequest (nolock)
+            WHERE
+                                ISNULL(IsProcessed, 0) = @IsProcessed
+                                AND IsOverdue IS NULL
+            ORDER BY
+                                Id DESC;
            ";
+
+        public static string GetPendingConsentsWithoutPull = @"
+            SELECT TOP {0}
+                    cr.CompanyCode,
+                    cr.Id,
+                    cr.IysCode,
+                    cr.BrandCode,
+                    CONVERT(varchar, cr.ConsentDate,20) AS ConsentDate,
+                    cr.[Source],
+                    cr.Recipient,
+                    cr.RecipientType,
+                    cr.Status,
+                    cr.Type
+            FROM dbo.IYSConsentRequest cr WITH (NOLOCK)
+            WHERE ISNULL(cr.IsProcessed, 0) = 0
+              AND ISNULL(cr.IsOverdue, 0) = 0
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM dbo.IysPullConsent pc WITH (NOLOCK)
+                    WHERE pc.CompanyCode = cr.CompanyCode
+                      AND pc.Recipient = cr.Recipient
+                      AND ISNULL(pc.RecipientType, '') = ISNULL(cr.RecipientType, '')
+              )
+            ORDER BY cr.Id DESC;
+            ";
+
+        public static string MarkConsentsOverdue = @"
+            UPDATE dbo.IYSConsentRequest
+            SET IsOverdue = 1,
+                UpdateDate = GETDATE()
+            WHERE ISNULL(IsProcessed, 0) = 0
+              AND ISNULL(IsOverdue, 0) = 0
+              AND CreateDate < DATEADD(DAY, -@MaxAgeInDays, GETDATE());
+            ";
+
+        public static string MarkDuplicateConsentsOverdue = @"
+            WITH DuplicateRows AS (
+                SELECT Id
+                FROM (
+                    SELECT Id,
+                           ROW_NUMBER() OVER(
+                                PARTITION BY CompanyCode, Recipient, ISNULL(RecipientType, '')
+                                ORDER BY CreateDate DESC, Id DESC) AS RN
+                    FROM dbo.IYSConsentRequest WITH (NOLOCK)
+                    WHERE ISNULL(IsProcessed, 0) = 0
+                      AND ISNULL(IsOverdue, 0) = 0
+                ) Ranked
+                WHERE RN > 1
+            )
+            UPDATE target
+            SET IsOverdue = 1,
+                UpdateDate = GETDATE()
+            FROM dbo.IYSConsentRequest AS target
+            INNER JOIN DuplicateRows AS dup ON target.Id = dup.Id;
+            ";
 
         public static string UpdateConsentRequest = @"
 			IF EXISTS (SELECT * FROM dbo.IYSConsentRequest (nolock) WHERE Id = @Id)
