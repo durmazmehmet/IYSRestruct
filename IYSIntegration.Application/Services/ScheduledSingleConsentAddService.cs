@@ -31,6 +31,7 @@ public class ScheduledSingleConsentAddService
         var response = new ResponseBase<ScheduledJobStatistics>();
         response.Success();
         var results = new ConcurrentBag<LogResult>();
+        var responseUpdates = new ConcurrentBag<ResponseBase<AddConsentResult>>();
         int failedCount = 0;
         int successCount = 0;
 
@@ -98,10 +99,31 @@ public class ScheduledSingleConsentAddService
                                 await _dbService.InsertPullConsent(insertReq);
                                 dict[recipientKey] = insertReq.Consent;
                             }
+                            else if (!queryResp.IsSuccessful())
+                            {
+                                results.Add(new LogResult
+                                {
+                                    Id = log.Id,
+                                    CompanyCode = companyCode,
+                                    Messages = new Dictionary<string, string>
+                                    {
+                                        { "Query Error", BuildErrorMessage(queryResp) }
+                                    }
+                                });
+                            }
                         }
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, "Error querying consent for {Recipient}", recipientKey.Recipient);
+                            results.Add(new LogResult
+                            {
+                                Id = log.Id,
+                                CompanyCode = companyCode,
+                                Messages = new Dictionary<string, string>
+                                {
+                                    { "Query Error", ex.Message }
+                                }
+                            });
                         }
                     });
                     await Task.WhenAll(queryTasks);
@@ -173,12 +195,12 @@ public class ScheduledSingleConsentAddService
                     };
 
                     var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{companyCode}/addConsent", request.Consent);
-                   
-                    if (addResponse.HttpStatusCode >= 200 || addResponse.HttpStatusCode < 300)
+
+                    addResponse.Id = log.Id;
+                    responseUpdates.Add(addResponse);
+
+                    if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
                     {
-                        var id = await _dbService.InsertConsentRequest(request);
-                        addResponse.Id = id;
-                        await _dbService.UpdateConsentResponse(addResponse);
                         Interlocked.Increment(ref successCount);
                     }
                     else
@@ -204,6 +226,29 @@ public class ScheduledSingleConsentAddService
             response.Error("SINGLE_CONSENT_ADD_FATAL", "Service failed with an unexpected exception.");
         }
 
+        try
+        {
+            var responsesToUpdate = responseUpdates.ToArray();
+            if (responsesToUpdate.Length > 0)
+            {
+                await _dbService.UpdateConsentResponses(responsesToUpdate);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bulk update of consent responses failed");
+            results.Add(new LogResult
+            {
+                Id = 0,
+                CompanyCode = string.Empty,
+                Messages = new Dictionary<string, string>
+                {
+                    { "Database Error", ex.Message }
+                }
+            });
+            response.Error("CONSENT_RESPONSE_UPDATE_FAILED", "Consent responses could not be updated.");
+        }
+
         foreach (var result in results)
         {
             response.AddMessage(result.GetMessages());
@@ -218,4 +263,37 @@ public class ScheduledSingleConsentAddService
 
     private static (string Recipient, string RecipientType) CreateRecipientKey(string recipient, string? recipientType)
         => (recipient, recipientType ?? string.Empty);
+
+    private static string BuildErrorMessage<T>(ResponseBase<T> response)
+    {
+        var parts = new List<string>();
+
+        if (response.Messages is { Count: > 0 })
+        {
+            parts.AddRange(response.Messages.Select(kv => $"{kv.Key}: {kv.Value}"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(response.OriginalError?.Message))
+        {
+            parts.Add($"Message: {response.OriginalError.Message}");
+        }
+
+        if (response.OriginalError?.Errors != null && response.OriginalError.Errors.Length > 0)
+        {
+            parts.AddRange(response.OriginalError.Errors
+                .Where(e => !string.IsNullOrWhiteSpace(e.Code) || !string.IsNullOrWhiteSpace(e.Message))
+                .Select(e => string.IsNullOrWhiteSpace(e.Code)
+                    ? e.Message ?? string.Empty
+                    : string.IsNullOrWhiteSpace(e.Message)
+                        ? e.Code
+                        : $"{e.Code}: {e.Message}"));
+        }
+
+        if (parts.Count == 0)
+        {
+            parts.Add($"HTTP {response.HttpStatusCode}");
+        }
+
+        return string.Join(" | ", parts);
+    }
 }
