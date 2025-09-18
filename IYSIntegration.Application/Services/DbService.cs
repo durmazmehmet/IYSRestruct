@@ -215,6 +215,27 @@ namespace IYSIntegration.Application.Services
             }
         }
 
+        public async Task<List<string>> GetExistingConsentRecipients(string companyCode, string? type, IEnumerable<string> recipients)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var result = (await connection.QueryAsync<string>(
+                    QueryStrings.GetExistingConsentRecipients,
+                    new
+                    {
+                        CompanyCode = companyCode,
+                        Type = string.IsNullOrWhiteSpace(type) ? null : type.Trim(),
+                        Recipients = recipients
+                    })).ToList();
+
+                await connection.CloseAsync();
+
+                return result;
+            }
+        }
+
         public async Task<DateTime?> GetLastConsentDate(string companyCode, string recipient)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
