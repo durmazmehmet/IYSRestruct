@@ -52,6 +52,33 @@ public class ConsentsController : ControllerBase
     }
 
     /// <summary>
+    /// "{_baseUrl}/v2/sps/{IysCode}/brands/{BrandCode}/consents"
+    /// </summary>
+    /// <param name="companyCode"></param>
+    /// <param name="consent"></param>
+    /// <returns></returns>
+    [HttpPost("addConsentV2")]
+    public async Task<ActionResult<ResponseBase<AddConsentResult>>> AddConsentV2(
+        [FromRoute] string companyCode,
+        [FromBody] Consent consent)
+    {
+        var consentParams = _iysHelper.GetIysCode(companyCode);
+
+        var iysRequest = new IysRequest<Consent>
+        {
+            IysCode = consentParams.IysCode,
+            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents",
+            Body = consent,
+            Action = "Add Consent V2",
+            Method = RestSharp.Method.Post
+        };
+
+        var result = await _clientHelper.Execute<AddConsentResult, Consent>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
+    }
+
+    /// <summary>
     /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/status"
     /// </summary>
     /// <param name="companyCode"></param>

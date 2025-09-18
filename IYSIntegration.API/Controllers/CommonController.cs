@@ -107,6 +107,76 @@ namespace IYSIntegration.API.Controllers
             return response;
         }
 
+        [Route("addConsentV2")]
+        [HttpPost]
+        public async Task<ResponseBase<AddConsentResult>> AddConsentV2([FromBody] AddConsentRequest request)
+        {
+            var response = new ResponseBase<AddConsentResult>();
+
+            request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
+
+            if (string.IsNullOrWhiteSpace(request.Consent?.ConsentDate))
+            {
+                response.Error("Hata", "ConsentDate alanı zorunludur");
+            }
+
+            DateTime.TryParse(request.Consent.ConsentDate, out var parsedDate);
+
+            if (!await _dbService.CheckConsentRequest(request))
+            {
+                response.Error("Hata", "İlk defa giden rıza red gönderilemez");
+                return response;
+            }
+
+            var lastConsentDate = await _dbService.GetLastConsentDate(request.CompanyCode, request.Consent.Recipient);
+
+            if (lastConsentDate.HasValue && parsedDate < lastConsentDate.Value)
+            {
+                response.Error("Validation", "Sistemdeki izinden eski tarihli rıza gönderilemez");
+                return response;
+            }
+
+            if (_iysHelper.IsOlderThanBusinessDays(parsedDate, 3))
+            {
+                response.Error("Hata", "3 iş gününden eski consent gönderilemez");
+                return response;
+            }
+
+            response = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsentV2", request.Consent);
+
+            if (!request.WithoutLogging)
+            {
+                var id = await _dbService.InsertConsentRequest(request);
+                response.Id = id;
+                await _dbService.UpdateConsentResponseFromCommon(response);
+                response.OriginalError = null;
+
+                if (id > 0 && request.Consent != null)
+                {
+                    var insertedConsent = new ConsentRequestLog
+                    {
+                        Id = id,
+                        CompanyCode = request.CompanyCode,
+                        IysCode = request.IysCode,
+                        BrandCode = request.BrandCode,
+                        Recipient = request.Consent.Recipient,
+                        RecipientType = request.Consent.RecipientType,
+                        Type = request.Consent.Type,
+                        Status = request.Consent.Status,
+                        Source = request.Consent.Source,
+                        ConsentDate = request.Consent.ConsentDate
+                    };
+
+                    var insertedConsents = new List<Consent> { insertedConsent };
+
+                    await _duplicateCleanerService.CleanAsync(insertedConsents);
+                    await _pendingSyncService.SyncAsync(insertedConsents);
+                }
+            }
+
+            return response;
+        }
+
         [Route("addConsentAsync")]
         [HttpPost]
         public async Task<int> AddConsentAsync([FromBody] AddConsentRequest request)
