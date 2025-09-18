@@ -81,7 +81,7 @@ namespace IYSIntegration.API.Controllers
         }
 
         /// <summary>
-        /// Sf'dan gelen, aynı müşteri için birden fazla türde izin kaydının ileitlmek üzere
+        /// Sf'dan gelen, aynı müşteri için birden fazla türde izin kaydının ileitlmesi için kullanılır.
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>

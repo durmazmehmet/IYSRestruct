@@ -8,7 +8,6 @@ namespace IYSIntegration.API.Controllers
     [Route("api/[controller]")]
     public class ScheduledController : ControllerBase
     {
-        private readonly ScheduledMultipleConsentQueryService _multipleConsentQueryService;
         private readonly ScheduledSingleConsentAddService _singleConsentAddService;
         private readonly ScheduledMultipleConsentAddService _multipleConsentAddService;
         private readonly ScheduledPullConsentService _pullConsentService;
@@ -16,7 +15,7 @@ namespace IYSIntegration.API.Controllers
         private readonly ScheduledSendConsentErrorService _sendConsentErrorService;
         private readonly IPendingSyncService _pendingSyncService;
 
-        public ScheduledController(ScheduledMultipleConsentQueryService multipleConsentQueryService,
+        public ScheduledController(
                                    ScheduledSingleConsentAddService singleConsentAddService,
                                    ScheduledMultipleConsentAddService multipleConsentAddService,
                                    ScheduledPullConsentService pullConsentService,
@@ -24,20 +23,12 @@ namespace IYSIntegration.API.Controllers
                                    ScheduledSendConsentErrorService sendConsentErrorService,
                                    IPendingSyncService pendingSyncService)
         {
-            _multipleConsentQueryService = multipleConsentQueryService;
             _singleConsentAddService = singleConsentAddService;
             _multipleConsentAddService = multipleConsentAddService;
             _pullConsentService = pullConsentService;
             _sfConsentService = sfConsentService;
             _sendConsentErrorService = sendConsentErrorService;
             _pendingSyncService = pendingSyncService;
-        }
-
-        [HttpGet("bulkConsentQuery")]
-        public async Task<IActionResult> MultipleConsentQuery([FromQuery] int batchSize)
-        {
-            var result = await _multipleConsentQueryService.RunAsync(batchSize);
-            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
         [HttpGet("pushBulkConsentToIys")]
