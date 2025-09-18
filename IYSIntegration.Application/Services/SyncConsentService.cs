@@ -23,6 +23,17 @@ namespace IYSIntegration.Application.Services
             _logger = logger;
         }
 
+        public async Task<Consent?> SyncAsync(Consent consent, CancellationToken cancellationToken = default)
+        {
+            if (consent == null)
+            {
+                return null;
+            }
+
+            var syncedConsents = await SyncAsync(new[] { consent }, cancellationToken);
+            return syncedConsents.FirstOrDefault();
+        }
+
         public async Task<IReadOnlyCollection<Consent>> SyncAsync(IEnumerable<Consent> consents, CancellationToken cancellationToken = default)
         {
             if (consents == null)
