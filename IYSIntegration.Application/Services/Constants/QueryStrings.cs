@@ -185,20 +185,25 @@
             ) THEN 1 ELSE 0 END;";
 
         public static string GetLastConsents = @"
+            WITH FilteredConsents AS (
+                SELECT CompanyCode, Recipient, RecipientType, Status, ConsentDate
+                FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK)
+                WHERE IsProcessed = 1
+                  AND CompanyCode = @CompanyCode
+                  AND Recipient IN @Recipients
+                UNION ALL
+                SELECT CompanyCode, Recipient, RecipientType, Status, ConsentDate
+                FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)
+                WHERE CompanyCode = @CompanyCode
+                  AND Recipient IN @Recipients
+            )
             SELECT CompanyCode, Recipient, RecipientType, Status, convert(varchar, ConsentDate, 20) as ConsentDate
             FROM (
                 SELECT CompanyCode, Recipient, RecipientType, Status, ConsentDate,
                        ROW_NUMBER() OVER(PARTITION BY CompanyCode, Recipient, ISNULL(RecipientType, '') ORDER BY ConsentDate DESC) AS RN
-                FROM (
-                    SELECT CompanyCode, Recipient, RecipientType, Status, ConsentDate
-                    FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK)
-                    WHERE IsProcessed = 1
-                    UNION ALL
-                    SELECT CompanyCode, Recipient, RecipientType, Status, ConsentDate
-                    FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)
-                ) AS AllConsents
+                FROM FilteredConsents
             ) AS Ranked
-            WHERE RN = 1 AND CompanyCode = @CompanyCode AND Recipient IN @Recipients;";
+            WHERE RN = 1;";
 
         public static string InsertConsentRequestWitBatch = @"
             INSERT INTO SfdcMasterData.dbo.IYSConsentRequest
