@@ -137,14 +137,15 @@
         public static string QueryConsentRequest = @"
             SELECT
                 cr.Id,
-                ISNULL(cl.Id, 0) as LogId,
-                ISNULL(cr.IsProcessed,0) as IsProcessed,
-                cr.IsSuccess, 
+                ISNULL(cl.Id, 0) AS LogId,
+                ISNULL(cr.IsProcessed, 0) AS IsProcessed,
+                cr.IsSuccess,
                 cl.Response,
-                convert(varchar, cl.UpdateDate, 20) as SendDate
-            FROM IYSConsentRequest cr(NOLOCK)
-            LEFT JOIN IYSCallLog cl (nolock) ON (cr.LogId = cl.Id)
-            WHERE cr.Id = @Id";
+                CONVERT(varchar(19), cl.UpdateDate, 20) AS SendDate
+            FROM IYSConsentRequest cr WITH (NOLOCK)
+            LEFT JOIN IYSCallLog cl WITH (NOLOCK) ON cr.LogId = cl.Id
+            WHERE cr.Recipient LIKE '%' + @recipient + '%'";
+
 
         public static string GetMaxBatchId = @"
             SELECT MAX(ISNULL(BatchId, 0)) FROM IYSConsentRequest (nolock)

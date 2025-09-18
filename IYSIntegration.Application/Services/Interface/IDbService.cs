@@ -18,7 +18,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task<DateTime?> GetLastConsentDate(string companyCode, string recipient);
         Task<List<Consent>> GetLastConsents(string companyCode, IEnumerable<string> recipients);
         Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response);
-        Task<ConsentResultLog> GetConsentRequest(long id);
+        Task<ConsentResultLog> GetConsentRequest(string id);
         Task<int> GetMaxBatchId();
         Task<int> InsertConsentRequestWithBatch(AddConsentRequest request);
         Task InsertBatchConsentQuery(BatchConsentQuery request);

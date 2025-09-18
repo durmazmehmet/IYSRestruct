@@ -89,7 +89,7 @@ public class ConsentsController : ControllerBase
     /// <param name="batchId"></param>
     /// <returns></returns>
     [HttpGet("queryAddMultipleConsent")]
-    public async Task<ActionResult<ResponseBase<List<QueryMultipleConsentResult>>>> QueryMultipleConsent(
+    public async Task<ActionResult<ResponseBase<List<QueryMultipleConsentResult>>>> QueryAddMultipleConsent(
         [FromRoute] string companyCode,
         [FromQuery] string requestId, int? batchId = null)
     {

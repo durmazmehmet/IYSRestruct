@@ -266,7 +266,7 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-        public async Task<ConsentResultLog> GetConsentRequest(long id)
+        public async Task<ConsentResultLog> GetConsentRequest(string recipient)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
@@ -274,7 +274,7 @@ namespace IYSIntegration.Application.Services
                 var result = (await connection.QueryAsync<ConsentResultLog>(QueryStrings.QueryConsentRequest,
                     new
                     {
-                        Id = id
+                        Recipient = recipient
                     })).SingleOrDefault();
 
                 connection.Close();
