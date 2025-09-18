@@ -1,4 +1,5 @@
 using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using Microsoft.Extensions.Logging;
 using System;
