@@ -199,7 +199,7 @@ namespace IYSIntegration.API.Controllers
         }
 
         /// <summary>
-        /// IYS'den tekil izin sorgulama
+        /// IYS'den tekil izin sorgulama (1 saatde en fazla 1000 sorgu yapılabilir)
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
@@ -211,6 +211,11 @@ namespace IYSIntegration.API.Controllers
             return await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{request.CompanyCode}/queryConsent", request.RecipientKey);
         }
 
+        /// <summary>
+        /// IYS'den çoklu izin sorgulama (tek seferde en fazla 1000 kayıt sorgulanabilir)
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         [Route("queryMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<MultipleQueryConsentResult>> QueryMultipleConsent([FromBody] QueryMutipleConsentRequest request)
@@ -271,20 +276,7 @@ namespace IYSIntegration.API.Controllers
 
             return response;
         }
-
-        /// <summary>
-        /// Çoklu izin ekleme tarihçesini verir.
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        [Route("queryAddMultipleConsent")]
-        [HttpPost]
-        public async Task<ResponseBase<List<QueryMultipleConsentResult>>> QueryAddMultipleConsent(QueryMultipleConsentRequest request)
-        {
-            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
-            return await _client.GetAsync<List<QueryMultipleConsentResult>>($"consents/{request.CompanyCode}/queryAddMultipleConsent?requestId={request.RequestId}&batchId={request.BatchId}");
-        }
-
+                
         /// <summary>
         /// IYS'den consent çekimi için kullanılır.
         /// </summary>
