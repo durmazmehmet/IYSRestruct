@@ -202,6 +202,8 @@ namespace IYSIntegration.API.Controllers
                         RecipientType = consent.RecipientType,
                         Status = consent.Status,
                         Type = consent.Type,
+                        RetailerCode = consent.RetailerCode,
+                        RetailerAccess = consent.RetailerAccess,
                     }
                 };
 
@@ -239,6 +241,16 @@ namespace IYSIntegration.API.Controllers
             return response;
         }
 
+        [Route("addMultipleConsentV2")]
+        [HttpPost]
+        public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsentV2([FromBody] MultipleConsentRequest request)
+        {
+            if (string.IsNullOrEmpty(request.CompanyCode))
+                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+
+            return await _client.PostJsonAsync<MultipleConsentRequest, MultipleConsentResult>($"consents/{request.CompanyCode}/addMultipleConsentV2", request);
+        }
+
         [Route("sendMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<MultipleConsentResult>> SendMultipleConsent([FromBody] MultipleConsentRequest request)
@@ -257,6 +269,17 @@ namespace IYSIntegration.API.Controllers
             request.CompanyCode = ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
 
             return await _client.PostJsonAsync<QueryMultipleConsentRequest, List<QueryMultipleConsentResult>>($"consents/{request.CompanyCode}/queryMultipleConsent", request);
+        }
+
+
+        [Route("searchRequestDetailsV2")]
+        [HttpPost]
+        public async Task<ResponseBase<List<QueryMultipleConsentResultV2>>> SearchRequestDetailsV2([FromBody] QueryMultipleConsentRequestV2 request)
+        {
+            if (string.IsNullOrEmpty(request.CompanyCode))
+                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+
+            return await _client.PostJsonAsync<QueryMultipleConsentRequestV2, List<QueryMultipleConsentResultV2>>($"consents/{request.CompanyCode}/searchRequestDetailsV2", request);
         }
 
 
