@@ -1,5 +1,4 @@
 using IYSIntegration.Application.Services;
-using IYSIntegration.Application.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IYSIntegration.API.Controllers
@@ -8,15 +7,15 @@ namespace IYSIntegration.API.Controllers
     [Route("api/[controller]")]
     public class ScheduledController : ControllerBase
     {
-        private readonly ScheduledSingleConsentAddService _singleConsentAddService;
-        private readonly ScheduledPullConsentService _pullConsentService;
-        private readonly ScheduledSfConsentService _sfConsentService;
+        private readonly AddConsentService _singleConsentAddService;
+        private readonly PullConsentService _pullConsentService;
+        private readonly SfConsentService _sfConsentService;
         private readonly SendConsentErrorService _sendConsentErrorService;
 
         public ScheduledController(
-                                   ScheduledSingleConsentAddService singleConsentAddService,
-                                   ScheduledPullConsentService pullConsentService,
-                                   ScheduledSfConsentService sfConsentService,
+                                   AddConsentService singleConsentAddService,
+                                   PullConsentService pullConsentService,
+                                   SfConsentService sfConsentService,
                                    SendConsentErrorService sendConsentErrorService
                                    )
         {

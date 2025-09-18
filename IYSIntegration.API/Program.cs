@@ -24,10 +24,9 @@ internal class Program
             return new IysProxy(url);
         });
         builder.Services.AddScoped<ISyncConsentService, SyncConsentService>();
-        builder.Services.AddScoped<ScheduledSingleConsentAddService>();
-        builder.Services.AddScoped<ScheduledMultipleConsentAddService>();
-        builder.Services.AddScoped<ScheduledPullConsentService>();
-        builder.Services.AddScoped<ScheduledSfConsentService>();
+        builder.Services.AddScoped<AddConsentService>();
+        builder.Services.AddScoped<PullConsentService>();
+        builder.Services.AddScoped<SfConsentService>();
         builder.Services.AddScoped<SendConsentErrorService>();
 
         builder.Services.AddControllers();
