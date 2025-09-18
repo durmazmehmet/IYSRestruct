@@ -13,13 +13,17 @@ namespace IYSIntegration.API.Controllers
         private readonly ScheduledPullConsentService _pullConsentService;
         private readonly ScheduledSfConsentService _sfConsentService;
         private readonly ScheduledSendConsentErrorService _sendConsentErrorService;
+        private readonly ScheduledPendingConsentSyncService _pendingConsentSyncService;
+        private readonly ScheduledConsentOverdueService _consentOverdueService;
 
         public ScheduledController(ScheduledMultipleConsentQueryService multipleConsentQueryService,
                                    ScheduledSingleConsentAddService singleConsentAddService,
                                    ScheduledMultipleConsentAddService multipleConsentAddService,
                                    ScheduledPullConsentService pullConsentService,
                                    ScheduledSfConsentService sfConsentService,
-                                   ScheduledSendConsentErrorService sendConsentErrorService)
+                                   ScheduledSendConsentErrorService sendConsentErrorService,
+                                   ScheduledPendingConsentSyncService pendingConsentSyncService,
+                                   ScheduledConsentOverdueService consentOverdueService)
         {
             _multipleConsentQueryService = multipleConsentQueryService;
             _singleConsentAddService = singleConsentAddService;
@@ -27,6 +31,8 @@ namespace IYSIntegration.API.Controllers
             _pullConsentService = pullConsentService;
             _sfConsentService = sfConsentService;
             _sendConsentErrorService = sendConsentErrorService;
+            _pendingConsentSyncService = pendingConsentSyncService;
+            _consentOverdueService = consentOverdueService;
         }
 
         /// <summary>
@@ -86,6 +92,30 @@ namespace IYSIntegration.API.Controllers
         public async Task<IActionResult> SfConsent([FromQuery] int batchSize)
         {
             var result = await _sfConsentService.RunAsync(batchSize);
+            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
+        }
+
+        /// <summary>
+        /// Bekleyen rızalar IYS'den sorgulanır ve sisteme eklenir.
+        /// </summary>
+        /// <param name="rowCount"></param>
+        /// <returns></returns>
+        [HttpGet("syncPendingConsents")]
+        public async Task<IActionResult> SyncPendingConsents([FromQuery] int rowCount)
+        {
+            var result = await _pendingConsentSyncService.RunAsync(rowCount);
+            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
+        }
+
+        /// <summary>
+        /// Bekleyen rızalar gecikmiş olarak işaretlenir.
+        /// </summary>
+        /// <param name="maxAgeInDays"></param>
+        /// <returns></returns>
+        [HttpGet("markPendingConsentsOverdue")]
+        public async Task<IActionResult> MarkPendingConsentsOverdue([FromQuery] int maxAgeInDays = 3)
+        {
+            var result = await _consentOverdueService.RunAsync(maxAgeInDays);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
