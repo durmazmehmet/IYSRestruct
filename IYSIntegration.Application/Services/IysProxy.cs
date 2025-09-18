@@ -5,11 +5,11 @@ using RestSharp;
 
 namespace IYSIntegration.Application.Services;
 
-public class SimpleRestClient : ISimpleRestClient
+public class IysProxy : IIysProxy
 {
     private readonly RestClient _client;
 
-    public SimpleRestClient(string baseUrl)
+    public IysProxy(string baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
             throw new ArgumentException("Base URL boş olamaz.", nameof(baseUrl));

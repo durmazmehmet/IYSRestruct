@@ -2,7 +2,7 @@
 
 namespace IYSIntegration.Application.Services.Interface
 {
-    public interface ISimpleRestClient
+    public interface IIysProxy
     {
         Task<ResponseBase<T>> GetAsync<T>(string path, IDictionary<string, string?>? query = null, CancellationToken ct = default);
         Task<ResponseBase<T>> PostFormAsync<T>(string path, IDictionary<string, string> form, CancellationToken ct = default);
