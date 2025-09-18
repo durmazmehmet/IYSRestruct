@@ -58,7 +58,9 @@ public class ScheduledMultipleConsentAddService
                             RecipientType = x.RecipientType,
                             Source = x.Source,
                             Status = x.Status,
-                            Type = x.Type
+                            Type = x.Type,
+                            RetailerCode = x.RetailerCode,
+                            RetailerAccess = x.RetailerAccess
                         }).ToList();
 
                         var result = await _client.PostJsonAsync<List<Consent>, MultipleConsentResult>($"consents/{companyCode}/multipleConsent", consents);

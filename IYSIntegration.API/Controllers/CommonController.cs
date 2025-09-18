@@ -213,6 +213,8 @@ namespace IYSIntegration.API.Controllers
                         RecipientType = consent.RecipientType,
                         Status = consent.Status,
                         Type = consent.Type,
+                        RetailerCode = consent.RetailerCode,
+                        RetailerAccess = consent.RetailerAccess,
                     }
                 };
 
@@ -223,6 +225,16 @@ namespace IYSIntegration.API.Controllers
             response.AddMessage("Success", $"{count}/{requestCount} kayıt başarı ile eklendi");
             response.Success();
             return response;
+        }
+
+        [Route("addMultipleConsentV2")]
+        [HttpPost]
+        public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsentV2([FromBody] MultipleConsentRequest request)
+        {
+            if (string.IsNullOrEmpty(request.CompanyCode))
+                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+
+            return await _client.PostJsonAsync<MultipleConsentRequest, MultipleConsentResult>($"consents/{request.CompanyCode}/addMultipleConsentV2", request);
         }
 
         [Route("sendMultipleConsent")]
