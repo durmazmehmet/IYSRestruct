@@ -41,140 +41,26 @@ public class ScheduledSingleConsentAddService
         {
             var logs = await _dbService.GetConsentRequests(false, rowCount);
 
-            var groupedLogs = logs.GroupBy(l => _iysHelper.GetCompanyCode(l.IysCode));
-            var consentCache = new ConcurrentDictionary<string, Dictionary<(string Recipient, string RecipientType), Consent>>();
-
-            foreach (var group in groupedLogs)
-            {
-                var companyCode = group.Key;
-                var recipientKeys = group
-                    .Select(l => CreateRecipientKey(l.Recipient, l.RecipientType))
-                    .Distinct()
-                    .ToList();
-                var existingRecipients = recipientKeys.Select(r => r.Recipient).Distinct();
-                var existing = await _dbService.GetLastConsents(companyCode, existingRecipients);
-                var dict = existing.ToDictionary(c => CreateRecipientKey(c.Recipient, c.RecipientType), c => c);
-                var missing = recipientKeys.Where(r => !dict.ContainsKey(r)).ToList();
-
-                if (missing.Any())
-                {
-                    var queryTasks = missing.Select(async recipientKey =>
-                    {
-                        var log = group.First(l => CreateRecipientKey(l.Recipient, l.RecipientType) == recipientKey);
-                        try
-                        {
-                            var queryReq = new QueryConsentRequest
-                            {
-                                CompanyCode = companyCode,
-                                IysCode = log.IysCode,
-                                BrandCode = log.BrandCode,
-                                RecipientKey = new RecipientKey
-                                {
-                                    Recipient = log.Recipient,
-                                    RecipientType = log.RecipientType,
-                                    Type = log.Type
-                                }
-                            };
-
-                            var queryResp = await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{companyCode}/queryConsent", queryReq.RecipientKey);
-                            if (queryResp.IsSuccessful() && queryResp.Data != null && !string.IsNullOrEmpty(queryResp.Data.ConsentDate))
-                            {
-                                var insertReq = new AddConsentRequest
-                                {
-                                    CompanyCode = companyCode,
-                                    IysCode = log.IysCode,
-                                    BrandCode = log.BrandCode,
-                                    Consent = new Consent
-                                    {
-                                        Recipient = queryResp.Data.Recipient,
-                                        Type = queryResp.Data.Type,
-                                        Source = queryResp.Data.Source,
-                                        Status = queryResp.Data.Status,
-                                        ConsentDate = queryResp.Data.ConsentDate,
-                                        RecipientType = queryResp.Data.RecipientType,
-                                        CreationDate = queryResp.Data.CreationDate,
-                                        TransactionId = queryResp.Data.TransactionId
-                                    }
-                                };
-                                await _dbService.InsertPullConsent(insertReq);
-                                dict[recipientKey] = insertReq.Consent;
-                            }
-                            else if (!queryResp.IsSuccessful())
-                            {
-                                results.Add(new LogResult
-                                {
-                                    Id = log.Id,
-                                    CompanyCode = companyCode,
-                                    Messages = new Dictionary<string, string>
-                                    {
-                                        { "Query Error", BuildErrorMessage(queryResp) }
-                                    }
-                                });
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error querying consent for {Recipient}", recipientKey.Recipient);
-                            results.Add(new LogResult
-                            {
-                                Id = log.Id,
-                                CompanyCode = companyCode,
-                                Messages = new Dictionary<string, string>
-                                {
-                                    { "Query Error", ex.Message }
-                                }
-                            });
-                        }
-                    });
-                    await Task.WhenAll(queryTasks);
-                }
-
-                consentCache[companyCode] = dict;
-            }
-
-            var validLogs = new List<ConsentRequestLog>();
             foreach (var log in logs)
             {
-                var companyCode = _iysHelper.GetCompanyCode(log.IysCode);
-                consentCache.TryGetValue(companyCode, out var companyConsents);
-                if (companyConsents == null)
-                {
-                    companyConsents = new Dictionary<(string Recipient, string RecipientType), Consent>();
-                    consentCache[companyCode] = companyConsents;
-                }
-                companyConsents.TryGetValue(CreateRecipientKey(log.Recipient, log.RecipientType), out var existingConsent);
+                var companyCode = !string.IsNullOrWhiteSpace(log.CompanyCode)
+                    ? log.CompanyCode
+                    : _iysHelper.GetCompanyCode(log.IysCode) ?? string.Empty;
 
-                if ((log.Status == "RED" || log.Status == "RET") && existingConsent == null)
+                if (string.IsNullOrWhiteSpace(companyCode))
                 {
+                    results.Add(new LogResult
+                    {
+                        Id = log.Id,
+                        CompanyCode = string.Empty,
+                        Messages = new Dictionary<string, string>
+                        {
+                            { "Company", "Şirket kodu bulunamadı." }
+                        }
+                    });
+                    Interlocked.Increment(ref failedCount);
                     continue;
                 }
-
-                if (existingConsent != null &&
-                    DateTime.TryParse(existingConsent.ConsentDate, out var lastDate) &&
-                    DateTime.TryParse(log.ConsentDate, out var reqDate) &&
-                    lastDate > reqDate)
-                {
-                    continue;
-                }
-
-                if (existingConsent != null && existingConsent.Status == "RET" && log.Status == "RET")
-                {
-                    continue;
-                }
-
-                if (existingConsent != null && !string.IsNullOrWhiteSpace(existingConsent.ConsentDate) &&
-                        DateTime.TryParse(existingConsent.ConsentDate, out var consentDate) &&
-                        _iysHelper.IsOlderThanBusinessDays(consentDate, 3))
-                {
-                    continue;
-                }
-
-                validLogs.Add(log);
-            }
-
-            foreach (var log in validLogs)
-            {
-                var companyCode = _iysHelper.GetCompanyCode(log.IysCode);
 
                 try
                 {
@@ -183,6 +69,7 @@ public class ScheduledSingleConsentAddService
                         WithoutLogging = true,
                         IysCode = log.IysCode,
                         BrandCode = log.BrandCode,
+                        CompanyCode = companyCode,
                         Consent = new Consent
                         {
                             ConsentDate = log.ConsentDate,
@@ -205,6 +92,15 @@ public class ScheduledSingleConsentAddService
                     }
                     else
                     {
+                        results.Add(new LogResult
+                        {
+                            Id = log.Id,
+                            CompanyCode = companyCode,
+                            Messages = new Dictionary<string, string>
+                            {
+                                { "Add Error", BuildErrorMessage(addResponse) }
+                            }
+                        });
                         Interlocked.Increment(ref failedCount);
                     }
 
@@ -260,9 +156,6 @@ public class ScheduledSingleConsentAddService
         };
         return response;
     }
-
-    private static (string Recipient, string RecipientType) CreateRecipientKey(string recipient, string? recipientType)
-        => (recipient, recipientType ?? string.Empty);
 
     private static string BuildErrorMessage<T>(ResponseBase<T> response)
     {

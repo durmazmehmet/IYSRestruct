@@ -22,6 +22,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task<int> InsertConsentRequestWithBatch(AddConsentRequest request);
         Task InsertBatchConsentQuery(BatchConsentQuery request);
         Task<List<ConsentRequestLog>> GetConsentRequests(bool isProcessed, int rowCount);
+        Task<List<ConsentRequestLog>> GetPendingConsentsWithoutPull(int rowCount);
         Task UpdateConsentResponse(ResponseBase<AddConsentResult> response);
         Task UpdateConsentResponses(IEnumerable<ResponseBase<AddConsentResult>> responses);
         Task UpdateBatchId(string companyCode, int batchSize);
@@ -40,5 +41,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
         Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);
+        Task<int> MarkConsentsOverdue(int maxAgeInDays);
+        Task<int> MarkDuplicateConsentsOverdue();
     }
 }
