@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
+using System;
 using System.Data.SqlClient;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +26,32 @@ namespace IYSIntegration.Application.Services
             _configuration = configuration;
             _logger = loggerServiceBase;
             _iysHelper = iysHelper;
+        }
+
+        internal sealed record DuplicateCleanupCandidate(
+            string CompanyCode,
+            string Recipient,
+            string RecipientType,
+            string Type,
+            string Status);
+
+        internal static IReadOnlyList<DuplicateCleanupCandidate> BuildDuplicateCleanupCandidates(IEnumerable<Consent> consents)
+        {
+            if (consents == null)
+            {
+                return Array.Empty<DuplicateCleanupCandidate>();
+            }
+
+            return consents
+                .Where(c => c != null && !string.IsNullOrWhiteSpace(c.CompanyCode) && !string.IsNullOrWhiteSpace(c.Recipient))
+                .Select(c => new DuplicateCleanupCandidate(
+                    c.CompanyCode!,
+                    c.Recipient!,
+                    c.RecipientType ?? string.Empty,
+                    c.Type ?? string.Empty,
+                    c.Status ?? string.Empty))
+                .Distinct()
+                .ToList();
         }
 
         public async Task<int> InsertLog<TRequest>(IysRequest<TRequest> request)
@@ -698,21 +725,7 @@ namespace IYSIntegration.Application.Services
 
         public async Task<int> MarkDuplicateConsentsOverdueForConsents(IEnumerable<Consent> consents)
         {
-            if (consents == null)
-            {
-                return 0;
-            }
-
-            var candidates = consents
-                .Where(c => !string.IsNullOrWhiteSpace(c.CompanyCode) && !string.IsNullOrWhiteSpace(c.Recipient))
-                .Select(c => new
-                {
-                    CompanyCode = c.CompanyCode!,
-                    Recipient = c.Recipient!,
-                    RecipientType = c.RecipientType ?? string.Empty
-                })
-                .Distinct()
-                .ToList();
+            var candidates = BuildDuplicateCleanupCandidates(consents);
 
             if (candidates.Count == 0)
             {
@@ -729,7 +742,14 @@ namespace IYSIntegration.Application.Services
                 {
                     totalAffected += await connection.ExecuteAsync(
                         QueryStrings.MarkDuplicateConsentsOverdueForRecipient,
-                        candidate);
+                        new
+                        {
+                            candidate.CompanyCode,
+                            candidate.Recipient,
+                            RecipientType = candidate.RecipientType,
+                            candidate.Type,
+                            candidate.Status
+                        });
                 }
 
                 await connection.CloseAsync();
