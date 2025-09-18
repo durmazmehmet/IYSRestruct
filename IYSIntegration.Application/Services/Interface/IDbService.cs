@@ -15,6 +15,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task<bool> CheckConsentRequest(AddConsentRequest request);
         Task<bool> PullConsentExists(string companyCode, string recipient, string? type = null);
         Task<bool> SuccessfulConsentRequestExists(string companyCode, string recipient, string? type = null);
+        Task<List<string>> GetExistingConsentRecipients(string companyCode, string? type, IEnumerable<string> recipients);
         Task<DateTime?> GetLastConsentDate(string companyCode, string recipient);
         Task<List<Consent>> GetLastConsents(string companyCode, IEnumerable<string> recipients);
         Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response);
@@ -39,6 +40,7 @@ namespace IYSIntegration.Application.Services.Interface
         Task UpdateJustRequestDateOfPullRequestLog(PullRequestLog log);
         Task InsertPullConsent(AddConsentRequest request);
         Task<List<Consent>> GetPullConsentRequests(bool isProcessed, int rowCount);
+        Task UpdatePullConsentStatuses(string companyCode, string recipientType, string type, IEnumerable<string> recipients, string status);
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
         Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);

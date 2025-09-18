@@ -200,6 +200,26 @@
                   AND (BatchError IS NULL OR LTRIM(RTRIM(BatchError)) = '')
             ) THEN 1 ELSE 0 END;";
 
+        public static string GetExistingConsentRecipients = @"
+            SELECT DISTINCT Recipient
+            FROM (
+                SELECT Recipient
+                FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)
+                WHERE CompanyCode = @CompanyCode
+                  AND Recipient IN @Recipients
+                  AND (@Type IS NULL OR @Type = '' OR ISNULL(Type, '') = ISNULL(@Type, ''))
+                UNION ALL
+                SELECT Recipient
+                FROM SfdcMasterData.dbo.IYSConsentRequest (NOLOCK)
+                WHERE CompanyCode = @CompanyCode
+                  AND Recipient IN @Recipients
+                  AND (@Type IS NULL OR @Type = '' OR ISNULL(Type, '') = ISNULL(@Type, ''))
+                  AND ISNULL(IsProcessed, 0) = 1
+                  AND ISNULL(IsSuccess, 0) = 1
+                  AND ISNULL(IsOverdue, 0) = 0
+                  AND (BatchError IS NULL OR LTRIM(RTRIM(BatchError)) = '')
+            ) Existing;";
+
         public static string GetLastConsents = @"
             WITH FilteredConsents AS (
                 SELECT CompanyCode, Recipient, RecipientType, Status, ConsentDate
@@ -558,35 +578,45 @@
 		";
 
         public static string GetPullConsentRequests = @"
-            SELECT TOP {0} 
-				Id, 
-				CompanyCode, 
-				SalesforceId, 
-				IysCode, 
-				BrandCode, 
-				convert(varchar, ConsentDate, 120) as ConsentDate, 
-				convert(varchar, CreationDate, 120) as CreationDate, 
-				[Source], 
-				Recipient, 
-				RecipientType, 
-				Status, 
-				[Type], 
-				TransactionId, 
-				IsSuccess, 
-				CreateDate, 
-				UpdateDate, 
-				LogId, 
-				IsProcessed, 
-				Error
-			FROM dbo.IysPullConsent (nolock)
+            SELECT TOP {0}
+                                Id,
+                                CompanyCode,
+                                SalesforceId,
+                                IysCode,
+                                BrandCode,
+                                convert(varchar, ConsentDate, 120) as ConsentDate,
+                                convert(varchar, CreationDate, 120) as CreationDate,
+                                [Source],
+                                Recipient,
+                                RecipientType,
+                                Status,
+                                [Type],
+                                TransactionId,
+                                IsSuccess,
+                                CreateDate,
+                                UpdateDate,
+                                LogId,
+                                IsProcessed,
+                                Error
+                        FROM dbo.IysPullConsent (nolock)
                 WHERE ISNULL(IsProcessed, 0) = @IsProcessed
                 ORDER BY CreateDate ASC;
-		";
+                ";
+
+        public static string UpdatePullConsentStatuses = @"
+            UPDATE dbo.IysPullConsent
+            SET Status = @Status,
+                UpdateDate = GETDATE()
+            WHERE CompanyCode = @CompanyCode
+              AND RecipientType = @RecipientType
+              AND [Type] = @Type
+              AND Recipient IN @Recipients;
+            ";
 
         public static string UpdateSfConsentRequest = @"
             UPDATE dbo.IysPullConsent
             SET IsSuccess = @IsSuccess,
-                LogId = @LogId,    
+                LogId = @LogId,
                 UpdateDate = GETDATE(),
 				Error = @Error,
                 IsProcessed = 1

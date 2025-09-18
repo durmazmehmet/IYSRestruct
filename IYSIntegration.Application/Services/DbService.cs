@@ -215,6 +215,27 @@ namespace IYSIntegration.Application.Services
             }
         }
 
+        public async Task<List<string>> GetExistingConsentRecipients(string companyCode, string? type, IEnumerable<string> recipients)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var result = (await connection.QueryAsync<string>(
+                    QueryStrings.GetExistingConsentRecipients,
+                    new
+                    {
+                        CompanyCode = companyCode,
+                        Type = string.IsNullOrWhiteSpace(type) ? null : type.Trim(),
+                        Recipients = recipients
+                    })).ToList();
+
+                await connection.CloseAsync();
+
+                return result;
+            }
+        }
+
         public async Task<DateTime?> GetLastConsentDate(string companyCode, string recipient)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
@@ -673,6 +694,45 @@ namespace IYSIntegration.Application.Services
                 return result;
             }
 
+        }
+
+        public async Task UpdatePullConsentStatuses(string companyCode, string recipientType, string type, IEnumerable<string> recipients, string status)
+        {
+            if (string.IsNullOrWhiteSpace(companyCode)
+                || string.IsNullOrWhiteSpace(recipientType)
+                || string.IsNullOrWhiteSpace(type)
+                || string.IsNullOrWhiteSpace(status))
+            {
+                return;
+            }
+
+            var recipientList = recipients?
+                .Where(recipient => !string.IsNullOrWhiteSpace(recipient))
+                .Select(recipient => recipient.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (recipientList == null || recipientList.Count == 0)
+            {
+                return;
+            }
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                await connection.ExecuteAsync(QueryStrings.UpdatePullConsentStatuses,
+                    new
+                    {
+                        CompanyCode = companyCode,
+                        RecipientType = recipientType,
+                        Type = type,
+                        Status = status.ToUpperInvariant(),
+                        Recipients = recipientList
+                    });
+
+                connection.Close();
+            }
         }
 
         public async Task UpdateSfConsentResponse(SfConsentResult consentResult)
