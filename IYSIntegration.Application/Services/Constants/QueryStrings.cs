@@ -322,7 +322,7 @@
                 FROM (
                     SELECT Id,
                            ROW_NUMBER() OVER(
-                                PARTITION BY CompanyCode, Recipient, ISNULL(RecipientType, '')
+                                PARTITION BY CompanyCode, Recipient, ISNULL(RecipientType, ''), ISNULL(Type, ''), ISNULL(Status, '')
                                 ORDER BY CreateDate DESC, Id DESC) AS RN
                     FROM dbo.IYSConsentRequest WITH (NOLOCK)
                     WHERE ISNULL(IsProcessed, 0) = 0
@@ -343,7 +343,7 @@
                 FROM (
                     SELECT Id,
                            ROW_NUMBER() OVER(
-                                PARTITION BY CompanyCode, Recipient, ISNULL(RecipientType, '')
+                                PARTITION BY CompanyCode, Recipient, ISNULL(RecipientType, ''), ISNULL(Type, ''), ISNULL(Status, '')
                                 ORDER BY CreateDate DESC, Id DESC) AS RN
                     FROM dbo.IYSConsentRequest WITH (NOLOCK)
                     WHERE ISNULL(IsProcessed, 0) = 0
@@ -351,6 +351,8 @@
                       AND CompanyCode = @CompanyCode
                       AND Recipient = @Recipient
                       AND ISNULL(RecipientType, '') = ISNULL(@RecipientType, '')
+                      AND ISNULL(Type, '') = ISNULL(@Type, '')
+                      AND ISNULL(Status, '') = ISNULL(@Status, '')
                 ) Ranked
                 WHERE RN > 1
             )
