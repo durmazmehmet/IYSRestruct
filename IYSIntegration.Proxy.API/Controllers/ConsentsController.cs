@@ -132,6 +132,36 @@ public class ConsentsController : ControllerBase
         return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
+    [HttpPost("searchRequestDetailsV2")]
+    public async Task<ActionResult<ResponseBase<List<QueryMultipleConsentResultV2>>>> SearchRequestDetailsV2(
+        [FromRoute] string companyCode,
+        [FromBody] QueryMultipleConsentRequestV2 request)
+    {
+        if (request is null)
+        {
+            return BadRequest("Request body is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.RequestId))
+        {
+            return BadRequest("requestId is required.");
+        }
+
+        var consentParams = _iysHelper.GetIysCode(companyCode);
+
+        var iysRequest = new IysRequest<DummyRequest>
+        {
+            IysCode = consentParams.IysCode,
+            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{Uri.EscapeDataString(request.RequestId)}",
+            Action = "Search Request Details V2",
+            BatchId = request.BatchId
+        };
+
+        var result = await _clientHelper.Execute<List<QueryMultipleConsentResultV2>, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
+    }
+
     /// <summary>
     /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/changes?queryParams"
     /// </summary>

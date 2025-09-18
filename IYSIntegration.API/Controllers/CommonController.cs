@@ -248,6 +248,17 @@ namespace IYSIntegration.API.Controllers
         }
 
 
+        [Route("searchRequestDetailsV2")]
+        [HttpPost]
+        public async Task<ResponseBase<List<QueryMultipleConsentResultV2>>> SearchRequestDetailsV2([FromBody] QueryMultipleConsentRequestV2 request)
+        {
+            if (string.IsNullOrEmpty(request.CompanyCode))
+                request.CompanyCode = _iysHelper.GetCompanyCode(request.IysCode);
+
+            return await _client.PostJsonAsync<QueryMultipleConsentRequestV2, List<QueryMultipleConsentResultV2>>($"consents/{request.CompanyCode}/searchRequestDetailsV2", request);
+        }
+
+
 
         [Route("pullConsent")]
         [HttpPost]
