@@ -106,6 +106,33 @@ public class ConsentsController : ControllerBase
     }
 
     /// <summary>
+    /// "{_baseUrl}/v2/sps/{IysCode}/brands/{BrandCode}/consents/request"
+    /// </summary>
+    /// <param name="companyCode"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    [HttpPost("addMultipleConsentV2")]
+    public async Task<ActionResult<ResponseBase<MultipleConsentResult>>> AddMultipleConsentV2(
+        [FromRoute] string companyCode,
+        [FromBody] MultipleConsentRequest request)
+    {
+        var consentParams = _iysHelper.GetIysCode(companyCode);
+
+        var iysRequest = new IysRequest<List<Consent>>
+        {
+            IysCode = consentParams.IysCode,
+            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request",
+            Body = request.Consents,
+            Action = "Add Multiple Consent V2",
+            BatchId = request.BatchId
+        };
+
+        var result = await _clientHelper.Execute<MultipleConsentResult, List<Consent>>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
+    }
+
+    /// <summary>
     /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/request/{requestId}"
     /// </summary>
     /// <param name="companyCode"></param>

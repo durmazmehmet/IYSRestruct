@@ -22,8 +22,8 @@ namespace IYSIntegration.Application.Services.Models.Base
         [JsonProperty("recipientType")]
         public string RecipientType { get; set; }
 
-        [JsonProperty("totalCount", NullValueHandling = NullValueHandling.Ignore)]
-        public int RetailerCode { get; set; }
+        [JsonProperty("retailerCode", NullValueHandling = NullValueHandling.Ignore)]
+        public int? RetailerCode { get; set; }
 
         [JsonProperty("creationDate", NullValueHandling = NullValueHandling.Ignore)]
         public string? CreationDate { get; set; }

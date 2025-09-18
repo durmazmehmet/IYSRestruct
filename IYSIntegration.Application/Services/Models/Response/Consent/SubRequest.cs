@@ -24,5 +24,8 @@ namespace IYSIntegration.Application.Services.Models.Response.Consent
 
         [JsonProperty("subRequestId")]
         public string SubRequestId { get; set; }
+
+        [JsonProperty("creationDate", NullValueHandling = NullValueHandling.Ignore)]
+        public string? CreationDate { get; set; }
     }
 }
