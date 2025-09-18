@@ -42,6 +42,7 @@ namespace IYSIntegration.API.Controllers
             request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
             var response = new ResponseBase<AddConsentResult>();
+            var forceSend = _iysHelper.IsForceSendEnabled();
 
             if (request.Consent == null)
             {
@@ -64,7 +65,7 @@ namespace IYSIntegration.API.Controllers
                 return response;
             }
 
-            if (request.ForceSend)
+            if (forceSend)
             {
                 var sendResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
                 sendResponse.Id = queuedId;
@@ -92,6 +93,7 @@ namespace IYSIntegration.API.Controllers
 
             var requestCount = request.Consents.Count;
             var response = new ResponseBase<MultipleConsentResult>();
+            var forceSend = _iysHelper.IsForceSendEnabled();
 
             if ((request.IysCode == 0 || request.BrandCode == 0) && !string.IsNullOrWhiteSpace(request.CompanyCode))
             {
@@ -126,7 +128,6 @@ namespace IYSIntegration.API.Controllers
                     CompanyName = request.CompanyName,
                     IysCode = request.IysCode,
                     BrandCode = request.BrandCode,
-                    ForceSend = request.ForceSend,
                     SalesforceId = consent.SalesforceId,
                     Consent = new Consent
                     {
@@ -146,7 +147,7 @@ namespace IYSIntegration.API.Controllers
 
                 if (result > 0)
                 {
-                    if (request.ForceSend)
+                    if (forceSend)
                     {
                         var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", consent);
                         addResponse.Id = result;
@@ -181,7 +182,7 @@ namespace IYSIntegration.API.Controllers
                 response.AddMessage($"Error_{i + 1}", "İzin isteği sıraya alınamadı.");
             }
 
-            if (request.ForceSend)
+            if (forceSend)
             {
                 response.AddMessage("Success", $"{successCount}/{requestCount} kayıt başarı ile gönderildi");
             }
