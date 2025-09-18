@@ -75,7 +75,7 @@ public class ScheduledSingleConsentAddService
                 {
                     var request = new AddConsentRequest
                     {
-                        WithoutLogging = true,
+                        ForceSend = true,
                         IysCode = log.IysCode,
                         BrandCode = log.BrandCode,
                         CompanyCode = companyCode,
