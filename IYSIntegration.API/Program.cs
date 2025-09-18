@@ -21,7 +21,8 @@ internal class Program
         {
             var config = provider.GetRequiredService<IConfiguration>();
             var url = config.GetValue<string>("BaseIysProxyUrl");
-            return new IysProxy(url);
+            var auth = config.GetValue<string>("BaseIysProxyAuth");
+            return new IysProxy(url, auth);
         });
         builder.Services.AddScoped<ISyncConsentService, SyncConsentService>();
         builder.Services.AddScoped<AddConsentService>();

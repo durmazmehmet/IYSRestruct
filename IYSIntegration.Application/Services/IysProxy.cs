@@ -8,12 +8,13 @@ namespace IYSIntegration.Application.Services;
 public class IysProxy : IIysProxy
 {
     private readonly RestClient _client;
-
-    public IysProxy(string baseUrl)
+    private readonly string _auth;
+    public IysProxy(string baseUrl, string auth)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
             throw new ArgumentException("Base URL boş olamaz.", nameof(baseUrl));
 
+        _auth = auth ?? throw new ArgumentNullException(nameof(auth));
         _client = new RestClient(new RestClientOptions(baseUrl)
         {
             MaxTimeout = 30000,
@@ -28,6 +29,7 @@ public class IysProxy : IIysProxy
     {
         var req = new RestRequest(path, Method.Get);
         req.AddOrUpdateHeader("Accept", "application/json");
+        req.AddOrUpdateHeader("Authorization", $"Basic {_auth}");
 
         if (query != null)
             foreach (var kv in query)
@@ -45,6 +47,7 @@ public class IysProxy : IIysProxy
         var req = new RestRequest(path, Method.Post);
         req.AddOrUpdateHeader("Accept", "application/json");
         req.AddOrUpdateHeader("Content-Type", "application/json");
+        req.AddOrUpdateHeader("Authorization", $"Basic {_auth}");
         req.AddStringBody(JsonConvert.SerializeObject(body), ContentType.Json);
 
         var resp = await _client.ExecuteAsync(req, ct);
@@ -59,6 +62,7 @@ public class IysProxy : IIysProxy
         var req = new RestRequest(path, Method.Post);
         req.AddOrUpdateHeader("Accept", "application/json");
         req.AddOrUpdateHeader("Content-Type", "application/x-www-form-urlencoded");
+        req.AddOrUpdateHeader("Authorization", $"Basic {_auth}");
 
         foreach (var kv in form)
             req.AddParameter(kv.Key, kv.Value, ParameterType.GetOrPost);
@@ -75,6 +79,7 @@ public class IysProxy : IIysProxy
         var req = new RestRequest(path, Method.Put);
         req.AddOrUpdateHeader("Accept", "application/json");
         req.AddOrUpdateHeader("Content-Type", "application/json");
+        req.AddOrUpdateHeader("Authorization", $"Basic {_auth}");
         req.AddStringBody(JsonConvert.SerializeObject(body), ContentType.Json);
 
         var resp = await _client.ExecuteAsync(req, ct);

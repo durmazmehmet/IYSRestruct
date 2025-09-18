@@ -83,7 +83,7 @@ public class IysIdentityService : IIysIdentityService
         {
             var token = isReset ? null : await _cacheService.GetCachedHashDataAsync<Token>("IYS_Token", iysCode.ToString());
 
-            if (token == null || token.RefreshTokenValidTill < DateTime.UtcNow)
+            if (string.IsNullOrEmpty(token?.AccessToken ?? null) || token?.RefreshTokenValidTill < DateTime.UtcNow)
             {
                 token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
             }
