@@ -7,6 +7,7 @@ using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace IYSIntegration.Application.Services
 {
@@ -35,95 +36,123 @@ namespace IYSIntegration.Application.Services
             var consentRequests = await _dbService.GetPullConsentRequests(false, rowCount);
             if (consentRequests?.Count > 0)
             {
-                var latestConsents = consentRequests
-                    .GroupBy(x => new { x.CompanyCode, x.Recipient })
-                    .Select(g => g.OrderByDescending(x => x.CreateDate).First())
+                var groupedConsents = consentRequests
+                    .GroupBy(x => x.CompanyCode)
                     .ToList();
 
-                var outdatedConsents = consentRequests
-                    .GroupBy(x => new { x.CompanyCode, x.Recipient })
-                    .SelectMany(g => g.OrderByDescending(x => x.CreateDate).Skip(1))
-                    .ToList();
-
-                foreach (var outdated in outdatedConsents)
+                _logger.LogInformation($"SfConsentService running at: {consentRequests.Count} records processing");
+                foreach (var consentGroup in groupedConsents)
                 {
+                    var companyCode = consentGroup.Key;
+                    var consentsInGroup = consentGroup.ToList();
+
                     try
                     {
-                        var skipResult = new SfConsentResult
-                        {
-                            Id = outdated.Id,
-                            IsSuccess = false,
-                            LogId = 0,
-                            Error = "Superseded by newer consent",
-                        };
-                        _dbService.UpdateSfConsentResponse(skipResult).Wait();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError("SfConsentService duplicate skip error: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-                    }
-                }
 
-                _logger.LogInformation($"SfConsentService running at: {latestConsents?.Count} records processing");
-                foreach (var consent in latestConsents)
-                {
-                    try
-                    {
                         var request = new SfConsentBase
                         {
-                            CompanyCode = consent.CompanyCode
-                        };
+                            CompanyCode = companyCode,
+                            Consents = consentsInGroup.Select(consent =>
+                            {
+                                var recipient = consent.Recipient;
+                                if (consent.Type != "EPOSTA" && recipient?.StartsWith("+90") == true)
+                                {
+                                    recipient = recipient.Substring(3);
+                                }
 
-                        if (consent.Type != "EPOSTA" && consent.Recipient.StartsWith("+90"))
-                            consent.Recipient = consent.Recipient.Substring(3);
-
-                        consent.CreationDate = null;
-                        consent.TransactionId = null;
-                        consent.CompanyCode = null;
-                        request.Consents = new List<Consent>
-                        {
-                            consent
+                                return new Consent
+                                {
+                                    Id = consent.Id,
+                                    ConsentDate = consent.ConsentDate,
+                                    Source = consent.Source,
+                                    Recipient = recipient,
+                                    RecipientType = consent.RecipientType,
+                                    Status = consent.Status,
+                                    Type = consent.Type,
+                                    RetailerCode = consent.RetailerCode,
+                                    RetailerAccess = consent.RetailerAccess,
+                                    CreationDate = null,
+                                    TransactionId = null
+                                };
+                            }).ToList()
                         };
 
                         var addConsentResult = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("salesforce/AddConsent", new SfConsentAddRequest { Request = request });
 
+                        var wsDescription = addConsentResult.Data?.WsDescription;
+                        var successMessage = string.IsNullOrWhiteSpace(wsDescription) ? "Success" : wsDescription;
+                        var failureMessage = !string.IsNullOrWhiteSpace(wsDescription)
+                            ? wsDescription
+                            : addConsentResult.OriginalError?.Message
+                                ?? (addConsentResult.Messages != null && addConsentResult.Messages.Count > 0
+                                    ? string.Join(" | ", addConsentResult.Messages.Select(kv => $"{kv.Key}:{kv.Value}"))
+                                    : "Unknown error");
 
                         if (addConsentResult.IsSuccessful())
                         {
-                            var result = new SfConsentResult
+                            foreach (var consent in consentsInGroup)
                             {
-                                Id = consent.Id,
-                                IsSuccess = addConsentResult.IsSuccessful(),
-                                LogId = addConsentResult.LogId,
-                                Error = (addConsentResult.IsSuccessful()) ? string.Empty : addConsentResult.OriginalError?.Message ?? "Unknown error",
-                            };
+                                var result = new SfConsentResult
+                                {
+                                    Id = consent.Id,
+                                    IsSuccess = true,
+                                    LogId = addConsentResult.LogId,
+                                    Error = string.Empty,
+                                };
 
-                            await _dbService.UpdateSfConsentResponse(result);
-
-                            if (result.IsSuccess)
-                            {
+                                await _dbService.UpdateSfConsentResponse(result);
                                 successCount++;
-                                results.Add(new LogResult { Id = consent.Id, CompanyCode = consent.CompanyCode, Messages = new Dictionary<string, string> { { "Success", addConsentResult.Data.WsDescription } } });
-                            }         
-                            else
-                            {
-                                response.Error();
-                                failedCount++;
-                                results.Add(new LogResult { Id = consent.Id, CompanyCode = consent.CompanyCode, Messages = new Dictionary<string, string> { { "Error", addConsentResult.Data.WsDescription } } });
+                                results.Add(new LogResult
+                                {
+                                    Id = consent.Id,
+                                    CompanyCode = companyCode,
+                                    Status = "Success",
+                                    Messages = new Dictionary<string, string> { { "Success", successMessage } }
+                                });
                             }
                         }
                         else
                         {
                             response.Error();
-                            results.Add(new LogResult { Id = consent.Id, CompanyCode = consent.CompanyCode, Messages = addConsentResult.Messages });
+
+                            foreach (var consent in consentsInGroup)
+                            {
+                                var result = new SfConsentResult
+                                {
+                                    Id = consent.Id,
+                                    IsSuccess = false,
+                                    LogId = addConsentResult.LogId,
+                                    Error = failureMessage,
+                                };
+
+                                await _dbService.UpdateSfConsentResponse(result);
+                                failedCount++;
+                                results.Add(new LogResult
+                                {
+                                    Id = consent.Id,
+                                    CompanyCode = companyCode,
+                                    Status = "Failed",
+                                    Messages = new Dictionary<string, string> { { "Error", failureMessage } }
+                                });
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         response.Error();
-                        failedCount++;
                         _logger.LogError("SfConsentService Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
-                        results.Add(new LogResult { Id = consent.Id, CompanyCode = consent.CompanyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
+
+                        foreach (var consent in consentsInGroup)
+                        {
+                            failedCount++;
+                            results.Add(new LogResult
+                            {
+                                Id = consent.Id,
+                                CompanyCode = companyCode,
+                                Status = "Exception",
+                                Messages = new Dictionary<string, string> { { "Exception", ex.Message } }
+                            });
+                        }
                     }
                 }
             }
