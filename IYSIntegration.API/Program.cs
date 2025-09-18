@@ -14,7 +14,7 @@ internal class Program
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddSingleton<LoggerServiceBase>(provider => { return new GrayLogger(); });
-        builder.Services.AddSingleton<IIysHelper, IysHelper>();
+        builder.Services.AddScoped<IIysHelper, IysHelper>();
 
         builder.Services.AddScoped<IDbService, DbService>();
         builder.Services.AddScoped<IysProxy>(provider =>

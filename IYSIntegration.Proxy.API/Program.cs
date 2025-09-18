@@ -42,7 +42,7 @@ internal class Program
         builder.Services.AddSingleton<IIysIdentityService, IysIdentityService>();
         builder.Services.AddSingleton<ISfIdentityService, SfIdentityService>();
         builder.Services.AddSingleton<IIysRestClientService, IysRestClientService>();
-        builder.Services.AddSingleton<IIysHelper, IysHelper>();
+        builder.Services.AddScoped<IIysHelper, IysHelper>();
 
         builder.Services.AddScoped<IDbService, DbService>();
 
