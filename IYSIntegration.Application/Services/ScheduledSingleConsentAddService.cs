@@ -56,21 +56,6 @@ public class ScheduledSingleConsentAddService
                     ? log.CompanyCode
                     : _iysHelper.GetCompanyCode(log.IysCode) ?? string.Empty;
 
-                if (string.IsNullOrWhiteSpace(companyCode))
-                {
-                    results.Add(new LogResult
-                    {
-                        Id = log.Id,
-                        CompanyCode = string.Empty,
-                        Messages = new Dictionary<string, string>
-                        {
-                            { "Company", "Şirket kodu bulunamadı." }
-                        }
-                    });
-                    Interlocked.Increment(ref failedCount);
-                    continue;
-                }
-
                 try
                 {
                     var request = new AddConsentRequest
