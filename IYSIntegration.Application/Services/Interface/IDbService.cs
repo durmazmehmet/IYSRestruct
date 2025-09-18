@@ -25,8 +25,8 @@ namespace IYSIntegration.Application.Services.Interface
         Task InsertBatchConsentQuery(BatchConsentQuery request);
         Task<List<ConsentRequestLog>> GetConsentRequests(bool isProcessed, int rowCount);
         Task<List<ConsentRequestLog>> GetPendingConsentsWithoutPull(int rowCount);
-        Task UpdateConsentResponse(ResponseBase<AddConsentResult> response);
-        Task UpdateConsentResponses(IEnumerable<ResponseBase<AddConsentResult>> responses);
+        Task UpdateConsentResponse(ConsentResponseUpdate response);
+        Task UpdateConsentResponses(IEnumerable<ConsentResponseUpdate> responses);
         Task UpdateBatchId(string companyCode, int batchSize);
         Task<List<BatchSummary>> GetBatchSummary(int batchCount);
         Task<List<ConsentRequestLog>> GeBatchConsentRequests(int batchId);

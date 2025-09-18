@@ -422,7 +422,7 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-        public async Task UpdateConsentResponse(ResponseBase<AddConsentResult> response)
+        public async Task UpdateConsentResponse(ConsentResponseUpdate response)
         {
             if (response == null)
             {
@@ -432,7 +432,7 @@ namespace IYSIntegration.Application.Services
             await UpdateConsentResponses(new[] { response });
         }
 
-        public async Task UpdateConsentResponses(IEnumerable<ResponseBase<AddConsentResult>> responses)
+        public async Task UpdateConsentResponses(IEnumerable<ConsentResponseUpdate> responses)
         {
             if (responses == null)
             {
@@ -446,8 +446,6 @@ namespace IYSIntegration.Application.Services
                 return;
             }
 
-            var overdueErrors = new HashSet<string> { "H174", "H175", "H178" };
-
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
@@ -457,39 +455,16 @@ namespace IYSIntegration.Application.Services
                     {
                         foreach (var response in responseList)
                         {
-                            var errorCodeList = response.OriginalError?.Errors?
-                                .Select(x => x.Code)
-                                .Where(code => !string.IsNullOrWhiteSpace(code))
-                                .ToList() ?? new List<string>();
-
-                            var isConsentOverdue = response.OriginalError?.Errors?.Any(x => !string.IsNullOrWhiteSpace(x.Code) && overdueErrors.Contains(x.Code)) ?? false;
-
-                            var errors = errorCodeList.Count > 0 ? string.Join(",", errorCodeList) : "Mevcut olmayan";
-
-                            if (response.HttpStatusCode == 200)
-                            {
-                                _logger.LogInformation($"SingleConsentWorker ID {response.Id} ve {response.HttpStatusCode} statu olarak alındı");
-                            }
-                            else if (isConsentOverdue)
-                            {
-                                _logger.LogWarning($"SingleConsentWorker ID {response.Id} ve IYS geciken/mükerrer {errors} olarak alındı");
-                            }
-                            else
-                            {
-                                _logger.LogError($"SingleConsentWorker ID {response.Id} ve {response.HttpStatusCode} statu kodu ve {errors} IYS hataları ile alınamadı");
-                            }
-
                             await connection.ExecuteAsync(QueryStrings.UpdateConsentRequest,
                                 new
                                 {
                                     Id = response.Id,
                                     LogId = response.LogId,
-                                    IsSuccess = isConsentOverdue ? 0 : response.IsSuccessful() ? 1 : 0,
-                                    TransactionId = response.Data?.TransactionId,
-                                    CreationDate = response.Data?.CreationDate,
-                                    BatchError = response.OriginalError == null ? null : JsonConvert.SerializeObject(response.OriginalError,
-                                        Formatting.None, new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }),
-                                    IsOverdue = isConsentOverdue ? 1 : 0
+                                    IsSuccess = response.IsSuccess ? 1 : 0,
+                                    TransactionId = response.TransactionId,
+                                    CreationDate = response.CreationDate,
+                                    BatchError = response.BatchError,
+                                    IsOverdue = response.IsOverdue ? 1 : 0
                                 },
                                 transaction);
                         }

@@ -4,6 +4,8 @@ using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +20,12 @@ public class AddConsentService
     private readonly IDbService _dbService;
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
+    private static readonly HashSet<string> OverdueErrorCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "H174",
+        "H175",
+        "H178"
+    };
 
     public AddConsentService(
         ILogger<AddConsentService> logger,
@@ -36,7 +44,7 @@ public class AddConsentService
         var response = new ResponseBase<ScheduledJobStatistics>();
         response.Success();
         var results = new ConcurrentBag<LogResult>();
-        var responseUpdates = new ConcurrentBag<ResponseBase<AddConsentResult>>();
+        var responseUpdates = new ConcurrentBag<ConsentResponseUpdate>();
         int failedCount = 0;
         int successCount = 0;
 
@@ -45,9 +53,10 @@ public class AddConsentService
         try
         {
           
-            var logs = await _dbService.GetConsentRequests(false, rowCount);
+            var pendingConsents = await _dbService.GetPendingConsentsWithoutPull(rowCount);
+            var groupedConsents = new Dictionary<string, List<ConsentRequestLog>>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var log in logs)
+            foreach (var log in pendingConsents)
             {
                 var companyCode = !string.IsNullOrWhiteSpace(log.CompanyCode)
                     ? log.CompanyCode
@@ -68,54 +77,75 @@ public class AddConsentService
                     continue;
                 }
 
-                try
+                log.CompanyCode = companyCode;
+
+                if (!groupedConsents.TryGetValue(companyCode, out var consentList))
                 {
-                    var request = new AddConsentRequest
-                    {
-                        IysCode = log.IysCode,
-                        BrandCode = log.BrandCode,
-                        CompanyCode = companyCode,
-                        Consent = new Consent
-                        {
-                            ConsentDate = log.ConsentDate,
-                            Recipient = log.Recipient,
-                            RecipientType = log.RecipientType,
-                            Source = log.Source,
-                            Status = log.Status,
-                            Type = log.Type
-                        }
-                    };
-
-                    var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{companyCode}/addConsent", request.Consent);
-
-                    addResponse.Id = log.Id;
-                    responseUpdates.Add(addResponse);
-
-                    if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
-                    {
-                        Interlocked.Increment(ref successCount);
-                    }
-                    else
-                    {
-                        results.Add(new LogResult
-                        {
-                            Id = log.Id,
-                            CompanyCode = companyCode,
-                            Messages = new Dictionary<string, string>
-                            {
-                                { "Add Error", BuildErrorMessage(addResponse) }
-                            }
-                        });
-                        Interlocked.Increment(ref failedCount);
-                    }
-
+                    consentList = new List<ConsentRequestLog>();
+                    groupedConsents.Add(companyCode, consentList);
                 }
-                catch (Exception ex)
+
+                consentList.Add(log);
+            }
+
+            foreach (var group in groupedConsents)
+            {
+                foreach (var log in group.Value)
                 {
-                    results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
-                    Interlocked.Increment(ref failedCount);
-                    _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
-                    response.Error();
+                    try
+                    {
+                        var request = new AddConsentRequest
+                        {
+                            IysCode = log.IysCode,
+                            BrandCode = log.BrandCode,
+                            CompanyCode = group.Key,
+                            Consent = new Consent
+                            {
+                                ConsentDate = log.ConsentDate,
+                                Recipient = log.Recipient,
+                                RecipientType = log.RecipientType,
+                                Source = log.Source,
+                                Status = log.Status,
+                                Type = log.Type
+                            }
+                        };
+
+                        var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{group.Key}/addConsent", request.Consent);
+
+                        addResponse.Id = log.Id;
+
+                        var update = CreateConsentResponseUpdate(addResponse);
+                        if (update != null)
+                        {
+                            responseUpdates.Add(update);
+                        }
+
+                        if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
+                        {
+                            Interlocked.Increment(ref successCount);
+                        }
+                        else
+                        {
+                            results.Add(new LogResult
+                            {
+                                Id = log.Id,
+                                CompanyCode = group.Key,
+                                Messages = new Dictionary<string, string>
+                                {
+                                    { "Add Error", BuildErrorMessage(addResponse) }
+                                }
+                            });
+                            Interlocked.Increment(ref failedCount);
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add(new LogResult { Id = log.Id, CompanyCode = group.Key, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
+                        Interlocked.Increment(ref failedCount);
+                        _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
+                        response.Error();
+                    }
                 }
             }
 
@@ -160,6 +190,55 @@ public class AddConsentService
             FailedCount = failedCount
         };
         return response;
+    }
+
+    private ConsentResponseUpdate? CreateConsentResponseUpdate(ResponseBase<AddConsentResult> response)
+    {
+        if (response == null)
+        {
+            return null;
+        }
+
+        var errorCodeList = response.OriginalError?.Errors?
+            .Select(x => x.Code)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .ToList() ?? new List<string>();
+
+        var isConsentOverdue = response.OriginalError?.Errors?.Any(x =>
+            !string.IsNullOrWhiteSpace(x.Code) && OverdueErrorCodes.Contains(x.Code!)) ?? false;
+
+        var errors = errorCodeList.Count > 0 ? string.Join(",", errorCodeList) : "Mevcut olmayan";
+
+        if (response.HttpStatusCode == 200)
+        {
+            _logger.LogInformation("SingleConsentWorker ID {Id} ve {Status} statu olarak alındı", response.Id, response.HttpStatusCode);
+        }
+        else if (isConsentOverdue)
+        {
+            _logger.LogWarning("SingleConsentWorker ID {Id} ve IYS geciken/mükerrer {Errors} olarak alındı", response.Id, errors);
+        }
+        else
+        {
+            _logger.LogError("SingleConsentWorker ID {Id} ve {Status} statu kodu ve {Errors} IYS hataları ile alınamadı", response.Id, response.HttpStatusCode, errors);
+        }
+
+        var serializedError = response.OriginalError == null
+            ? null
+            : JsonConvert.SerializeObject(
+                response.OriginalError,
+                Formatting.None,
+                new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore });
+
+        return new ConsentResponseUpdate
+        {
+            Id = response.Id,
+            LogId = response.LogId,
+            IsSuccess = isConsentOverdue ? false : response.IsSuccessful(),
+            TransactionId = response.Data?.TransactionId,
+            CreationDate = response.Data?.CreationDate,
+            BatchError = serializedError,
+            IsOverdue = isConsentOverdue
+        };
     }
 
     private static string BuildErrorMessage<T>(ResponseBase<T> response)
