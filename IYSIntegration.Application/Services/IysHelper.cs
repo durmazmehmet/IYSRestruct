@@ -30,6 +30,8 @@ public sealed class IysHelper : IIysHelper
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
+    public bool IsForceSendEnabled() => _config.GetValue("ForceSend", false);
+
     public List<string> GetAllCompanyCodes() => _config.GetSection("CompanyCodes").Get<List<string>>() ?? [];
 
     public ConsentParams GetIysCode(string companyCode)
@@ -107,7 +109,9 @@ public sealed class IysHelper : IIysHelper
 
         request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
-        if (request.ForceSend)
+        var forceSend = IsForceSendEnabled();
+
+        if (forceSend)
         {
             return (true, response);
         }
@@ -159,6 +163,7 @@ public sealed class IysHelper : IIysHelper
         request.CompanyCode = ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
 
         var results = new List<ConsentProcessingResult>();
+        var forceSend = IsForceSendEnabled();
 
         for (var i = 0; i < request.Consents.Count; i++)
         {
@@ -170,7 +175,6 @@ public sealed class IysHelper : IIysHelper
                 IysCode = request.IysCode,
                 BrandCode = request.BrandCode,
                 SalesforceId = consent.SalesforceId,
-                ForceSend = request.ForceSend,
                 Consent = new Consent
                 {
                     ConsentDate = consent.ConsentDate,
@@ -185,7 +189,7 @@ public sealed class IysHelper : IIysHelper
                 }
             };
 
-            if (request.ForceSend)
+            if (forceSend)
             {
                 results.Add(new ConsentProcessingResult
                 {
@@ -244,7 +248,7 @@ public sealed class IysHelper : IIysHelper
         ResponseBase<AddConsentResult> response,
         bool runPendingSync = true)
     {
-        if (request.ForceSend)
+        if (IsForceSendEnabled())
         {
             return;
         }
@@ -259,7 +263,7 @@ public sealed class IysHelper : IIysHelper
         AddConsentRequest request,
         bool runPendingSync = true)
     {
-        if (request.ForceSend)
+        if (IsForceSendEnabled())
         {
             return 0;
         }

@@ -8,7 +8,6 @@ namespace IYSIntegration.Application.Services.Models.Request.Consent
         public string? CompanyName { get; set; }
         public int BatchId { get; set; }
         public bool ForBatch { get; set; }
-        public bool ForceSend { get; set; }
         public List<Base.Consent> Consents { get; set; }
 
     }

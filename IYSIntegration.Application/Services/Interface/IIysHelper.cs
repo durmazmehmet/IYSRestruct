@@ -33,4 +33,6 @@ public interface IIysHelper
     string? ResolveCompanyCode(string? companyCode, string? companyName, int iysCode);
 
     string BuildAddConsentErrorMessage(ResponseBase<AddConsentResult> addResponse);
+
+    bool IsForceSendEnabled();
 }
