@@ -12,6 +12,8 @@ public class IysIdentityService : IIysIdentityService
 {
     private readonly ICacheService _cacheService;
     private readonly IConfiguration _config;
+    private readonly int TokenExpiry;
+    private readonly int RefreshTokenExpiry;
     private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     ILogger<IysIdentityService> _logger;
 
@@ -20,6 +22,8 @@ public class IysIdentityService : IIysIdentityService
         _config = config;
         _logger = logger;
         _cacheService = cacheService;
+        TokenExpiry = _config.GetValue<int>($"TokenExpiry", 7000);
+        RefreshTokenExpiry = _config.GetValue<int>($"RefreshTokenExpiry", 14000);
     }
 
     private async Task<Token> GetNewToken(int iysCode)
@@ -40,8 +44,8 @@ public class IysIdentityService : IIysIdentityService
         if (response.IsSuccessful)
         {
             var token = JsonConvert.DeserializeObject<Token>(response.Content);
-            token.TokenValidTill = DateTime.UtcNow.AddMinutes(110);
-            token.RefreshTokenValidTill = DateTime.UtcNow.AddMinutes(230);
+            token.TokenValidTill = DateTime.UtcNow.AddSeconds(TokenExpiry);
+            token.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(RefreshTokenExpiry);
             return token;
         }
         else
@@ -64,8 +68,8 @@ public class IysIdentityService : IIysIdentityService
         if (response.IsSuccessful)
         {
             var refreshToken = JsonConvert.DeserializeObject<Token>(response.Content);
-            refreshToken.TokenValidTill = DateTime.UtcNow.AddMinutes(110);
-            refreshToken.RefreshTokenValidTill = DateTime.UtcNow.AddMinutes(230);
+            refreshToken.TokenValidTill = DateTime.UtcNow.AddSeconds(TokenExpiry);
+            refreshToken.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(RefreshTokenExpiry);
             return refreshToken;
         }
         else
