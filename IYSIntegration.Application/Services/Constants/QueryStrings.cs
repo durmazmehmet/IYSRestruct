@@ -20,7 +20,7 @@
                 @RefreshTokenMasked,
                 @TokenCreateDateUtc,
                 @TokenRefreshDateUtc,
-                @Operation, 
+ @Operation, 
                 @ServerIdentifier,
                 SYSUTCDATETIME()
                 );";

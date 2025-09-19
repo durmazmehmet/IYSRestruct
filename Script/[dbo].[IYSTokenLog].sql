@@ -13,7 +13,6 @@ CREATE TABLE [dbo].[IYSTokenLog]
     [TokenRefreshDateUtc] DATETIME2(0) NULL,
     [Operation] NVARCHAR(32) NOT NULL,
     [ServerIdentifier] NVARCHAR(128) NOT NULL,
-    
     [CreatedAtUtc] DATETIME2(0) NOT NULL CONSTRAINT [DF_IYSTokenLog_CreatedAtUtc] DEFAULT (SYSUTCDATETIME())
 );
 GO
