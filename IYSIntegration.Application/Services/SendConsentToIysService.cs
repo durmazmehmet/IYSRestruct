@@ -57,21 +57,22 @@ public class SendConsentToIysService
             executionStopwatch = Stopwatch.StartNew();
         }
 
+        _logger.LogInformation("SingleConsentAddService started at {Time}", DateTimeOffset.Now);
+
         if (!_isIysOnline)
         {
-            const string offlineMessage = "IYS servisi çevrimdışı olduğu için gönderim yapılmadı.";
+            const string offlineMessage = "IYS servisi çevrimdışı modda çalıştırılıyor. Gönderimler yapılmayacak.";
             _logger.LogWarning(offlineMessage);
-            response.Error("IysService", offlineMessage);
-            response.Data = new ScheduledJobStatistics
+            results.Add(new LogResult
             {
-                SuccessCount = 0,
-                FailedCount = 0
-            };
-            LogExecutionDuration(executionStopwatch, true);
-            return response;
+                Id = 0,
+                CompanyCode = string.Empty,
+                Messages = new Dictionary<string, string>
+                {
+                    { "IysService", offlineMessage }
+                }
+            });
         }
-
-        _logger.LogInformation("SingleConsentAddService started at {Time}", DateTimeOffset.Now);
 
         try
         {
@@ -133,9 +134,15 @@ public class SendConsentToIysService
                         };
 
                         Stopwatch? requestStopwatch = null;
-                        if (_isMetricsOnline)
+                        if (_isMetricsOnline && _isIysOnline)
                         {
                             requestStopwatch = Stopwatch.StartNew();
+                        }
+
+                        if (!_isIysOnline)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(5));
+                            continue;
                         }
 
                         var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{group.Key}/addConsent", request.Consent);
@@ -223,7 +230,7 @@ public class SendConsentToIysService
             SuccessCount = successCount,
             FailedCount = failedCount
         };
-        LogExecutionDuration(executionStopwatch);
+        LogExecutionDuration(executionStopwatch, !_isIysOnline);
         return response;
     }
 
