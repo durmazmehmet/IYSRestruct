@@ -3,7 +3,6 @@ using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using RestSharp;
-using System.Collections.Generic;
 
 namespace IYSIntegration.Application.Services.Interface
 {
@@ -12,29 +11,13 @@ namespace IYSIntegration.Application.Services.Interface
         Task<int> InsertLog<TRequest>(IysRequest<TRequest> request);
         Task UpdateLog(RestResponse response, int id);
         Task<int> InsertConsentRequest(AddConsentRequest request);
-        Task<bool> CheckConsentRequest(AddConsentRequest request);
         Task<bool> PullConsentExists(string companyCode, string recipient, string? type = null);
         Task<bool> SuccessfulConsentRequestExists(string companyCode, string recipient, string? type = null);
         Task<List<string>> GetExistingConsentRecipients(string companyCode, string? type, IEnumerable<string> recipients);
-        Task<DateTime?> GetLastConsentDate(string companyCode, string recipient);
-        Task<List<Consent>> GetLastConsents(string companyCode, IEnumerable<string> recipients);
-        Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response);
+        Task UpdateConsentResponseFromResponse(ResponseBase<AddConsentResult> response);
         Task<ConsentResultLog> GetConsentRequest(string id);
-        Task<int> GetMaxBatchId();
-        Task<int> InsertConsentRequestWithBatch(AddConsentRequest request);
-        Task InsertBatchConsentQuery(BatchConsentQuery request);
-        Task<List<ConsentRequestLog>> GetConsentRequests(bool isProcessed, int rowCount);
-        Task<List<ConsentRequestLog>> GetPendingConsentsWithoutPull(int rowCount);
-        Task UpdateConsentResponse(ConsentResponseUpdate response);
+        Task<List<ConsentRequestLog>> GetPendingConsents(int rowCount);
         Task UpdateConsentResponses(IEnumerable<ConsentResponseUpdate> responses);
-        Task UpdateBatchId(string companyCode, int batchSize);
-        Task<List<BatchSummary>> GetBatchSummary(int batchCount);
-        Task<List<ConsentRequestLog>> GeBatchConsentRequests(int batchId);
-        Task UpdateBatchConsentRequests(BatchConsentQuery query);
-        Task<List<BatchConsentQuery>> GetUnprocessedMultipleConsenBatches(int batchCount);
-        Task UpdateMultipleConsentQueryDate(int batchId, long logId);
-        Task UpdateMultipleConsentItem(BatchItemResult batchItemResult);
-        Task ReorderBatch(int oldBatchId);
         Task<PullRequestLog> GetPullRequestLog(string companyCode);
         Task UpdatePullRequestLog(PullRequestLog log);
         Task UpdateJustRequestDateOfPullRequestLog(PullRequestLog log);
@@ -44,10 +27,5 @@ namespace IYSIntegration.Application.Services.Interface
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
         Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);
-        Task<int> MarkConsentsOverdue(int maxAgeInDays);
-        Task<int> MarkDuplicateConsentsOverdue();
-        Task<int> MarkDuplicateConsentsOverdueForConsents(IEnumerable<Consent> consents);
-        Task MarkConsentsAsNotPulled(IEnumerable<long> consentIds);
-        Task MarkConsentsAsPulled(IEnumerable<long> consentIds);
     }
 }

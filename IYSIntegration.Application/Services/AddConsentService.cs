@@ -5,18 +5,14 @@ using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 
 namespace IYSIntegration.Application.Services;
 
 
-public class SendConsentToIysService
+public class AddConsentService
 {
-    private readonly ILogger<SendConsentToIysService> _logger;
+    private readonly ILogger<AddConsentService> _logger;
     private readonly IDbService _dbService;
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
@@ -27,8 +23,8 @@ public class SendConsentToIysService
         "H178"
     };
 
-    public SendConsentToIysService(
-        ILogger<SendConsentToIysService> logger,
+    public AddConsentService(
+        ILogger<AddConsentService> logger,
         IDbService dbHelper,
         IIysHelper iysHelper,
         IysProxy client)
@@ -52,8 +48,8 @@ public class SendConsentToIysService
 
         try
         {
-          
-            var pendingConsents = await _dbService.GetPendingConsentsWithoutPull(rowCount);
+
+            var pendingConsents = await _dbService.GetPendingConsents(rowCount);
             var groupedConsents = new Dictionary<string, List<ConsentRequestLog>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var log in pendingConsents)

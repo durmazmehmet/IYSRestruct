@@ -1,14 +1,7 @@
 using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
-using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace IYSIntegration.Application.Services;
 

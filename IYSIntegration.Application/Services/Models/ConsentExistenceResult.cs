@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using IYSIntegration.Application.Services.Models.Base;
 
 namespace IYSIntegration.Application.Services.Models

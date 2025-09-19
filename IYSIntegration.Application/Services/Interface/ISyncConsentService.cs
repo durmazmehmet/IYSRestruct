@@ -1,7 +1,4 @@
 using IYSIntegration.Application.Services.Models.Base;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace IYSIntegration.Application.Services.Interface
 {

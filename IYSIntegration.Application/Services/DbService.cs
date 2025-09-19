@@ -9,10 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
-using System;
 using System.Data.SqlClient;
-using System.Collections.Generic;
-using System.Linq;
 namespace IYSIntegration.Application.Services
 {
     public class DbService : IDbService
@@ -32,25 +29,6 @@ namespace IYSIntegration.Application.Services
             string RecipientType,
             string Type,
             string Status);
-
-        internal static IReadOnlyList<DuplicateCleanupCandidate> BuildDuplicateCleanupCandidates(IEnumerable<Consent> consents)
-        {
-            if (consents == null)
-            {
-                return Array.Empty<DuplicateCleanupCandidate>();
-            }
-
-            return consents
-                .Where(c => c != null && !string.IsNullOrWhiteSpace(c.CompanyCode) && !string.IsNullOrWhiteSpace(c.Recipient))
-                .Select(c => new DuplicateCleanupCandidate(
-                    c.CompanyCode!,
-                    c.Recipient!,
-                    c.RecipientType ?? string.Empty,
-                    c.Type ?? string.Empty,
-                    c.Status ?? string.Empty))
-                .Distinct()
-                .ToList();
-        }
 
         public async Task<int> InsertLog<TRequest>(IysRequest<TRequest> request)
         {
@@ -137,23 +115,6 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-        public async Task<bool> CheckConsentRequest(AddConsentRequest request)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.CheckConsentRequest,
-                    new
-                    {
-                        request.Consent.Status,
-                        request.Consent.Recipient
-                    });
-                connection.Close();
-
-                return result == 1;
-            }
-        }
-
         public async Task<bool> PullConsentExists(string companyCode, string recipient, string? type = null)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
@@ -213,40 +174,7 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-        public async Task<DateTime?> GetLastConsentDate(string companyCode, string recipient)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteScalarAsync<DateTime?>(QueryStrings.GetLastConsentDate,
-                    new
-                    {
-                        CompanyCode = companyCode,
-                        Recipient = recipient
-                    });
-                connection.Close();
-
-                return result;
-            }
-        }
-
-        public async Task<List<Consent>> GetLastConsents(string companyCode, IEnumerable<string> recipients)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = (await connection.QueryAsync<Consent>(
-    QueryStrings.GetLastConsents,
-    new { CompanyCode = companyCode, Recipients = recipients } // IEnumerable<string>
-)).ToList();
-                connection.Close();
-                return result;
-            }
-
-            
-        }
-
-        public async Task UpdateConsentResponseFromCommon(ResponseBase<AddConsentResult> response)
+        public async Task UpdateConsentResponseFromResponse(ResponseBase<AddConsentResult> response)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
@@ -281,102 +209,7 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-        public async Task<int> GetMaxBatchId()
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.GetMaxBatchId);
-                connection.Close();
-
-                return result;
-            }
-        }
-
-        public async Task<int> InsertConsentRequestWithBatch(AddConsentRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.CompanyCode)
-                && !string.IsNullOrWhiteSpace(request.CompanyName))
-            {
-                request.CompanyCode = request.CompanyName;
-            }
-
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteScalarAsync<int>(QueryStrings.InsertConsentRequestWitBatch,
-                    new
-                    {
-                        request.CompanyCode,
-                        request.SalesforceId,
-                        request.IysCode,
-                        request.BrandCode,
-                        request.Consent.ConsentDate,
-                        request.Consent.Source,
-                        request.Consent.Recipient,
-                        request.Consent.RecipientType,
-                        request.Consent.Status,
-                        request.Consent.Type,
-                        request.Consent.BatchId,
-                        request.Consent.Index,
-                        request.Consent.LogId,
-                        request.Consent.IsSuccess,
-                        request.Consent.BatchError
-                    });
-                connection.Close();
-
-                return result;
-            }
-        }
-
-        public async Task InsertBatchConsentQuery(BatchConsentQuery request)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteScalarAsync<int>(string.Format(QueryStrings.InsertMultipleConsentQuery, request.CheckAfter),
-                    new
-                    {
-                        request.IysCode,
-                        request.BrandCode,
-                        request.BatchId,
-                        request.LogId,
-                        request.RequestId
-                    });
-                connection.Close();
-            }
-        }
-
-        public async Task<List<BatchSummary>> GetBatchSummary(int batchCount)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = (await connection.QueryAsync<BatchSummary>(string.Format(QueryStrings.GetBatchSummary, batchCount))).ToList();
-                connection.Close();
-                return result;
-            }
-        }
-
-        public async Task<List<ConsentRequestLog>> GetConsentRequests(bool isProcessed, int rowCount)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = (await connection.QueryAsync<ConsentRequestLog>(string.Format(QueryStrings.GetConsentRequests, rowCount),
-                    new
-                    {
-                        IsProcessed = isProcessed ? 1 : 0
-                    })).ToList();
-
-                connection.Close();
-
-                return result;
-            }
-
-        }
-
-        public async Task<List<ConsentRequestLog>> GetPendingConsentsWithoutPull(int rowCount)
+        public async Task<List<ConsentRequestLog>> GetPendingConsents(int rowCount)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
@@ -387,26 +220,6 @@ namespace IYSIntegration.Application.Services
                 return result;
             }
 
-        }
-
-        public async Task UpdateBatchId(string companyCode, int batchSize)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                await connection.ExecuteAsync(string.Format(QueryStrings.UpdateBatchId, companyCode, batchSize));
-                connection.Close();
-            }
-        }
-
-        public async Task UpdateConsentResponse(ConsentResponseUpdate response)
-        {
-            if (response == null)
-            {
-                return;
-            }
-
-            await UpdateConsentResponses(new[] { response });
         }
 
         public async Task UpdateConsentResponses(IEnumerable<ConsentResponseUpdate> responses)
@@ -441,7 +254,7 @@ namespace IYSIntegration.Application.Services
                                     TransactionId = response.TransactionId,
                                     CreationDate = response.CreationDate,
                                     BatchError = response.BatchError,
-                                    IsOverdue = response.IsOverdue ? 1 : 0
+                                    IsOverdue = response.IsOverdue ? 1 : 0,
                                 },
                                 transaction);
                         }
@@ -454,101 +267,6 @@ namespace IYSIntegration.Application.Services
                         throw;
                     }
                 }
-                connection.Close();
-            }
-        }
-
-        public async Task<List<ConsentRequestLog>> GeBatchConsentRequests(int batchId)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = (await connection.QueryAsync<ConsentRequestLog>(QueryStrings.GetBatchConsentRequests,
-                    new
-                    {
-                        BatchId = batchId
-                    })).ToList();
-
-                connection.Close();
-
-                return result;
-            }
-        }
-
-        public async Task UpdateBatchConsentRequests(BatchConsentQuery query)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteAsync(string.Format(QueryStrings.UpdateBatchConsentRequests, query.CheckAfter),
-                    new
-                    {
-                        IysCode = query.IysCode,
-                        BrandCode = query.BrandCode,
-                        BatchId = query.BatchId,
-                        LogId = query.LogId,
-                        RequestId = query.RequestId
-                    });
-                connection.Close();
-            }
-        }
-
-        public async Task<List<BatchConsentQuery>> GetUnprocessedMultipleConsenBatches(int batchCount)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = (await connection.QueryAsync<BatchConsentQuery>(string.Format(QueryStrings.GetUnprocessedMultipleConsenBatches, batchCount))).ToList();
-                connection.Close();
-
-                return result;
-            }
-        }
-
-        public async Task UpdateMultipleConsentQueryDate(int batchId, long logId)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteAsync(QueryStrings.UpdateMultipleConsentQueryDate,
-                    new
-                    {
-                        LogId = logId,
-                        BatchId = batchId
-                    });
-                connection.Close();
-            }
-        }
-
-        public async Task UpdateMultipleConsentItem(BatchItemResult batchItemResult)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteAsync(QueryStrings.UpdateMultipleConsentItem,
-                    new
-                    {
-                        BatchId = batchItemResult.BatchId,
-                        Index = batchItemResult.Index,
-                        IsSuccess = batchItemResult.IsSuccess,
-                        BatchError = batchItemResult.BatchError,
-                        LogId = batchItemResult.LogId,
-                        IsQueryResult = batchItemResult.IsQueryResult
-                    });
-                connection.Close();
-            }
-        }
-
-        public async Task ReorderBatch(int oldBatchId)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteAsync(QueryStrings.ReorderBatch,
-                    new
-                    {
-                        OldBatchId = oldBatchId
-                    });
                 connection.Close();
             }
         }
@@ -602,8 +320,6 @@ namespace IYSIntegration.Application.Services
                 connection.Close();
             }
         }
-
-
 
         public async Task InsertPullConsent(AddConsentRequest request)
         {
@@ -723,117 +439,5 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-        public async Task<int> MarkConsentsOverdue(int maxAgeInDays)
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var affected = await connection.ExecuteAsync(QueryStrings.MarkConsentsOverdue, new { MaxAgeInDays = maxAgeInDays });
-                connection.Close();
-
-                return affected;
-            }
-        }
-
-        public async Task<int> MarkDuplicateConsentsOverdue()
-        {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var affected = await connection.ExecuteAsync(QueryStrings.MarkDuplicateConsentsOverdue);
-                connection.Close();
-
-                return affected;
-            }
-        }
-
-        public async Task<int> MarkDuplicateConsentsOverdueForConsents(IEnumerable<Consent> consents)
-        {
-            var candidates = BuildDuplicateCleanupCandidates(consents);
-
-            if (candidates.Count == 0)
-            {
-                return 0;
-            }
-
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                await connection.OpenAsync();
-
-                var totalAffected = 0;
-
-                foreach (var candidate in candidates)
-                {
-                    totalAffected += await connection.ExecuteAsync(
-                        QueryStrings.MarkDuplicateConsentsOverdueForRecipient,
-                        new
-                        {
-                            candidate.CompanyCode,
-                            candidate.Recipient,
-                            RecipientType = candidate.RecipientType,
-                            candidate.Type,
-                            candidate.Status
-                        });
-                }
-
-                await connection.CloseAsync();
-
-                return totalAffected;
-            }
-        }
-
-        public async Task MarkConsentsAsNotPulled(IEnumerable<long> consentIds)
-        {
-            if (consentIds == null)
-            {
-                return;
-            }
-
-            var ids = consentIds
-                .Where(id => id > 0)
-                .Distinct()
-                .ToArray();
-
-            if (ids.Length == 0)
-            {
-                return;
-            }
-
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                await connection.OpenAsync();
-
-                await connection.ExecuteAsync(QueryStrings.MarkConsentsAsNotPulled, new { Ids = ids });
-
-                await connection.CloseAsync();
-            }
-        }
-
-        public async Task MarkConsentsAsPulled(IEnumerable<long> consentIds)
-        {
-            if (consentIds == null)
-            {
-                return;
-            }
-
-            var ids = consentIds
-                .Where(id => id > 0)
-                .Distinct()
-                .ToArray();
-
-            if (ids.Length == 0)
-            {
-                return;
-            }
-
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                await connection.OpenAsync();
-
-                await connection.ExecuteAsync(QueryStrings.MarkConsentsAsPulled, new { Ids = ids });
-
-                await connection.CloseAsync();
-            }
-        }
     }
 }

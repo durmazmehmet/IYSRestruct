@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;

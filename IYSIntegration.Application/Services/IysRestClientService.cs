@@ -80,7 +80,7 @@ namespace IYSIntegration.Application.Services
                                 response.AddMessage(detail.Code, detail.Message);
                             }
                         }
-                    }           
+                    }
 
                 }
                 catch (Exception ex)

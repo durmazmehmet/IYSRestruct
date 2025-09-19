@@ -30,13 +30,13 @@ namespace IYSIntegration.Application.Services.Models.Base
     }
 
     public class Consent : IysBaseConsent
-    {  
+    {
         [JsonProperty("creationDate", NullValueHandling = NullValueHandling.Ignore)]
         public string? CreationDate { get; set; }
 
         [JsonProperty("transactionId", NullValueHandling = NullValueHandling.Ignore)]
         public string? TransactionId { get; set; }
-        
+
         [JsonIgnore]
         public long Id { get; set; }
 

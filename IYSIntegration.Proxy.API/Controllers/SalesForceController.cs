@@ -62,7 +62,7 @@ public class SalesForceController : ControllerBase
             else
             {
                 var errorResponse = JsonConvert.DeserializeObject<List<SfConsentAddErrorResponse>>(httpResponse.Content);
-                response.Error("Hata",$"{errorResponse.FirstOrDefault().errorCode}-{errorResponse.FirstOrDefault().message}");                
+                response.Error("Hata", $"{errorResponse.FirstOrDefault().errorCode}-{errorResponse.FirstOrDefault().message}");
             }
         }
         catch (Exception ex)

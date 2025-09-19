@@ -1,15 +1,11 @@
 ﻿using IYSIntegration.Application.Services;
 using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Error;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace IYSIntegration.API.Controllers
 {
@@ -79,7 +75,7 @@ namespace IYSIntegration.API.Controllers
             {
                 var sendResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
                 sendResponse.Id = queuedId;
-                await _dbService.UpdateConsentResponseFromCommon(sendResponse);
+                await _dbService.UpdateConsentResponseFromResponse(sendResponse);
                 return sendResponse;
             }
 
@@ -161,7 +157,7 @@ namespace IYSIntegration.API.Controllers
                     {
                         var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", consent);
                         addResponse.Id = result;
-                        await _dbService.UpdateConsentResponseFromCommon(addResponse);
+                        await _dbService.UpdateConsentResponseFromResponse(addResponse);
 
                         if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
                         {
@@ -287,7 +283,7 @@ namespace IYSIntegration.API.Controllers
 
             return response;
         }
-                
+
         /// <summary>
         /// IYS'den consent çekimi için kullanılır.
         /// </summary>
