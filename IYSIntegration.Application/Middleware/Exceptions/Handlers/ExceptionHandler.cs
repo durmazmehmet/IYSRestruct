@@ -4,7 +4,6 @@ namespace IYSIntegration.Application.Middleware.Exceptions.Handlers;
 
 public abstract class ExceptionHandler
 {
-    //TODO: Özel exceptionlar gerektikçe buraya yazarım
     public Task HandleExceptionAsync(Exception exception) =>
         exception switch
         {
