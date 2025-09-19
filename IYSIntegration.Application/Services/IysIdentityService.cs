@@ -6,260 +6,208 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
-using System;
 using System.Globalization;
-using System.Threading;
 
-namespace IYSIntegration.Application.Services;
-
-public class IysIdentityService : IIysIdentityService
+namespace IYSIntegration.Application.Services
 {
-    private readonly ICacheService _cacheService;
-    private readonly IConfiguration _config;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly int TokenExpiry;
-    private readonly int RefreshTokenExpiry;
-    private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-    private readonly ILogger<IysIdentityService> _logger;
-    private readonly string _serverIdentifier;
-    private const int TokenMaskSegmentLength = 4;
-    private const string TokenMaskSeparator = ".....";
-    private const string OperationNew = "NEW";
-    private const string OperationRefresh = "REFRESH";
-
-    public IysIdentityService(
-        IConfiguration config,
-        ILogger<IysIdentityService> logger,
-        ICacheService cacheService,
-        IServiceScopeFactory scopeFactory)
+    public class IysIdentityService : IIysIdentityService
     {
-        _config = config;
-        _logger = logger;
-        _cacheService = cacheService;
-        _scopeFactory = scopeFactory;
-        TokenExpiry = _config.GetValue<int>($"TokenExpiry", 7000);
-        RefreshTokenExpiry = _config.GetValue<int>($"RefreshTokenExpiry", 14000);
-        _serverIdentifier = ResolveServerIdentifier();
-    }
+        private readonly ICacheService _cacheService;
+        private readonly IConfiguration _config;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IIysHelper _iysHelper;
+        private readonly ILogger<IysIdentityService> _logger;
+        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private readonly string _serverIdentifier;
+        private const int TokenRefreshBufferSeconds = 300;
 
-    private async Task<Token> GetNewToken(int iysCode)
-    {
-
-        var IYSCredential = new Credential
+        public IysIdentityService(
+            IConfiguration config,
+            ILogger<IysIdentityService> logger,
+            ICacheService cacheService,
+            IIysHelper iysHelper,
+            IServiceScopeFactory scopeFactory)
         {
-            Username = _config.GetValue<string>($"{iysCode}:Username"),
-            Password = _config.GetValue<string>($"{iysCode}:Password"),
-            Granttype = "password"
-        };
-        var client = new RestClient(_config.GetValue<string>($"BaseUrl"));
-        var request = new RestRequest("oauth2/token", Method.Post);
-        request.AddHeader("content-type", "application/json");
-        request.AddParameter("application/json", JsonConvert.SerializeObject(IYSCredential), ParameterType.RequestBody);
-        RestResponse response = await client.ExecuteAsync(request);
-
-        if (response.IsSuccessful)
-        {
-            var token = JsonConvert.DeserializeObject<Token>(response.Content);
-            token.TokenValidTill = DateTime.UtcNow.AddSeconds(TokenExpiry);
-            token.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(RefreshTokenExpiry);
-            return token;
-        }
-        else
-        {
-            _logger.LogError($"New Token Hatası: {response.Content}");
-            throw new Exception($"New Token Hatası: {response.Content}");
-        }
-    }
-
-    private async Task<Token> RefreshToken(Token token)
-    {
-
-        var client = new RestClient(_config.GetValue<string>($"BaseUrl"));
-        var httpRequest = new RestRequest("oauth2/token", Method.Post);
-        httpRequest.AddHeader("content-type", "application/json");
-        var request = new RefreshTokenRequest { RefreshToken = token.RefreshToken, Granttype = "refresh_token" };
-        httpRequest.AddParameter("application/json", JsonConvert.SerializeObject(request), ParameterType.RequestBody);
-        RestResponse response = await client.ExecuteAsync(httpRequest);
-
-        if (response.IsSuccessful)
-        {
-            var refreshToken = JsonConvert.DeserializeObject<Token>(response.Content);
-            refreshToken.TokenValidTill = DateTime.UtcNow.AddSeconds(TokenExpiry);
-            refreshToken.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(RefreshTokenExpiry);
-            return refreshToken;
-        }
-        else
-        {
-            _logger.LogError($"Refresh Token Hatası: {response.Content}");
+            _config = config;
+            _logger = logger;
+            _cacheService = cacheService;
+            _scopeFactory = scopeFactory;
+            _serverIdentifier = ResolveServerIdentifier();
+            _iysHelper = iysHelper;
         }
 
-        return null;
-    }
-
-    public async Task<Token> GetToken(int iysCode, bool isReset)
-    {
-        await _semaphore.WaitAsync();
-        try
+        private async Task<Token> GetNewToken(int iysCode)
         {
-            var token = isReset ? null : await _cacheService.GetCachedHashDataAsync<Token>("IYS_Token", iysCode.ToString());
-
-            if (string.IsNullOrEmpty(token?.AccessToken ?? null) || token?.RefreshTokenValidTill < DateTime.UtcNow)
+            var credential = new Credential
             {
-                token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
-                await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
-                await LogTokenLifecycleAsync(iysCode, token, OperationNew);
-
-            }
-            else if (token?.TokenValidTill < DateTime.UtcNow)
-            {
-                var refreshedToken = await RefreshToken(token);
-
-                if (refreshedToken is not null)
-                {
-                    token = refreshedToken;
-                    await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
-                    await LogTokenLifecycleAsync(iysCode, token, OperationRefresh);
-                }
-                else
-                {
-                    token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
-                    await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
-                    await LogTokenLifecycleAsync(iysCode, token, OperationNew);
-                }
-            }
-
-            return token;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Token Hatası: {ex.Message}");
-            throw;
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
-    }
-
-    private async Task LogTokenLifecycleAsync(int iysCode, Token token, string operation)
-    {
-        if (token is null)
-        {
-            return;
-        }
-
-        string? companyCode = null;
-
-        try
-        {
-            companyCode = ResolveCompanyCode(iysCode);
-
-            if (string.IsNullOrWhiteSpace(companyCode))
-            {
-                companyCode = iysCode.ToString(CultureInfo.InvariantCulture);
-            }
-
-            var logEntry = new TokenLogEntry
-            {
-                CompanyCode = companyCode,
-                AccessTokenMasked = MaskToken(token.AccessToken),
-                RefreshTokenMasked = MaskToken(token.RefreshToken),
-                TokenUpdateDateUtc = DateTime.UtcNow,
-                Operation = operation,
-                ServerIdentifier = _serverIdentifier
+                Username = _config.GetValue<string>($"{iysCode}:Username"),
+                Password = _config.GetValue<string>($"{iysCode}:Password"),
+                Granttype = "password"
             };
 
-            using var scope = _scopeFactory.CreateScope();
-            var dbService = scope.ServiceProvider.GetRequiredService<IDbService>();
-            await dbService.InsertTokenLogAsync(logEntry);
+            var client = new RestClient(_config.GetValue<string>("BaseUrl"));
+            var request = new RestRequest("oauth2/token", Method.Post);
+            request.AddHeader("content-type", "application/json");
+            request.AddStringBody(JsonConvert.SerializeObject(credential), DataFormat.Json);
+
+            var response = await client.ExecuteAsync(request);
+
+            if (!response.IsSuccessful)
+            {
+                _logger.LogError($"New Token Hatası: {response.Content}");
+                throw new Exception($"New Token Hatası: {response.Content}");
+            }
+
+            var token = JsonConvert.DeserializeObject<Token>(response.Content);
+            token.TokenValidTill = DateTime.UtcNow.AddSeconds(token.ExpiresIn);
+            token.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(token.RefreshExpiresIn);
+
+            return token;
         }
-        catch (Exception ex)
+
+        private async Task<Token?> RefreshToken(Token oldToken)
         {
- _logger.LogError(
+            var client = new RestClient(_config.GetValue<string>("BaseUrl"));
+            var request = new RestRequest("oauth2/token", Method.Post);
+            request.AddHeader("content-type", "application/json");
+
+            var body = new RefreshTokenRequest
+            {
+                RefreshToken = oldToken.RefreshToken,
+                Granttype = "refresh_token"
+            };
+
+            request.AddStringBody(JsonConvert.SerializeObject(body), DataFormat.Json);
+
+            var response = await client.ExecuteAsync(request);
+
+            if (!response.IsSuccessful)
+            {
+                _logger.LogError($"Refresh Token Hatası: {response.Content}");
+                return null;
+            }
+
+            var token = JsonConvert.DeserializeObject<Token>(response.Content);
+            token.TokenValidTill = DateTime.UtcNow.AddSeconds(token.ExpiresIn);
+            token.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(token.RefreshExpiresIn);
+
+            return token;
+        }
+
+        public async Task<Token> GetToken(int iysCode, bool isReset)
+        {
+            await _semaphore.WaitAsync();
+            try
+            {
+                var token = isReset
+                    ? null
+                    : await _cacheService.GetCachedHashDataAsync<Token>("IYS_Token", iysCode.ToString());
+
+                if (string.IsNullOrEmpty(token?.AccessToken) || token?.RefreshTokenValidTill <= DateTime.UtcNow)
+                {
+                    // refresh_token süresi bitmiş → sıfırdan al
+                    token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
+                    await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
+                    await LogTokenLifecycleAsync(iysCode, token, "New");
+                }
+                else if (token?.TokenValidTill <= DateTime.UtcNow.AddSeconds(TokenRefreshBufferSeconds))
+                {
+                    // access_token süresi 5 dakika içinde dolacak → refresh dene
+                    var refreshedToken = await RefreshToken(token);
+
+                    if (refreshedToken is not null)
+                    {
+                        token = refreshedToken;
+                        await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
+                        await LogTokenLifecycleAsync(iysCode, token, "Refresh");
+                    }
+                    else
+                    {
+                        // refresh başarısız → yeniden sıfırdan al
+                        token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
+                        await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
+                        await LogTokenLifecycleAsync(iysCode, token, "New");
+                    }
+                }
+
+                return token;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Token Hatası: {ex.Message}");
+                throw;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        private async Task LogTokenLifecycleAsync(int iysCode, Token token, string operation)
+        {
+            if (token is null) return;
+
+            string? companyCode = null;
+
+            try
+            {
+                companyCode = _iysHelper.GetCompanyCode(iysCode) ?? iysCode.ToString(CultureInfo.InvariantCulture);
+
+                var logEntry = new TokenLogEntry
+                {
+                    CompanyCode = companyCode,
+                    AccessTokenMasked = MaskToken(token.AccessToken),
+                    RefreshTokenMasked = MaskToken(token.RefreshToken),
+                    TokenUpdateDateUtc = DateTime.UtcNow,
+                    Operation = operation,
+                    ServerIdentifier = _serverIdentifier
+                };
+
+                using var scope = _scopeFactory.CreateScope();
+                var dbService = scope.ServiceProvider.GetRequiredService<IDbService>();
+                await dbService.InsertTokenLogAsync(logEntry);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
                     ex,
                     "Token loglaması sırasında hata oluştu (CompanyCode: {CompanyCode}, IysCode: {IysCode}, Operation: {Operation}, Server: {Server}).",
                     companyCode ?? string.Empty,
                     iysCode,
                     operation,
                     _serverIdentifier);
-        }
-    }
-
-    private string? ResolveCompanyCode(int iysCode)
-    {
-        foreach (var section in _config.GetChildren())
-        {
-            if (string.Equals(section.Key, "ConnectionStrings", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var iysValue = _config.GetValue<int?>($"{section.Key}:IysCode");
-            var brandValue = _config.GetValue<int?>($"{section.Key}:BrandCode");
-
-            if (iysValue == iysCode || brandValue == iysCode)
-            {
-                return NormalizeCompanyCode(section.Key);
             }
         }
 
-        return null;
-    }
-
-    private static string NormalizeCompanyCode(string companyCode)
-    {
-        if (string.IsNullOrWhiteSpace(companyCode))
+        private static string? MaskToken(string? token)
         {
-            return string.Empty;
+            var TokenMaskSegmentLength = 4;
+
+            if (string.IsNullOrWhiteSpace(token)) return null;
+
+            var trimmed = token.Trim();
+            if (trimmed.Length <= TokenMaskSegmentLength * 2) return trimmed;
+
+            var firstPart = trimmed.Substring(0, TokenMaskSegmentLength);
+            var lastPart = trimmed.Substring(trimmed.Length - TokenMaskSegmentLength, TokenMaskSegmentLength);
+
+            return string.Concat(firstPart, "***", lastPart);
         }
 
-        var trimmed = companyCode.Trim();
-
-        if (string.Equals(trimmed, "BAI", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(trimmed, "BOD", StringComparison.OrdinalIgnoreCase))
+        private string ResolveServerIdentifier()
         {
-            return "BOD";
-        }
+            var configuredName = _config.GetValue<string>("ServerIdentifier");
+            if (!string.IsNullOrWhiteSpace(configuredName)) return configuredName.Trim();
 
-        return trimmed;
-    }
-
-    private static string? MaskToken(string? token)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return null;
-        }
-
-        var trimmed = token.Trim();
-
-        if (trimmed.Length <= TokenMaskSegmentLength * 2)
-        {
-            return trimmed;
-        }
-
-        var firstPart = trimmed.Substring(0, TokenMaskSegmentLength);
-        var lastPart = trimmed.Substring(trimmed.Length - TokenMaskSegmentLength, TokenMaskSegmentLength);
-
-        return string.Concat(firstPart, TokenMaskSeparator, lastPart);
-    }
- private string ResolveServerIdentifier()
-    {
-        var configuredName = _config.GetValue<string>("ServerIdentifier");
-
-        if (!string.IsNullOrWhiteSpace(configuredName))
-        {
-            return configuredName.Trim();
-        }
-
-        try
-        {
-            var machineName = Environment.MachineName;
-            return string.IsNullOrWhiteSpace(machineName) ? "UNKNOWN" : machineName;
-        }
-        catch
-        {
-            return "UNKNOWN";
+            try
+            {
+                var machineName = Environment.MachineName;
+                return string.IsNullOrWhiteSpace(machineName) ? "UNKNOWN" : machineName;
+            }
+            catch
+            {
+                return "UNKNOWN";
+            }
         }
     }
 }
