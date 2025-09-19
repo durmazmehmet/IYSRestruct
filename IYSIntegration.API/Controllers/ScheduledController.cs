@@ -45,10 +45,17 @@ namespace IYSIntegration.API.Controllers
         public async Task<IActionResult> PullConsent([FromQuery] int batchSize, bool resetAfter = false)
         {
             Stopwatch? executionStopwatch = null;
-            executionStopwatch.Start();
+            if (_isMetricsOnline)
+            {
+
+                executionStopwatch.Start();
+            }      
             var result = await _pullConsentService.RunAsync(batchSize, resetAfter);
-            executionStopwatch.Stop();
-            result.AddMessage("Execution Time", $"{executionStopwatch.ElapsedMilliseconds} ms");
+            if (_isMetricsOnline)
+            {
+                executionStopwatch.Stop();
+                result.AddMessage("Execution Time", $"{executionStopwatch.ElapsedMilliseconds} ms");
+            }
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
