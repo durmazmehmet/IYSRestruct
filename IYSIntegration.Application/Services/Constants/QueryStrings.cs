@@ -190,6 +190,48 @@
                   AND (BatchError IS NULL OR LTRIM(RTRIM(BatchError)) = '')
             ) Existing;";
 
+        public static string GetLatestConsentStates = @"
+            WITH LatestConsent AS (
+                SELECT
+                    Recipient,
+                    Status,
+                    ConsentDate,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY Recipient
+                        ORDER BY ConsentDate DESC, SourcePriority ASC
+                    ) AS RowNumber
+                FROM (
+                    SELECT
+                        pc.Recipient,
+                        pc.Status,
+                        pc.ConsentDate,
+                        0 AS SourcePriority
+                    FROM SfdcMasterData.dbo.IysPullConsent pc WITH (NOLOCK)
+                    WHERE pc.CompanyCode = @CompanyCode
+                      AND ISNULL(pc.RecipientType, '') = ISNULL(@RecipientType, '')
+                      AND ISNULL(pc.[Type], '') = ISNULL(@Type, '')
+                      AND pc.Recipient IN @Recipients
+                    UNION ALL
+                    SELECT
+                        cr.Recipient,
+                        cr.Status,
+                        cr.ConsentDate,
+                        1 AS SourcePriority
+                    FROM SfdcMasterData.dbo.IYSConsentRequest cr WITH (NOLOCK)
+                    WHERE cr.CompanyCode = @CompanyCode
+                      AND ISNULL(cr.RecipientType, '') = ISNULL(@RecipientType, '')
+                      AND ISNULL(cr.[Type], '') = ISNULL(@Type, '')
+                      AND cr.Recipient IN @Recipients
+                      AND ISNULL(cr.IsProcessed, 0) = 1
+                      AND ISNULL(cr.IsSuccess, 0) = 1
+                      AND ISNULL(cr.IsOverdue, 0) = 0
+                      AND (cr.BatchError IS NULL OR LTRIM(RTRIM(cr.BatchError)) = '')
+                ) Combined
+            )
+            SELECT Recipient, Status, ConsentDate
+            FROM LatestConsent
+            WHERE RowNumber = 1;";
+
         public static string GetPendingConsents = @"
             SELECT TOP {0}
                     cr.CompanyCode,
