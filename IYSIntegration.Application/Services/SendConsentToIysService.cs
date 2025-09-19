@@ -1,14 +1,16 @@
-﻿using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Threading;
 
 namespace IYSIntegration.Application.Services;
-
 
 public class SendConsentToIysService
 {
@@ -16,6 +18,8 @@ public class SendConsentToIysService
     private readonly IDbService _dbService;
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
+    private readonly bool _isIysOnline;
+    private readonly bool _isMetricsOnline;
     private static readonly HashSet<string> OverdueErrorCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "H174",
@@ -27,12 +31,15 @@ public class SendConsentToIysService
         ILogger<SendConsentToIysService> logger,
         IDbService dbHelper,
         IIysHelper iysHelper,
-        IysProxy client)
+        IysProxy client,
+        IConfiguration configuration)
     {
         _logger = logger;
         _dbService = dbHelper;
         _client = client;
         _iysHelper = iysHelper;
+        _isIysOnline = configuration.GetValue("IsIysOnline", true);
+        _isMetricsOnline = configuration.GetValue("IsMetricsOnline", false);
     }
 
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
@@ -44,11 +51,30 @@ public class SendConsentToIysService
         int failedCount = 0;
         int successCount = 0;
 
+        Stopwatch? executionStopwatch = null;
+        if (_isMetricsOnline)
+        {
+            executionStopwatch = Stopwatch.StartNew();
+        }
+
+        if (!_isIysOnline)
+        {
+            const string offlineMessage = "IYS servisi çevrimdışı olduğu için gönderim yapılmadı.";
+            _logger.LogWarning(offlineMessage);
+            response.Error("IysService", offlineMessage);
+            response.Data = new ScheduledJobStatistics
+            {
+                SuccessCount = 0,
+                FailedCount = 0
+            };
+            LogExecutionDuration(executionStopwatch, true);
+            return response;
+        }
+
         _logger.LogInformation("SingleConsentAddService started at {Time}", DateTimeOffset.Now);
 
         try
         {
-
             var pendingConsents = await _dbService.GetPendingConsents(rowCount);
             var groupedConsents = new Dictionary<string, List<ConsentRequestLog>>(StringComparer.OrdinalIgnoreCase);
 
@@ -106,7 +132,19 @@ public class SendConsentToIysService
                             }
                         };
 
+                        Stopwatch? requestStopwatch = null;
+                        if (_isMetricsOnline)
+                        {
+                            requestStopwatch = Stopwatch.StartNew();
+                        }
+
                         var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{group.Key}/addConsent", request.Consent);
+
+                        if (requestStopwatch != null)
+                        {
+                            requestStopwatch.Stop();
+                            _logger.LogInformation("SendConsentToIysService IYS yanıtı {LogId} için {ElapsedSeconds} saniyede alındı", log.Id, requestStopwatch.Elapsed.TotalSeconds);
+                        }
 
                         addResponse.Id = log.Id;
 
@@ -185,7 +223,26 @@ public class SendConsentToIysService
             SuccessCount = successCount,
             FailedCount = failedCount
         };
+        LogExecutionDuration(executionStopwatch);
         return response;
+    }
+
+    private void LogExecutionDuration(Stopwatch? stopwatch, bool isOffline = false)
+    {
+        if (!_isMetricsOnline || stopwatch == null)
+        {
+            return;
+        }
+
+        stopwatch.Stop();
+        if (isOffline)
+        {
+            _logger.LogInformation("SendConsentToIysService tamamlanma süresi (IYS çevrimdışı): {ElapsedSeconds} saniye", stopwatch.Elapsed.TotalSeconds);
+        }
+        else
+        {
+            _logger.LogInformation("SendConsentToIysService tamamlanma süresi: {ElapsedSeconds} saniye", stopwatch.Elapsed.TotalSeconds);
+        }
     }
 
     private ConsentResponseUpdate? CreateConsentResponseUpdate(ResponseBase<AddConsentResult> response)
