@@ -24,6 +24,7 @@ internal class Program
             var auth = config.GetValue<string>("BaseIysProxyAuth");
             return new IysProxy(url, auth);
         });
+        builder.Services.AddScoped<IIysProxy>(provider => provider.GetRequiredService<IysProxy>());
         builder.Services.AddScoped<SendConsentToIysService>();
         builder.Services.AddScoped<PullConsentFromIysService>();
         builder.Services.AddScoped<PullConsentLookupService>();
