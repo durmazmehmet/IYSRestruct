@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using System;
 using System.Linq;
 using System.Drawing;
 
@@ -133,9 +134,9 @@ namespace IYSIntegration.Application.Services
             return response;
         }
 
-        public async Task<ResponseBase<List<ConsentErrorCompanyStats>>> GetErrorReportStatsAsync(DateTime? date = null)
+        public async Task<ResponseBase<ConsentErrorReportStatsResult>> GetErrorReportStatsAsync(DateTime? date = null)
         {
-            var response = new ResponseBase<List<ConsentErrorCompanyStats>>();
+            var response = new ResponseBase<ConsentErrorReportStatsResult>();
             response.Success();
 
             try
@@ -180,7 +181,35 @@ namespace IYSIntegration.Application.Services
                     .ThenBy(stat => stat.CompanyCode)
                     .ToList();
 
-                response.Success(stats);
+                var requestedRangeEnd = date ?? DateTime.Today;
+                var requestedRangeStart = requestedRangeEnd.AddDays(-1);
+
+                var createDates = errorConsents
+                    .Select(consent => consent.CreateDate)
+                    .Where(value => value.HasValue)
+                    .Select(value => value.Value)
+                    .OrderBy(value => value)
+                    .ToList();
+
+                DateTime? dataRangeStart = null;
+                DateTime? dataRangeEnd = null;
+
+                if (createDates.Count > 0)
+                {
+                    dataRangeStart = createDates.First();
+                    dataRangeEnd = createDates.Last();
+                }
+
+                var reportResult = new ConsentErrorReportStatsResult
+                {
+                    RangeStart = requestedRangeStart,
+                    RangeEnd = requestedRangeEnd,
+                    DataRangeStart = dataRangeStart,
+                    DataRangeEnd = dataRangeEnd,
+                    Companies = stats
+                };
+
+                response.Success(reportResult);
             }
             catch (Exception ex)
             {
