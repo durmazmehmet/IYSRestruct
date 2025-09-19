@@ -24,5 +24,12 @@ namespace IYSIntegration.Application.Services.Models.Response.Identity
 
         [JsonProperty("refreshTokenValidTill")]
         public DateTime? RefreshTokenValidTill { get; set; }
+
+        [JsonIgnore]
+        public DateTime RefreshDate { get; set; }
+
+        [JsonIgnore]
+        public DateTime CreateDate { get; set; }
+        public DateTime PreviousDate { get; internal set; }
     }
 }

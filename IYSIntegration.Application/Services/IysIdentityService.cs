@@ -26,7 +26,7 @@ public class IysIdentityService : IIysIdentityService
         RefreshTokenExpiry = _config.GetValue<int>($"RefreshTokenExpiry", 14000);
     }
 
-    private async Task<Token> GetNewToken(int iysCode)
+    private async Task<Token> GetNewToken(int iysCode, DateTime previousDate)
     {
 
         var IYSCredential = new Credential
@@ -46,6 +46,8 @@ public class IysIdentityService : IIysIdentityService
             var token = JsonConvert.DeserializeObject<Token>(response.Content);
             token.TokenValidTill = DateTime.UtcNow.AddSeconds(TokenExpiry);
             token.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(RefreshTokenExpiry);
+            token.CreateDate = DateTime.UtcNow;
+            token.PreviousDate = previousDate;
             return token;
         }
         else
@@ -55,7 +57,7 @@ public class IysIdentityService : IIysIdentityService
         }
     }
 
-    private async Task<Token> RefreshToken(Token token)
+    private async Task<Token> RefreshToken(Token token, DateTime previousDate)
     {
 
         var client = new RestClient(_config.GetValue<string>($"BaseUrl"));
@@ -70,6 +72,8 @@ public class IysIdentityService : IIysIdentityService
             var refreshToken = JsonConvert.DeserializeObject<Token>(response.Content);
             refreshToken.TokenValidTill = DateTime.UtcNow.AddSeconds(TokenExpiry);
             refreshToken.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(RefreshTokenExpiry);
+            refreshToken.RefreshDate = DateTime.UtcNow;
+            refreshToken.PreviousDate = previousDate;
             return refreshToken;
         }
         else
@@ -89,13 +93,16 @@ public class IysIdentityService : IIysIdentityService
 
             if (string.IsNullOrEmpty(token?.AccessToken ?? null) || token?.RefreshTokenValidTill < DateTime.UtcNow)
             {
-                token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
+                var previouseValidDate = token.RefreshTokenValidTill ?? DateTime.MinValue;
+                token = await GetNewToken(iysCode, previouseValidDate) ?? throw new Exception("Token alınamadı");
                 await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
 
             }
             else if (token.TokenValidTill < DateTime.UtcNow)
             {
-                token = await RefreshToken(token) ?? await GetNewToken(iysCode);
+                var previouseValidDate = token.TokenValidTill ?? DateTime.MinValue;
+                token = await RefreshToken(token, previouseValidDate);
+                token ??= await GetNewToken(iysCode, previouseValidDate);
                 await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
             }
 
