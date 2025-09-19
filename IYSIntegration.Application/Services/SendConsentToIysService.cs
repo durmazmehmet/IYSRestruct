@@ -39,7 +39,6 @@ public class SendConsentToIysService
         _client = client;
         _iysHelper = iysHelper;
         _isIysOnline = configuration.GetValue("IsIysOnline", true);
-        _isMetricsOnline = configuration.GetValue("IsMetricsOnline", false);
     }
 
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
@@ -51,28 +50,7 @@ public class SendConsentToIysService
         int failedCount = 0;
         int successCount = 0;
 
-        Stopwatch? executionStopwatch = null;
-        if (_isMetricsOnline)
-        {
-            executionStopwatch = Stopwatch.StartNew();
-        }
-
         _logger.LogInformation("SingleConsentAddService started at {Time}", DateTimeOffset.Now);
-
-        if (!_isIysOnline)
-        {
-            const string offlineMessage = "IYS servisi çevrimdışı modda çalıştırılıyor. Gönderimler yapılmayacak.";
-            _logger.LogWarning(offlineMessage);
-            results.Add(new LogResult
-            {
-                Id = 0,
-                CompanyCode = string.Empty,
-                Messages = new Dictionary<string, string>
-                {
-                    { "IysService", offlineMessage }
-                }
-            });
-        }
 
         try
         {
@@ -133,11 +111,6 @@ public class SendConsentToIysService
                             }
                         };
 
-                        Stopwatch? requestStopwatch = null;
-                        if (_isMetricsOnline && _isIysOnline)
-                        {
-                            requestStopwatch = Stopwatch.StartNew();
-                        }
 
                         if (!_isIysOnline)
                         {
@@ -146,12 +119,6 @@ public class SendConsentToIysService
                         }
 
                         var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{group.Key}/addConsent", request.Consent);
-
-                        if (requestStopwatch != null)
-                        {
-                            requestStopwatch.Stop();
-                            _logger.LogInformation("SendConsentToIysService IYS yanıtı {LogId} için {ElapsedSeconds} saniyede alındı", log.Id, requestStopwatch.Elapsed.TotalSeconds);
-                        }
 
                         addResponse.Id = log.Id;
 
@@ -201,7 +168,12 @@ public class SendConsentToIysService
         try
         {
             var responsesToUpdate = responseUpdates.ToArray();
-            if (responsesToUpdate.Length > 0)
+
+            if (!_isIysOnline)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+            else if (responsesToUpdate.Length > 0)
             {
                 await _dbService.UpdateConsentResponses(responsesToUpdate);
             }
@@ -230,28 +202,9 @@ public class SendConsentToIysService
             SuccessCount = successCount,
             FailedCount = failedCount
         };
-        LogExecutionDuration(executionStopwatch, !_isIysOnline);
         return response;
     }
-
-    private void LogExecutionDuration(Stopwatch? stopwatch, bool isOffline = false)
-    {
-        if (!_isMetricsOnline || stopwatch == null)
-        {
-            return;
-        }
-
-        stopwatch.Stop();
-        if (isOffline)
-        {
-            _logger.LogInformation("SendConsentToIysService tamamlanma süresi (IYS çevrimdışı): {ElapsedSeconds} saniye", stopwatch.Elapsed.TotalSeconds);
-        }
-        else
-        {
-            _logger.LogInformation("SendConsentToIysService tamamlanma süresi: {ElapsedSeconds} saniye", stopwatch.Elapsed.TotalSeconds);
-        }
-    }
-
+    
     private ConsentResponseUpdate? CreateConsentResponseUpdate(ResponseBase<AddConsentResult> response)
     {
         if (response == null)

@@ -90,13 +90,14 @@ public class IysIdentityService : IIysIdentityService
             if (string.IsNullOrEmpty(token?.AccessToken ?? null) || token?.RefreshTokenValidTill < DateTime.UtcNow)
             {
                 token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
+                await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
+
             }
             else if (token.TokenValidTill < DateTime.UtcNow)
             {
                 token = await RefreshToken(token) ?? await GetNewToken(iysCode);
+                await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
             }
-
-            await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
 
             return token;
         }
