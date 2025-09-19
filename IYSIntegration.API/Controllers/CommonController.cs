@@ -366,5 +366,12 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
+        [HttpGet("GetErrorReportStats")]
+        public async Task<IActionResult> GetConsentErrorStats([FromQuery] DateTime? date)
+        {
+            var result = await _sendConsentErrorService.GetErrorReportStatsAsync(date);
+            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
+        }
+
     }
 }
