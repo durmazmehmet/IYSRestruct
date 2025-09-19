@@ -18,7 +18,7 @@ namespace IYSIntegration.Application.Services
 
         public async Task<ResponseBase<List<PullConsentSummary>>> BodCommercialConsents(int dayCount)
         {
-            string[] BodTargetCompanyCodes = new[] { "BAI", "BOD" };
+            string[] BodTargetCompanyCodes = new[] { "BOD" };
             string BodTargetRecipientType = "TACIR";
             var response = new ResponseBase<List<PullConsentSummary>>();
 
