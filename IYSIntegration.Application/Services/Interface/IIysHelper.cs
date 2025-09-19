@@ -11,7 +11,7 @@ public interface IIysHelper
 
     List<string> GetAllCompanyCodes();
 
-    string? ResolveCompanyCode(string? companyCode, string? companyName, int iysCode);
+    string? ResolveCompanyCode(string? companyCode, int iysCode);
 
     string BuildAddConsentErrorMessage(ResponseBase<AddConsentResult> addResponse);
 

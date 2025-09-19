@@ -30,6 +30,11 @@ public sealed class IysHelper : IIysHelper
         if (string.IsNullOrWhiteSpace(companyCode))
             throw new ArgumentException("Şirket kodu boş olamaz.", nameof(companyCode));
 
+        if (companyCode == "BAI" || companyCode == "BOD")
+        {
+            companyCode = "BOD";
+        }
+
         if (TryGet(companyCode, out var result))
             return result;
 
@@ -38,6 +43,14 @@ public sealed class IysHelper : IIysHelper
 
     public bool TryGet(string companyCode, out ConsentParams result)
     {
+        if (string.IsNullOrWhiteSpace(companyCode))
+            throw new ArgumentException("Şirket kodu boş olamaz.", nameof(companyCode));
+
+        if (companyCode == "BAI" || companyCode == "BOD")
+        {
+            companyCode = "BOD";
+        }
+
         var iys = _config.GetValue<int?>($"{companyCode}:IysCode");
         var brand = _config.GetValue<int?>($"{companyCode}:BrandCode");
 
@@ -85,20 +98,17 @@ public sealed class IysHelper : IIysHelper
     }
 
 
-    public string? ResolveCompanyCode(string? companyCode, string? companyName, int iysCode)
+    public string? ResolveCompanyCode(string? companyCode,  int iysCode)
     {
         if (!string.IsNullOrWhiteSpace(companyCode))
         {
+            if (companyCode == "BAI" || companyCode == "BOD")
+            {
+                companyCode = "BOD";
+            }
             return companyCode.Trim();
         }
 
-        if (!string.IsNullOrWhiteSpace(companyName))
-        {
-            return companyName.Trim();
-        }
-
-        return iysCode != 0
-            ? GetCompanyCode(iysCode)
-            : null;
+        return iysCode != 0 ? GetCompanyCode(iysCode) : null;
     }
 }

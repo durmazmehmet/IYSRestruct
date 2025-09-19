@@ -39,7 +39,7 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<AddConsentResult>> AddConsent([FromBody] AddConsentRequest request)
         {
-            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
+            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.IysCode);
 
             var response = new ResponseBase<AddConsentResult>();
             var forceSend = _iysHelper.IsForceSendEnabled();
@@ -95,7 +95,7 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<MultipleConsentResult>> AddMultipleConsent([FromBody] MultipleConsentRequest request)
         {
-            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.CompanyName, request.IysCode);
+            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.IysCode);
 
             var requestCount = request.Consents.Count;
             var response = new ResponseBase<MultipleConsentResult>();
@@ -287,7 +287,7 @@ namespace IYSIntegration.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
         {
-            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
+            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.IysCode);
             return await _client.PostJsonAsync<PullConsentRequest, PullConsentResult>($"consents/{request.CompanyCode}/pullConsent", request);
         }
 

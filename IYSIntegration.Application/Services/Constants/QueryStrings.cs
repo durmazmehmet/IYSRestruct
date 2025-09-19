@@ -146,7 +146,6 @@
             LEFT JOIN IYSCallLog cl WITH (NOLOCK) ON cr.LogId = cl.Id
             WHERE cr.Recipient LIKE '%' + @recipient + '%'";
 
-
         public static string GetMaxBatchId = @"
             SELECT MAX(ISNULL(BatchId, 0)) FROM IYSConsentRequest (nolock)
                     WHERE ISNULL(BatchId, 0) <> 0 ";
@@ -473,11 +472,9 @@
             INSERT INTO IYSMultipleConsentQuery(IysCode, BrandCode, BatchId, RequestId, CreateDate, QueryDate)
 			VALUES(@IysCode, @BrandCode, @BatchId, @RequestId, GETDATE(), DATEADD(SECOND, {0}, GETDATE()))";
 
-
         public static string GetUnprocessedMultipleConsenBatches = @"
             SELECT TOP {0} IysCode, BrandCode, BatchId, RequestId FROM IYSMultipleConsentQuery (NOLOCK)
 			WHERE QueryDate < GETDATE() AND ISNULL(IsProcessed, 0) = 0";
-
 
         public static string UpdateMultipleConsentQueryDate = @"
 			UPDATE IYSMultipleConsentQuery 
@@ -509,7 +506,6 @@
 					LogId = @LogId
 				WHERE BatchId = @BatchId AND [Index] = @Index
 			";
-
 
         public static string ReorderBatch = @"
 			DECLARE @BatchId INT  
@@ -606,9 +602,12 @@
         public static string GetPullConsentsByFilter = @"
             SELECT
                                 Id,
+                                CompanyCode,
                                 Recipient,
+                                RecipientType,
                                 [Type],
-                                Status
+                                Status,
+                                IsProcessed
                         FROM dbo.IysPullConsent (nolock)
                 WHERE CompanyCode IN @CompanyCodes
                   AND RecipientType = @RecipientType
