@@ -16,8 +16,6 @@ public class SendConsentToIysService
     private readonly IDbService _dbService;
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
-    private readonly bool _isIysOnline;
-    private readonly bool _isMetricsOnline;
     private static readonly HashSet<string> OverdueErrorCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "H174",
@@ -36,7 +34,6 @@ public class SendConsentToIysService
         _dbService = dbHelper;
         _client = client;
         _iysHelper = iysHelper;
-        _isIysOnline = configuration.GetValue("IsIysOnline", true);
     }
 
     public async Task<ResponseBase<ScheduledJobStatistics>> RunAsync(int rowCount)
@@ -109,13 +106,6 @@ public class SendConsentToIysService
                             }
                         };
 
-
-                        if (!_isIysOnline)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(5));
-                            continue;
-                        }
-
                         var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{group.Key}/addConsent", request.Consent);
 
                         addResponse.Id = log.Id;
@@ -162,35 +152,6 @@ public class SendConsentToIysService
             results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Failed", Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
             response.Error("SINGLE_CONSENT_ADD_FATAL", "Service failed with an unexpected exception.");
         }
-
-        try
-        {
-            var responsesToUpdate = responseUpdates.ToArray();
-
-            if (!_isIysOnline)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(5));
-            }
-            else if (responsesToUpdate.Length > 0)
-            {
-                await _dbService.UpdateConsentResponses(responsesToUpdate);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Bulk update of consent responses failed");
-            results.Add(new LogResult
-            {
-                Id = 0,
-                CompanyCode = string.Empty,
-                Messages = new Dictionary<string, string>
-                {
-                    { "Database Error", ex.Message }
-                }
-            });
-            response.Error("CONSENT_RESPONSE_UPDATE_FAILED", "Consent responses could not be updated.");
-        }
-
         foreach (var result in results)
         {
             response.AddMessage(result.GetMessages());
