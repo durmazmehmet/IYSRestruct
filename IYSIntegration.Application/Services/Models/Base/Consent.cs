@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+using IYSIntegration.Application.Services.Models;
+using Newtonsoft.Json;
 
 namespace IYSIntegration.Application.Services.Models.Base
 {
@@ -56,7 +57,11 @@ namespace IYSIntegration.Application.Services.Models.Base
         public bool? IsSuccess { get; set; }
 
         [JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         public string? BatchError { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("batchError")]
+        public ConsentBatchErrorModel? BatchErrorModel { get; set; }
 
         [JsonIgnore]
         public string? CompanyCode { get; set; }

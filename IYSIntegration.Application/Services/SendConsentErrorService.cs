@@ -1,8 +1,11 @@
 using IYSIntegration.Application.Services.Interface;
+using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using System.Linq;
 using System.Drawing;
 
 namespace IYSIntegration.Application.Services
@@ -116,8 +119,9 @@ namespace IYSIntegration.Application.Services
             try
             {
                 _logger.LogInformation("SendConsentErrorService.GetErrorsJsonAsync running at: {time}", DateTimeOffset.Now);
-                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date);
-                response.Success(errorConsents ?? new List<Consent>());
+                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date) ?? new List<Consent>();
+                PopulateBatchErrors(errorConsents);
+                response.Success(errorConsents);
             }
             catch (Exception ex)
             {
@@ -127,6 +131,96 @@ namespace IYSIntegration.Application.Services
             }
 
             return response;
+        }
+
+        public async Task<ResponseBase<List<ConsentErrorCompanyStats>>> GetErrorReportStatsAsync(DateTime? date = null)
+        {
+            var response = new ResponseBase<List<ConsentErrorCompanyStats>>();
+            response.Success();
+
+            try
+            {
+                _logger.LogInformation("SendConsentErrorService.GetErrorReportStatsAsync running at: {time}", DateTimeOffset.Now);
+                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date) ?? new List<Consent>();
+                PopulateBatchErrors(errorConsents);
+
+                var stats = errorConsents
+                    .GroupBy(consent => string.IsNullOrWhiteSpace(consent.CompanyCode) ? "UNKNOWN" : consent.CompanyCode!)
+                    .Select(group =>
+                    {
+                        var errorDetails = group
+                            .SelectMany(consent => consent.BatchErrorModel?.Errors ?? Enumerable.Empty<ConsentBatchErrorItem>())
+                            .ToList();
+
+                        var codes = errorDetails
+                            .GroupBy(detail => string.IsNullOrWhiteSpace(detail.Code) ? "UNKNOWN" : detail.Code!)
+                            .Select(codeGroup => new ConsentErrorCodeStats
+                            {
+                                Code = codeGroup.Key,
+                                Count = codeGroup.Count(),
+                                Messages = codeGroup
+                                    .Select(detail => detail.Message)
+                                    .Where(message => !string.IsNullOrWhiteSpace(message))
+                                    .Distinct()
+                                    .OrderBy(message => message)
+                                    .ToList()
+                            })
+                            .OrderBy(stat => stat.Code)
+                            .ToList();
+
+                        return new ConsentErrorCompanyStats
+                        {
+                            CompanyCode = group.Key,
+                            ConsentCount = group.Count(),
+                            ErrorCount = errorDetails.Count,
+                            Codes = codes
+                        };
+                    })
+                    .OrderByDescending(stat => stat.ErrorCount)
+                    .ThenBy(stat => stat.CompanyCode)
+                    .ToList();
+
+                response.Success(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("SendConsentErrorService.GetErrorReportStatsAsync Hata: {Message}, StackTrace: {StackTrace}, InnerException: {InnerException}", ex.Message, ex.StackTrace, ex.InnerException?.Message ?? "None");
+                response.AddMessage("Hata", ex.Message);
+                response.Error();
+            }
+
+            return response;
+        }
+
+        private void PopulateBatchErrors(IEnumerable<Consent> consents)
+        {
+            foreach (var consent in consents)
+            {
+                consent.BatchErrorModel = DeserializeBatchError(consent.BatchError);
+            }
+        }
+
+        private ConsentBatchErrorModel? DeserializeBatchError(string? batchError)
+        {
+            if (string.IsNullOrWhiteSpace(batchError))
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonConvert.DeserializeObject<ConsentBatchErrorModel>(batchError);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning("SendConsentErrorService.DeserializeBatchError JsonException: {Message}. Content: {Content}", ex.Message, batchError);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("SendConsentErrorService.DeserializeBatchError Exception: {Message}. Content: {Content}", ex.Message, batchError);
+            }
+
+            return null;
         }
     }
 }
