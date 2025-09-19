@@ -1,4 +1,4 @@
-using IYSIntegration.Application.Services.Interface;
+﻿using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
 using Microsoft.Extensions.Logging;
@@ -25,7 +25,7 @@ namespace IYSIntegration.Application.Services
 
             if (string.IsNullOrWhiteSpace(consent.CompanyCode) || string.IsNullOrWhiteSpace(consent.Recipient))
             {
-                _logger.LogWarning("Consent is missing required fields: CompanyCode='{CompanyCode}', Recipient='{Recipient}'", consent.CompanyCode, consent.Recipient);
+                _logger.LogWarning("Kontrol için parametre eksik CompanyCode='{CompanyCode}', Recipient='{Recipient}'", consent.CompanyCode, consent.Recipient);
                 return false;
             }
 
@@ -42,7 +42,7 @@ namespace IYSIntegration.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to check consent existence for CompanyCode='{CompanyCode}', Recipient='{Recipient}'", consent.CompanyCode, consent.Recipient);
+                _logger.LogError(ex, "Rıza kontrolünde hata CompanyCode='{CompanyCode}', Recipient='{Recipient}'", consent.CompanyCode, consent.Recipient);
                 return false;
             }
         }
@@ -66,7 +66,7 @@ namespace IYSIntegration.Application.Services
 
             foreach (var consent in missingCompanyConsents)
             {
-                _logger.LogWarning("Consent is missing required company code.");
+                _logger.LogWarning("Firma kodu eksik");
                 result.NonConsents.Add(consent);
             }
 
@@ -92,7 +92,7 @@ namespace IYSIntegration.Application.Services
                 {
                     foreach (var consent in group)
                     {
-                        _logger.LogWarning("Consent is missing required recipient for CompanyCode='{CompanyCode}'", companyCode);
+                        _logger.LogWarning("Rızada alıcı yok CompanyCode='{CompanyCode}'", companyCode);
                         result.NonConsents.Add(consent);
                     }
 
@@ -107,7 +107,7 @@ namespace IYSIntegration.Application.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to fetch existing consents for CompanyCode='{CompanyCode}', Type='{Type}'", companyCode, type);
+                    _logger.LogError(ex, "Rıza çekiminde başarısız olundu CompanyCode='{CompanyCode}', Type='{Type}'", companyCode, type);
 
                     foreach (var consent in group)
                     {
