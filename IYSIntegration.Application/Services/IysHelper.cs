@@ -98,7 +98,7 @@ public sealed class IysHelper : IIysHelper
     }
 
 
-    public string? ResolveCompanyCode(string? companyCode,  int iysCode)
+    public string? ResolveCompanyCode(string? companyCode, int iysCode)
     {
         if (!string.IsNullOrWhiteSpace(companyCode))
         {

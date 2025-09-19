@@ -1,7 +1,6 @@
 ﻿using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request;
-using IYSIntegration.Application.Services.Models.Request.Consent;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
 
@@ -51,7 +50,7 @@ public class ConsentsController : ControllerBase
 
         return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
-   
+
     /// <summary>
     /// Tekli izin sorgulama 
     /// Bu metot, bir IP adresinden saatte en fazla 100 istek yapabilir.

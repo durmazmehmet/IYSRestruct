@@ -1,14 +1,12 @@
 using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
-using IYSIntegration.Application.Services.Models.Request.Consent;
+using IYSIntegration.Application.Services.Models.Request;
 using IYSIntegration.Application.Services.Models.Response.Consent;
+using IYSIntegration.Application.Services.Models.Response.Schedule;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Threading;
 
 namespace IYSIntegration.Application.Services;
 
@@ -204,7 +202,7 @@ public class SendConsentToIysService
         };
         return response;
     }
-    
+
     private ConsentResponseUpdate? CreateConsentResponseUpdate(ResponseBase<AddConsentResult> response)
     {
         if (response == null)

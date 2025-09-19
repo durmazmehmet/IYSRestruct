@@ -1,6 +1,5 @@
-using IYSIntegration.Application.Services;
+﻿using IYSIntegration.Application.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 
 namespace IYSIntegration.API.Controllers
@@ -35,7 +34,11 @@ namespace IYSIntegration.API.Controllers
             _isMetricsOnline = _configuration.GetValue("IsMetricsOnline", false);
         }
 
-
+        /// <summary>
+        /// SF'dan alınan ve IysConsentRequest tablosuna eklenen izinlerin IYS'ye aktarılması
+        /// </summary>
+        /// <param name="batchSize"></param>
+        /// <returns></returns>
         [HttpGet("pushConsentsToIys")]
         public async Task<IActionResult> SingleConsentAdd([FromQuery] int batchSize)
         {
@@ -44,6 +47,12 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
+        /// <summary>
+        /// IYS'ten izinlerin çekilmesi ve IysPullConsent tablosuna aktarılması
+        /// </summary>
+        /// <param name="batchSize"></param>
+        /// <param name="resetAfter"></param>
+        /// <returns></returns>
         [HttpGet("pullConsentFromIys")]
         public async Task<IActionResult> PullConsent([FromQuery] int batchSize, bool resetAfter = false)
         {
@@ -52,7 +61,7 @@ namespace IYSIntegration.API.Controllers
             {
 
                 executionStopwatch.Start();
-            }      
+            }
             var result = await _pullConsentService.RunAsync(batchSize, resetAfter);
             if (_isMetricsOnline)
             {
@@ -62,6 +71,11 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
+        /// <summary>
+        /// BOD ticari izinlerin IysPullConsentLookup tablosundan verilmesi
+        /// </summary>
+        /// <param name="dayCount"></param>
+        /// <returns></returns>
         [HttpGet("BodCommercialConsents")]
         public async Task<IActionResult> BodCommercialConsents([FromQuery] int dayCount)
         {
@@ -69,6 +83,11 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
+        /// <summary>
+        /// IYS'ten çekilen izinlerin Salesforce'a aktarılması
+        /// </summary>
+        /// <param name="batchSize"></param>
+        /// <returns></returns>
         [HttpGet("pushConsentToSf")]
         public async Task<IActionResult> SfConsent([FromQuery] int batchSize)
         {
@@ -76,6 +95,11 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
+        /// <summary>
+        /// Excel Formatında hata raporunun oluşturulması ve BASE64 iletilmesi
+        /// </summary>
+        /// <param name="date"></param>
+        /// <returns></returns>
         [HttpGet("GetErrorReportFile")]
         public async Task<IActionResult> GetConsentErrorExcel([FromQuery] DateTime? date)
         {

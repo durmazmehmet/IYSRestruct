@@ -1,7 +1,7 @@
-﻿using IYSIntegration.Application.Services.Models;
-using IYSIntegration.Application.Services.Models.Base;
-using IYSIntegration.Application.Services.Models.Request.Consent;
+﻿using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Request;
 using IYSIntegration.Application.Services.Models.Response.Consent;
+using IYSIntegration.Application.Services.Models.Response.Schedule;
 using RestSharp;
 
 namespace IYSIntegration.Application.Services.Interface

@@ -1,4 +1,4 @@
-using IYSIntegration.Application.Services.Models;
+using IYSIntegration.Application.Services.Models.Response.Schedule;
 using Newtonsoft.Json;
 
 namespace IYSIntegration.Application.Services.Models.Base

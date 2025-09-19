@@ -1,12 +1,10 @@
 using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Response.Schedule;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using System;
-using System.Linq;
 using System.Drawing;
 
 namespace IYSIntegration.Application.Services

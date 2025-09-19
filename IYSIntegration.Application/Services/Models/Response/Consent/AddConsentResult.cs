@@ -14,15 +14,4 @@ namespace IYSIntegration.Application.Services.Models.Response.Consent
         public List<AddConsentError>? Errors { get; set; }
     }
 
-
-    public class AddConsentError
-    {
-
-        [JsonProperty("code")]
-        public string? Code { get; set; }
-
-        [JsonProperty("message")]
-        public string? Message { get; set; }
-    }
-
 }

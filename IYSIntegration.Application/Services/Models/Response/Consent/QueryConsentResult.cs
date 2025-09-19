@@ -16,14 +16,4 @@ namespace IYSIntegration.Application.Services.Models.Response.Consent
         [JsonProperty("transactionId")]
         public string TransactionId { get; set; }
     }
-
-    public class MultipleQueryConsentResult
-    {
-
-        [JsonProperty("requestId")]
-        public string RequestId { get; set; }
-
-        [JsonProperty("list")]
-        public List<string> List { get; set; }
-    }
 }

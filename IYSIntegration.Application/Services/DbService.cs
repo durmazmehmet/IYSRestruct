@@ -1,10 +1,10 @@
 ﻿using Dapper;
 using IYSIntegration.Application.Services.Constants;
 using IYSIntegration.Application.Services.Interface;
-using IYSIntegration.Application.Services.Models;
 using IYSIntegration.Application.Services.Models.Base;
-using IYSIntegration.Application.Services.Models.Request.Consent;
+using IYSIntegration.Application.Services.Models.Request;
 using IYSIntegration.Application.Services.Models.Response.Consent;
+using IYSIntegration.Application.Services.Models.Response.Schedule;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -235,7 +235,7 @@ namespace IYSIntegration.Application.Services
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
-                var result = (await connection.QueryAsync<ConsentRequestLog>(string.Format(QueryStrings.GetPendingConsentsWithoutPull, rowCount))).ToList();
+                var result = (await connection.QueryAsync<ConsentRequestLog>(string.Format(QueryStrings.GetPendingConsents, rowCount))).ToList();
                 connection.Close();
 
                 return result;
