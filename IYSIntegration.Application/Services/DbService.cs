@@ -90,6 +90,27 @@ namespace IYSIntegration.Application.Services
             }
         }
 
+        public async Task<List<PullConsentSummary>> GetPullConsentsAsync(DateTime startDate, string recipientType, IEnumerable<string> companyCodes)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var result = (await connection.QueryAsync<PullConsentSummary>(
+                    QueryStrings.GetPullConsentsByFilter,
+                    new
+                    {
+                        StartDate = startDate,
+                        RecipientType = recipientType,
+                        CompanyCodes = companyCodes
+                    })).ToList();
+
+                await connection.CloseAsync();
+
+                return result;
+            }
+        }
+
         public async Task<int> InsertConsentRequest(AddConsentRequest request)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))

@@ -26,6 +26,7 @@ internal class Program
         });
         builder.Services.AddScoped<SendConsentToIysService>();
         builder.Services.AddScoped<PullConsentFromIysService>();
+        builder.Services.AddScoped<PullConsentLookupService>();
         builder.Services.AddScoped<SendConsentToSalesforceService>();
         builder.Services.AddScoped<ErrorReportingService>();
 
