@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Serialization;
 
 namespace IYSIntegration.Application.Services.Models
@@ -45,5 +46,33 @@ namespace IYSIntegration.Application.Services.Models
 
         [JsonPropertyName("messages")]
         public List<string> Messages { get; set; } = new();
+    }
+
+    public sealed class ConsentErrorReportStatsResult
+    {
+        private const string DateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+
+        [JsonPropertyName("rangeStart")]
+        public DateTime RangeStart { get; set; }
+
+        [JsonPropertyName("rangeEnd")]
+        public DateTime RangeEnd { get; set; }
+
+        [JsonPropertyName("rangeDescription")]
+        public string RangeDescription => $"{RangeStart.ToString(DateTimeFormat)} - {RangeEnd.ToString(DateTimeFormat)}";
+
+        [JsonPropertyName("dataRangeStart")]
+        public DateTime? DataRangeStart { get; set; }
+
+        [JsonPropertyName("dataRangeEnd")]
+        public DateTime? DataRangeEnd { get; set; }
+
+        [JsonPropertyName("dataRangeDescription")]
+        public string? DataRangeDescription => DataRangeStart.HasValue && DataRangeEnd.HasValue
+            ? $"{DataRangeStart.Value.ToString(DateTimeFormat)} - {DataRangeEnd.Value.ToString(DateTimeFormat)}"
+            : null;
+
+        [JsonPropertyName("companies")]
+        public List<ConsentErrorCompanyStats> Companies { get; set; } = new();
     }
 }
