@@ -62,10 +62,10 @@ namespace IYSIntegration.API.Controllers
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
-        [HttpGet("getTacirPullConsents")]
-        public async Task<IActionResult> GetTacirPullConsents([FromQuery] int dayCount)
+        [HttpGet("BodCommercialConsents")]
+        public async Task<IActionResult> BodCommercialConsents([FromQuery] int dayCount)
         {
-            var result = await _pullConsentLookupService.GetRecentConsentsAsync(dayCount);
+            var result = await _pullConsentLookupService.BodCommercialConsents(dayCount);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
