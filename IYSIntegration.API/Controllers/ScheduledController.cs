@@ -11,6 +11,7 @@ namespace IYSIntegration.API.Controllers
     {
         private readonly SendConsentToIysService _singleConsentAddService;
         private readonly PullConsentFromIysService _pullConsentService;
+        private readonly PullConsentLookupService _pullConsentLookupService;
         private readonly SendConsentToSalesforceService _sfConsentService;
         private readonly ErrorReportingService _sendConsentErrorService;
         private readonly bool _isMetricsOnline;
@@ -19,6 +20,7 @@ namespace IYSIntegration.API.Controllers
         public ScheduledController(
                                    SendConsentToIysService singleConsentAddService,
                                    PullConsentFromIysService pullConsentService,
+                                   PullConsentLookupService pullConsentLookupService,
                                    SendConsentToSalesforceService sfConsentService,
                                    ErrorReportingService sendConsentErrorService,
                                    IConfiguration configuration
@@ -26,6 +28,7 @@ namespace IYSIntegration.API.Controllers
         {
             _singleConsentAddService = singleConsentAddService;
             _pullConsentService = pullConsentService;
+            _pullConsentLookupService = pullConsentLookupService;
             _sfConsentService = sfConsentService;
             _sendConsentErrorService = sendConsentErrorService;
             _configuration = configuration;
@@ -56,6 +59,13 @@ namespace IYSIntegration.API.Controllers
                 executionStopwatch.Stop();
                 result.AddMessage("Execution Time", $"{executionStopwatch.ElapsedMilliseconds} ms");
             }
+            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
+        }
+
+        [HttpGet("getTacirPullConsents")]
+        public async Task<IActionResult> GetTacirPullConsents([FromQuery] int dayCount)
+        {
+            var result = await _pullConsentLookupService.GetRecentConsentsAsync(dayCount);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 

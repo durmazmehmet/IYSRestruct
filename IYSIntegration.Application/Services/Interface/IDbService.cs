@@ -27,5 +27,6 @@ namespace IYSIntegration.Application.Services.Interface
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
         Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);
+        Task<List<PullConsentSummary>> GetPullConsentsAsync(DateTime startDate, string recipientType, IEnumerable<string> companyCodes);
     }
 }
