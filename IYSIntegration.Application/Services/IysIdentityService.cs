@@ -118,7 +118,7 @@ public class IysIdentityService : IIysIdentityService
             }
             else if (token?.TokenValidTill < DateTime.UtcNow)
             {
-                var previouseValidDate = token?.TokenValidTill ?? DateTime.MinValue;
+              var previouseValidDate = token?.TokenValidTill ?? DateTime.MinValue;
                 var refreshedToken = await RefreshToken(token, previouseValidDate);
 
                 if (refreshedToken is not null)
@@ -189,7 +189,7 @@ public class IysIdentityService : IIysIdentityService
         }
         catch (Exception ex)
         {
-                _logger.LogError(
+ _logger.LogError(
                     ex,
                     "Token loglaması sırasında hata oluştu (CompanyCode: {CompanyCode}, IysCode: {IysCode}, Operation: {Operation}, Server: {Server}).",
                     companyCode ?? string.Empty,
@@ -257,8 +257,7 @@ public class IysIdentityService : IIysIdentityService
 
         return string.Concat(firstPart, TokenMaskSeparator, lastPart);
     }
-
-    private string ResolveServerIdentifier()
+ private string ResolveServerIdentifier()
     {
         var configuredName = _config.GetValue<string>("ServerIdentifier");
 
