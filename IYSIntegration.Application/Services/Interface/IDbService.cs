@@ -1,4 +1,5 @@
-﻿using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Identity;
 using IYSIntegration.Application.Services.Models.Request;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using IYSIntegration.Application.Services.Models.Response.Schedule;
@@ -28,5 +29,6 @@ namespace IYSIntegration.Application.Services.Interface
         Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);
         Task<List<PullConsentSummary>> GetPullConsentsAsync(DateTime startDate, string recipientType, IEnumerable<string> companyCodes);
+        Task InsertTokenLogAsync(TokenLogEntry tokenLogEntry);
     }
 }
