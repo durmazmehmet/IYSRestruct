@@ -24,7 +24,6 @@ internal class Program
             var auth = config.GetValue<string>("BaseIysProxyAuth");
             return new IysProxy(url, auth);
         });
-        builder.Services.AddScoped<ISyncConsentService, SyncConsentService>();
         builder.Services.AddScoped<SendConsentToIysService>();
         builder.Services.AddScoped<PullConsentFromIysService>();
         builder.Services.AddScoped<SendConsentToSalesforceService>();
