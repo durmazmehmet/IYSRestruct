@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace IYSIntegration.Application.Services.Models.Response.Consent
 {
     public class MultipleQueryConsentResult
     {
-
         [JsonProperty("requestId")]
         public string RequestId { get; set; }
 

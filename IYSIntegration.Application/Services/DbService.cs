@@ -11,7 +11,9 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 namespace IYSIntegration.Application.Services
 {
     public class DbService : IDbService
