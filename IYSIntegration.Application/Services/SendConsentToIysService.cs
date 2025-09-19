@@ -10,9 +10,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+
 
 namespace IYSIntegration.Application.Services;
 
@@ -101,6 +103,7 @@ public class SendConsentToIysService
 
                 foreach (var consentGroup in groupedByRecipientAndType)
                 {
+
                     // Aynı kanal ve iletişim türü için bekleyen kayıtları birlikte değerlendiriyoruz.
                     var recipientType = consentGroup.Key.RecipientType;
                     var consentType = consentGroup.Key.Type;
@@ -355,6 +358,7 @@ public class SendConsentToIysService
         };
     }
 
+
     // Gönderim öncesi iş kurallarını tek noktada değerlendiriyoruz.
     private bool ShouldSkipConsent(ConsentRequestLog log, IDictionary<string, ConsentStateInfo> states, out string reason)
     {
@@ -372,6 +376,7 @@ public class SendConsentToIysService
         {
             return false;
         }
+
 
         states ??= new Dictionary<string, ConsentStateInfo>(StringComparer.OrdinalIgnoreCase);
         states.TryGetValue(recipient, out var existingState);
@@ -407,6 +412,7 @@ public class SendConsentToIysService
 
         return false;
     }
+
 
     private static bool NeedsApprovalRefresh(IEnumerable<ConsentRequestLog> consentGroup, IDictionary<string, ConsentStateInfo> states)
     {
@@ -481,13 +487,14 @@ public class SendConsentToIysService
         string? consentType,
         IReadOnlyCollection<string> recipients)
     {
-        var info = new QueryMultipleConsentInfo();
 
+        var info = new QueryMultipleConsentInfo();
         if (string.IsNullOrWhiteSpace(companyCode)
             || string.IsNullOrWhiteSpace(recipientType)
             || recipients == null
             || recipients.Count == 0)
         {
+
             return info;
         }
 
@@ -500,6 +507,7 @@ public class SendConsentToIysService
 
         if (recipientList.Count == 0)
         {
+
             return info;
         }
 
@@ -512,6 +520,7 @@ public class SendConsentToIysService
 
         try
         {
+
             var response = await _client.PostJsonAsync<RecipientKeyWithList, QueryMultipleConsentEnvelope>(
                 $"consents/{companyCode}/queryMultipleConsent",
                 request);
@@ -590,6 +599,7 @@ public class SendConsentToIysService
             IsOverdue = true
         };
     }
+
 
     // queryMultipleConsent yanıtındaki kayıtları ve mesajları tek noktada tutuyoruz.
     private sealed class QueryMultipleConsentInfo
