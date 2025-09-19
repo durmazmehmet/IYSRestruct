@@ -21,6 +21,7 @@ public class IysIdentityService : IIysIdentityService
     private readonly int RefreshTokenExpiry;
     private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private readonly ILogger<IysIdentityService> _logger;
+    private readonly string _serverIdentifier;
     private const int TokenMaskSegmentLength = 4;
     private const string TokenMaskSeparator = ".....";
     private const string OperationNew = "NEW";
@@ -38,6 +39,7 @@ public class IysIdentityService : IIysIdentityService
         _scopeFactory = scopeFactory;
         TokenExpiry = _config.GetValue<int>($"TokenExpiry", 7000);
         RefreshTokenExpiry = _config.GetValue<int>($"RefreshTokenExpiry", 14000);
+        _serverIdentifier = ResolveServerIdentifier();
     }
 
     private async Task<Token> GetNewToken(int iysCode, DateTime previousDate)
@@ -177,7 +179,8 @@ public class IysIdentityService : IIysIdentityService
                 RefreshTokenMasked = MaskToken(token.RefreshToken),
                 TokenCreateDateUtc = tokenCreateDate,
                 TokenRefreshDateUtc = token.RefreshDate != default ? token.RefreshDate : (DateTime?)null,
-                Operation = operation
+                Operation = operation,
+                ServerIdentifier = _serverIdentifier
             };
 
             using var scope = _scopeFactory.CreateScope();
@@ -186,12 +189,13 @@ public class IysIdentityService : IIysIdentityService
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Token loglaması sırasında hata oluştu (CompanyCode: {CompanyCode}, IysCode: {IysCode}, Operation: {Operation}).",
-                companyCode ?? string.Empty,
-                iysCode,
-                operation);
+        _logger.LogError(
+                    ex,
+                    "Token loglaması sırasında hata oluştu (CompanyCode: {CompanyCode}, IysCode: {IysCode}, Operation: {Operation}, Server: {Server}).",
+                    companyCode ?? string.Empty,
+                    iysCode,
+                    operation,
+                    _serverIdentifier);
         }
     }
 
@@ -252,5 +256,25 @@ public class IysIdentityService : IIysIdentityService
         var lastPart = trimmed.Substring(trimmed.Length - TokenMaskSegmentLength, TokenMaskSegmentLength);
 
         return string.Concat(firstPart, TokenMaskSeparator, lastPart);
+    }
+    
+private string ResolveServerIdentifier()
+    {
+        var configuredName = _config.GetValue<string>("ServerIdentifier");
+
+        if (!string.IsNullOrWhiteSpace(configuredName))
+        {
+            return configuredName.Trim();
+        }
+
+        try
+        {
+            var machineName = Environment.MachineName;
+            return string.IsNullOrWhiteSpace(machineName) ? "UNKNOWN" : machineName;
+        }
+        catch
+        {
+            return "UNKNOWN";
+        }
     }
 }

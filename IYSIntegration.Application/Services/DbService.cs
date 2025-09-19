@@ -73,7 +73,8 @@ namespace IYSIntegration.Application.Services
                     tokenLogEntry.RefreshTokenMasked,
                     tokenLogEntry.TokenCreateDateUtc,
                     tokenLogEntry.TokenRefreshDateUtc,
-                    tokenLogEntry.Operation
+                    tokenLogEntry.Operation,
+                    tokenLogEntry.ServerIdentifier
                 });
 
                 await connection.CloseAsync();

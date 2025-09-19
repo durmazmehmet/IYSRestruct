@@ -11,6 +11,7 @@
                     TokenCreateDateUtc,
                     TokenRefreshDateUtc,
                     Operation,
+                    ServerIdentifier,
                     CreatedAtUtc
                 )
             VALUES(
@@ -19,7 +20,8 @@
                 @RefreshTokenMasked,
                 @TokenCreateDateUtc,
                 @TokenRefreshDateUtc,
-                @Operation,
+                @Operation, 
+                @ServerIdentifier,
                 SYSUTCDATETIME()
                 );";
 
