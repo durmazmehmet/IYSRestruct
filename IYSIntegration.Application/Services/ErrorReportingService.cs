@@ -202,8 +202,6 @@ namespace IYSIntegration.Application.Services
 
                 var reportResult = new ConsentErrorReportStatsResult
                 {
-                    RangeStart = requestedRangeStart,
-                    RangeEnd = requestedRangeEnd,
                     DataRangeStart = dataRangeStart,
                     DataRangeEnd = dataRangeEnd,
                     Companies = stats
