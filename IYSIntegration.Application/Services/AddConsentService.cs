@@ -14,9 +14,9 @@ using System.Threading;
 namespace IYSIntegration.Application.Services;
 
 
-public class AddConsentService
+public class SendConsentToIysService
 {
-    private readonly ILogger<AddConsentService> _logger;
+    private readonly ILogger<SendConsentToIysService> _logger;
     private readonly IDbService _dbService;
     private readonly IysProxy _client;
     private readonly IIysHelper _iysHelper;
@@ -27,8 +27,8 @@ public class AddConsentService
         "H178"
     };
 
-    public AddConsentService(
-        ILogger<AddConsentService> logger,
+    public SendConsentToIysService(
+        ILogger<SendConsentToIysService> logger,
         IDbService dbHelper,
         IIysHelper iysHelper,
         IysProxy client)

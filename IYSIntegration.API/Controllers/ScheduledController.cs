@@ -7,13 +7,13 @@ namespace IYSIntegration.API.Controllers
     [Route("api/[controller]")]
     public class ScheduledController : ControllerBase
     {
-        private readonly AddConsentService _singleConsentAddService;
+        private readonly SendConsentToIysService _singleConsentAddService;
         private readonly PullConsentService _pullConsentService;
         private readonly SfConsentService _sfConsentService;
         private readonly SendConsentErrorService _sendConsentErrorService;
 
         public ScheduledController(
-                                   AddConsentService singleConsentAddService,
+                                   SendConsentToIysService singleConsentAddService,
                                    PullConsentService pullConsentService,
                                    SfConsentService sfConsentService,
                                    SendConsentErrorService sendConsentErrorService

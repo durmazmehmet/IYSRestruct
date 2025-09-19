@@ -112,47 +112,24 @@ namespace IYSIntegration.Application.Services
             }
         }
 
-
         public async Task<int> InsertConsentRequest(AddConsentRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.CompanyCode)
-                && !string.IsNullOrWhiteSpace(request.CompanyName))
-            {
-                request.CompanyCode = request.CompanyName;
-            }
-
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
-                var lastConsent = await connection.QueryFirstOrDefaultAsync<ConsentRequestLog>(QueryStrings.GetLastConsentRequest,
-                    new { request.CompanyCode, request.Consent.Recipient });
-
-                if (lastConsent != null &&
-                    lastConsent.IysCode == request.IysCode &&
-                    lastConsent.BrandCode == request.BrandCode &&
-                    lastConsent.ConsentDate == request.Consent.ConsentDate &&
-                    lastConsent.Source == request.Consent.Source &&
-                    lastConsent.RecipientType == request.Consent.RecipientType &&
-                    lastConsent.Status == request.Consent.Status &&
-                    lastConsent.Type == request.Consent.Type)
-                {
-                    connection.Close();
-                    return 0;
-                }
-
                 var result = await connection.ExecuteScalarAsync<int>(QueryStrings.InsertConsentRequest,
                     new
                     {
-                        request.CompanyCode,
-                        request.SalesforceId,
-                        request.IysCode,
-                        request.BrandCode,
-                        request.Consent.ConsentDate,
-                        request.Consent.Source,
-                        request.Consent.Recipient,
-                        request.Consent.RecipientType,
-                        request.Consent.Status,
-                        request.Consent.Type
+                        CompanyCode = request.CompanyCode,
+                        SalesforceId = request.SalesforceId,
+                        IysCode = request.IysCode,
+                        BrandCode = request.BrandCode,
+                        ConsentDate = request.Consent.ConsentDate,
+                        Source = request.Consent.Source,
+                        Recipient = request.Consent.Recipient,
+                        RecipientType = request.Consent.RecipientType,
+                        Status = request.Consent.Status,
+                        Type = request.Consent.Type
                     });
                 connection.Close();
 

@@ -40,8 +40,8 @@ public class IysIdentityService : IIysIdentityService
         if (response.IsSuccessful)
         {
             var token = JsonConvert.DeserializeObject<Token>(response.Content);
-            token.TokenValidTill = DateTime.UtcNow.AddSeconds(token.ExpiresIn);
-            token.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(token.RefreshExpiresIn);
+            token.TokenValidTill = DateTime.UtcNow.AddMinutes(110);
+            token.RefreshTokenValidTill = DateTime.UtcNow.AddMinutes(230);
             return token;
         }
         else
@@ -64,8 +64,8 @@ public class IysIdentityService : IIysIdentityService
         if (response.IsSuccessful)
         {
             var refreshToken = JsonConvert.DeserializeObject<Token>(response.Content);
-            refreshToken.TokenValidTill = DateTime.UtcNow.AddSeconds(refreshToken.ExpiresIn);
-            refreshToken.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(refreshToken.RefreshExpiresIn);
+            refreshToken.TokenValidTill = DateTime.UtcNow.AddMinutes(110);
+            refreshToken.RefreshTokenValidTill = DateTime.UtcNow.AddMinutes(230);
             return refreshToken;
         }
         else
