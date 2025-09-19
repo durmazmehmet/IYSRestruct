@@ -603,6 +603,19 @@
                 ORDER BY CreateDate ASC;
                 ";
 
+        public static string GetPullConsentsByFilter = @"
+            SELECT
+                                Id,
+                                Recipient,
+                                [Type],
+                                Status
+                        FROM dbo.IysPullConsent (nolock)
+                WHERE CompanyCode IN @CompanyCodes
+                  AND RecipientType = @RecipientType
+                  AND CreateDate >= @StartDate
+                ORDER BY CreateDate DESC;
+                ";
+
         public static string UpdatePullConsentStatuses = @"
             UPDATE dbo.IysPullConsent
             SET Status = @Status,
