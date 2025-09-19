@@ -10,13 +10,13 @@ using System.Drawing;
 
 namespace IYSIntegration.Application.Services
 {
-    public class SendConsentErrorService
+    public class ErrorReportingService
     {
-        private readonly ILogger<SendConsentErrorService> _logger;
+        private readonly ILogger<ErrorReportingService> _logger;
         private readonly IDbService _dbService;
         private string SmallDateFormat => "yyyy.MM.dd";
 
-        public SendConsentErrorService(ILogger<SendConsentErrorService> logger, IDbService dbHelper)
+        public ErrorReportingService(ILogger<ErrorReportingService> logger, IDbService dbHelper)
         {
             _logger = logger;
             _dbService = dbHelper;

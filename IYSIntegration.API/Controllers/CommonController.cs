@@ -16,12 +16,12 @@ namespace IYSIntegration.API.Controllers
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
-        private readonly SendConsentErrorService _sendConsentErrorService;
+        private readonly ErrorReportingService _sendConsentErrorService;
         public CommonController(
             IDbService dbHelper,
             IysProxy iysClient,
             IIysHelper iysHelper,
-            SendConsentErrorService sendConsentErrorService
+            ErrorReportingService sendConsentErrorService
             )
         {
             _dbService = dbHelper;
@@ -213,10 +213,7 @@ namespace IYSIntegration.API.Controllers
         [Route("queryConsent")]
         [HttpPost]
         public async Task<ResponseBase<QueryConsentResult>> QueryConsent([FromBody] QueryConsentRequest request)
-        {
-            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
-            return await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{request.CompanyCode}/queryConsent", request.RecipientKey);
-        }
+            => await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{request.CompanyCode}/queryConsent", request.RecipientKey);
 
         /// <summary>
         /// IYS'den çoklu izin sorgulama (tek seferde en fazla 1000 kayıt sorgulanabilir)
@@ -226,10 +223,7 @@ namespace IYSIntegration.API.Controllers
         [Route("queryMultipleConsent")]
         [HttpPost]
         public async Task<ResponseBase<MultipleQueryConsentResult>> QueryMultipleConsent([FromBody] QueryMutipleConsentRequest request)
-        {
-            request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
-            return await _client.PostJsonAsync<RecipientKeyWithList, MultipleQueryConsentResult>($"consents/{request.CompanyCode}/queryMultipleConsent", request.RecipientKeyWithList);
-        }
+            => await _client.PostJsonAsync<RecipientKeyWithList, MultipleQueryConsentResult>($"consents/{request.CompanyCode}/queryMultipleConsent", request.RecipientKeyWithList);
 
         /// <summary>
         /// IYSConsentRequest ve IYSCallLog sorgulanır
@@ -294,7 +288,6 @@ namespace IYSIntegration.API.Controllers
         public async Task<ResponseBase<PullConsentResult>> PullConsent(PullConsentRequest request)
         {
             request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, null, request.IysCode);
-
             return await _client.PostJsonAsync<PullConsentRequest, PullConsentResult>($"consents/{request.CompanyCode}/pullConsent", request);
         }
 

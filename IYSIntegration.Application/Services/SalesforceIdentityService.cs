@@ -8,14 +8,14 @@ using RestSharp;
 
 namespace IYSIntegration.Application.Services;
 
-public class SfIdentityService : ISfIdentityService
+public class SalesforceIdentityService : ISfIdentityService
 {
     private readonly IConfiguration _config;
     private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private readonly ICacheService _cacheService;
-    private readonly ILogger<SfIdentityService> _logger;
+    private readonly ILogger<SalesforceIdentityService> _logger;
 
-    public SfIdentityService(IConfiguration config, ICacheService cacheService, ILogger<SfIdentityService> logger)
+    public SalesforceIdentityService(IConfiguration config, ICacheService cacheService, ILogger<SalesforceIdentityService> logger)
     {
         _config = config;
         _cacheService = cacheService;

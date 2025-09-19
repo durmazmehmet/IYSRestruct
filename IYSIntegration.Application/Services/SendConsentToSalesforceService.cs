@@ -8,13 +8,13 @@ using System.Collections.Concurrent;
 
 namespace IYSIntegration.Application.Services
 {
-    public class SfConsentService
+    public class SendConsentToSalesforceService
     {
-        private readonly ILogger<SfConsentService> _logger;
+        private readonly ILogger<SendConsentToSalesforceService> _logger;
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
 
-        public SfConsentService(ILogger<SfConsentService> logger, IDbService dbHelper, IysProxy client)
+        public SendConsentToSalesforceService(ILogger<SendConsentToSalesforceService> logger, IDbService dbHelper, IysProxy client)
         {
             _logger = logger;
             _dbService = dbHelper;

@@ -25,10 +25,10 @@ internal class Program
             return new IysProxy(url, auth);
         });
         builder.Services.AddScoped<ISyncConsentService, SyncConsentService>();
-        builder.Services.AddScoped<AddConsentService>();
-        builder.Services.AddScoped<PullConsentService>();
-        builder.Services.AddScoped<SfConsentService>();
-        builder.Services.AddScoped<SendConsentErrorService>();
+        builder.Services.AddScoped<SendConsentToIysService>();
+        builder.Services.AddScoped<PullConsentFromIysService>();
+        builder.Services.AddScoped<SendConsentToSalesforceService>();
+        builder.Services.AddScoped<ErrorReportingService>();
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();

@@ -8,14 +8,14 @@ using System.Collections.Concurrent;
 
 namespace IYSIntegration.Application.Services
 {
-    public class PullConsentService
+    public class PullConsentFromIysService
     {
-        private readonly ILogger<PullConsentService> _logger;
+        private readonly ILogger<PullConsentFromIysService> _logger;
         private readonly IDbService _dbService;
         private readonly IysProxy _client;
         private readonly IIysHelper _iysHelper;
 
-        public PullConsentService(ILogger<PullConsentService> logger, IDbService dbHelper, IIysHelper iysHelper, IysProxy client)
+        public PullConsentFromIysService(ILogger<PullConsentFromIysService> logger, IDbService dbHelper, IIysHelper iysHelper, IysProxy client)
         {
             _logger = logger;
             _dbService = dbHelper;
