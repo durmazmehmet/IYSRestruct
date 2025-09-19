@@ -8,8 +8,7 @@
                     CompanyCode,
                     AccessTokenMasked,
                     RefreshTokenMasked,
-                    TokenCreateDateUtc,
-                    TokenRefreshDateUtc,
+                    TokenUpdateDateUtc,
                     Operation,
                     ServerIdentifier,
                     CreatedAtUtc
@@ -18,9 +17,8 @@
                 @CompanyCode,
                 @AccessTokenMasked,
                 @RefreshTokenMasked,
-                @TokenCreateDateUtc,
-                @TokenRefreshDateUtc,
- @Operation, 
+                @TokenUpdateDateUtc,
+                @Operation, 
                 @ServerIdentifier,
                 SYSUTCDATETIME()
                 );";

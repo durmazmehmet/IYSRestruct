@@ -42,7 +42,7 @@ public class IysIdentityService : IIysIdentityService
         _serverIdentifier = ResolveServerIdentifier();
     }
 
-    private async Task<Token> GetNewToken(int iysCode, DateTime previousDate)
+    private async Task<Token> GetNewToken(int iysCode)
     {
 
         var IYSCredential = new Credential
@@ -62,8 +62,6 @@ public class IysIdentityService : IIysIdentityService
             var token = JsonConvert.DeserializeObject<Token>(response.Content);
             token.TokenValidTill = DateTime.UtcNow.AddSeconds(TokenExpiry);
             token.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(RefreshTokenExpiry);
-            token.CreateDate = DateTime.UtcNow;
-            token.PreviousDate = previousDate;
             return token;
         }
         else
@@ -73,7 +71,7 @@ public class IysIdentityService : IIysIdentityService
         }
     }
 
-    private async Task<Token> RefreshToken(Token token, DateTime previousDate)
+    private async Task<Token> RefreshToken(Token token)
     {
 
         var client = new RestClient(_config.GetValue<string>($"BaseUrl"));
@@ -88,9 +86,6 @@ public class IysIdentityService : IIysIdentityService
             var refreshToken = JsonConvert.DeserializeObject<Token>(response.Content);
             refreshToken.TokenValidTill = DateTime.UtcNow.AddSeconds(TokenExpiry);
             refreshToken.RefreshTokenValidTill = DateTime.UtcNow.AddSeconds(RefreshTokenExpiry);
-            refreshToken.CreateDate = token.CreateDate == default ? DateTime.UtcNow : token.CreateDate;
-            refreshToken.RefreshDate = DateTime.UtcNow;
-            refreshToken.PreviousDate = previousDate;
             return refreshToken;
         }
         else
@@ -110,16 +105,14 @@ public class IysIdentityService : IIysIdentityService
 
             if (string.IsNullOrEmpty(token?.AccessToken ?? null) || token?.RefreshTokenValidTill < DateTime.UtcNow)
             {
-                var previouseValidDate = token?.RefreshTokenValidTill ?? DateTime.MinValue;
-                token = await GetNewToken(iysCode, previouseValidDate) ?? throw new Exception("Token alınamadı");
+                token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
                 await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
                 await LogTokenLifecycleAsync(iysCode, token, OperationNew);
 
             }
             else if (token?.TokenValidTill < DateTime.UtcNow)
             {
-              var previouseValidDate = token?.TokenValidTill ?? DateTime.MinValue;
-                var refreshedToken = await RefreshToken(token, previouseValidDate);
+                var refreshedToken = await RefreshToken(token);
 
                 if (refreshedToken is not null)
                 {
@@ -129,7 +122,7 @@ public class IysIdentityService : IIysIdentityService
                 }
                 else
                 {
-                    token = await GetNewToken(iysCode, previouseValidDate) ?? throw new Exception("Token alınamadı");
+                    token = await GetNewToken(iysCode) ?? throw new Exception("Token alınamadı");
                     await _cacheService.SetCacheHashDataAsync("IYS_Token", iysCode.ToString(), token);
                     await LogTokenLifecycleAsync(iysCode, token, OperationNew);
                 }
@@ -166,19 +159,12 @@ public class IysIdentityService : IIysIdentityService
                 companyCode = iysCode.ToString(CultureInfo.InvariantCulture);
             }
 
-            var tokenCreateDate = token.CreateDate != default
-                ? token.CreateDate
-                : token.RefreshDate != default
-                    ? token.RefreshDate
-                    : DateTime.UtcNow;
-
             var logEntry = new TokenLogEntry
             {
                 CompanyCode = companyCode,
                 AccessTokenMasked = MaskToken(token.AccessToken),
                 RefreshTokenMasked = MaskToken(token.RefreshToken),
-                TokenCreateDateUtc = tokenCreateDate,
-                TokenRefreshDateUtc = token.RefreshDate != default ? token.RefreshDate : (DateTime?)null,
+                TokenUpdateDateUtc = DateTime.UtcNow,
                 Operation = operation,
                 ServerIdentifier = _serverIdentifier
             };

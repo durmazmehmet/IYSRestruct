@@ -24,39 +24,6 @@ namespace IYSIntegration.Application.Services.Models.Response.Identity
 
         [JsonProperty("refreshTokenValidTill")]
         public DateTime? RefreshTokenValidTill { get; set; }
-
-        [JsonProperty("tokenValidTillLocal")]
-        public string? TokenValidTillLocal => FormatUtcPlus3Date(TokenValidTill);
-
-        [JsonProperty("refreshTokenValidTillLocal")]
-        public string? RefreshTokenValidTillLocal => FormatUtcPlus3Date(RefreshTokenValidTill);
-
-        [JsonIgnore]
-        public DateTime RefreshDate { get; set; }
-
-        [JsonIgnore]
-        public DateTime CreateDate { get; set; }
-        public DateTime PreviousDate { get; internal set; }
-
-        private static string? FormatUtcPlus3Date(DateTime? dateTime)
-        {
-            if (!dateTime.HasValue)
-            {
-                return null;
-            }
-
-            var utcDateTime = dateTime.Value;
-
-            utcDateTime = utcDateTime.Kind switch
-            {
-                DateTimeKind.Unspecified => DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc),
-                DateTimeKind.Local => utcDateTime.ToUniversalTime(),
-                _ => utcDateTime
-            };
-
-            var utcPlusThree = utcDateTime.ToUniversalTime().AddHours(3);
-
-            return $"{utcPlusThree:yyyy-MM-dd HH:mm:ss} (UTC+3)";
+       
         }
-    }
 }

@@ -71,8 +71,7 @@ namespace IYSIntegration.Application.Services
                     tokenLogEntry.CompanyCode,
                     tokenLogEntry.AccessTokenMasked,
                     tokenLogEntry.RefreshTokenMasked,
-                    tokenLogEntry.TokenCreateDateUtc,
-                    tokenLogEntry.TokenRefreshDateUtc,
+                    tokenLogEntry.TokenUpdateDateUtc,
                     tokenLogEntry.Operation,
                     tokenLogEntry.ServerIdentifier
                 });
