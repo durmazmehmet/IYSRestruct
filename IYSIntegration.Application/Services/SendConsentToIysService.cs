@@ -14,6 +14,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 
+
 namespace IYSIntegration.Application.Services;
 
 public class SendConsentToIysService
@@ -112,6 +113,7 @@ public class SendConsentToIysService
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .ToList();
 
+
                     var approvedRecipients = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                     // Bekleyen kayıtlar arasındaki en güncel log'u belirlemek için bir sözlük tutuyoruz.
@@ -153,7 +155,6 @@ public class SendConsentToIysService
                             }
 
                             approvedRecipients.Add(trimmedRecipient);
-
                             if (!string.IsNullOrWhiteSpace(entry.Reason))
                             {
                                 response.AddMessage(
@@ -379,6 +380,7 @@ public class SendConsentToIysService
             return false;
         }
 
+
         approvedRecipients ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (latestPending != null && latestPending.Id != log.Id)
@@ -403,7 +405,6 @@ public class SendConsentToIysService
         }
 
         var logDate = ParseConsentDate(log.ConsentDate);
-
         if (logDate.HasValue && logDate.Value < DateTime.UtcNow.AddDays(-3))
         {
             reason = $"SKIP_OUTDATED_CONSENT: Pending consent date {logDate:O} is older than 3 days.";
@@ -455,8 +456,8 @@ public class SendConsentToIysService
         string? consentType,
         IReadOnlyCollection<string> recipients)
     {
-        var info = new QueryMultipleConsentInfo();
 
+        var info = new QueryMultipleConsentInfo();
         if (string.IsNullOrWhiteSpace(companyCode)
             || string.IsNullOrWhiteSpace(recipientType)
             || recipients == null

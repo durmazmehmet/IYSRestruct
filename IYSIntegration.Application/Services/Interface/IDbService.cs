@@ -16,6 +16,11 @@ namespace IYSIntegration.Application.Services.Interface
         Task<bool> PullConsentExists(string companyCode, string recipient, string? type = null);
         Task<bool> SuccessfulConsentRequestExists(string companyCode, string recipient, string? type = null);
         Task<List<string>> GetExistingConsentRecipients(string companyCode, string? type, IEnumerable<string> recipients);
+        Task<Dictionary<string, ConsentStateInfo>> GetLatestConsentStatesAsync(
+            string companyCode,
+            string recipientType,
+            string? type,
+            IEnumerable<string> recipients);
         Task UpdateConsentResponseFromResponse(ResponseBase<AddConsentResult> response);
         Task<ConsentResultLog> GetConsentRequest(string id);
         Task<List<ConsentRequestLog>> GetPendingConsents(int rowCount);
