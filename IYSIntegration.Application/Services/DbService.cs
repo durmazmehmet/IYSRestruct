@@ -2,6 +2,7 @@
 using IYSIntegration.Application.Services.Constants;
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
+using IYSIntegration.Application.Services.Models.Identity;
 using IYSIntegration.Application.Services.Models.Request;
 using IYSIntegration.Application.Services.Models.Response.Consent;
 using IYSIntegration.Application.Services.Models.Response.Schedule;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
+using System;
 using System.Data.SqlClient;
 namespace IYSIntegration.Application.Services
 {
@@ -50,6 +52,32 @@ namespace IYSIntegration.Application.Services
                 connection.Close();
 
                 return result;
+            }
+        }
+
+        public async Task InsertTokenLogAsync(TokenLogEntry tokenLogEntry)
+        {
+            if (tokenLogEntry is null)
+            {
+                throw new ArgumentNullException(nameof(tokenLogEntry));
+            }
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                await connection.ExecuteAsync(QueryStrings.InsertTokenLog, new
+                {
+                    tokenLogEntry.CompanyCode,
+                    tokenLogEntry.AccessTokenMasked,
+                    tokenLogEntry.RefreshTokenMasked,
+                    tokenLogEntry.TokenCreateDateUtc,
+                    tokenLogEntry.TokenRefreshDateUtc,
+                    tokenLogEntry.Operation,
+                    tokenLogEntry.ServerIdentifier
+                });
+
+                await connection.CloseAsync();
             }
         }
 

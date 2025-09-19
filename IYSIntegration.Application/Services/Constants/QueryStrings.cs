@@ -2,9 +2,32 @@
 {
     public partial class QueryStrings
     {
+        public static string InsertTokenLog = @"
+            INSERT INTO SfdcMasterData.dbo.IYSTokenLog
+                (
+                    CompanyCode,
+                    AccessTokenMasked,
+                    RefreshTokenMasked,
+                    TokenCreateDateUtc,
+                    TokenRefreshDateUtc,
+                    Operation,
+                    ServerIdentifier,
+                    CreatedAtUtc
+                )
+            VALUES(
+                @CompanyCode,
+                @AccessTokenMasked,
+                @RefreshTokenMasked,
+                @TokenCreateDateUtc,
+                @TokenRefreshDateUtc,
+                @Operation,
+                @ServerIdentifier,
+                SYSUTCDATETIME()
+                );";
+
         public static string InsertRequest = @"
             INSERT INTO SfdcMasterData.dbo.IYSCallLog
-                (IysCode, 
+                (IysCode,
                  Action,
                  Url, 
                  Method,   
