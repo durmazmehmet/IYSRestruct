@@ -1,4 +1,3 @@
-using System;
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request;
@@ -9,11 +8,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Threading;
-
 
 namespace IYSIntegration.Application.Services;
 
@@ -23,24 +18,11 @@ public class SendConsentToIysService
     private readonly IDbService _dbService;
     private readonly IIysProxy _client;
     private readonly IIysHelper _iysHelper;
-    private static readonly HashSet<string> ApprovalStatuses = new(StringComparer.OrdinalIgnoreCase)
+
+    private static readonly HashSet<string> OverdueErrorCodes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "ON",
-        "ONAY"
+        "H174", "H175", "H178"
     };
-    private static readonly HashSet<string> RejectionStatuses = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "RET",
-        "RED"
-    };
-    private const int ConsentFreshnessDays = 3;
-    private static readonly HashSet<string> OverdueErrorCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "H174",
-        "H175",
-        "H178"
-    };
-    private sealed record QueryMultipleConsentCache(bool Success, HashSet<string> Recipients);
 
     public SendConsentToIysService(
         ILogger<SendConsentToIysService> logger,
@@ -66,7 +48,6 @@ public class SendConsentToIysService
 
         try
         {
-            // Bekleyen izin kayıtlarını çekip şirket bazında gruplayacağız.
             var pendingConsents = await _dbService.GetPendingConsents(rowCount);
             var groupedConsents = new Dictionary<string, List<ConsentRequestLog>>(StringComparer.OrdinalIgnoreCase);
 
@@ -104,72 +85,38 @@ public class SendConsentToIysService
 
             foreach (var group in groupedConsents)
             {
+                var companyCode = group.Key;
 
-                var queryCache = new Dictionary<string, QueryMultipleConsentCache>();
+                var groupedByRecipientAndType = group.Value
+                    .GroupBy(log => new ConsentGroupKey(
+                            log.RecipientType?.Trim() ?? string.Empty,
+                            log.Type?.Trim() ?? string.Empty),
+                        ConsentGroupKeyComparer.Instance);
 
-                foreach (var log in group.Value)
+                foreach (var consentGroup in groupedByRecipientAndType)
                 {
-                    var cacheKey = BuildRecipientTypeCacheKey(log);
+                    var recipientType = consentGroup.Key.RecipientType;
+                    var consentType = consentGroup.Key.Type;
 
-                    if (!queryCache.TryGetValue(cacheKey, out var queryInfo))
-                    {
-                        var recipients = group.Value
-                            .Where(x => string.Equals(x.RecipientType, log.RecipientType, StringComparison.OrdinalIgnoreCase)
-                                && string.Equals(x.Type, log.Type, StringComparison.OrdinalIgnoreCase))
-                            .Select(x => NormalizeRecipient(x.Recipient))
-                            .Where(r => !string.IsNullOrWhiteSpace(r))
-                            .Distinct(StringComparer.OrdinalIgnoreCase)
-                            .ToList();
+                    var recipients = consentGroup
+                        .Select(log => log.Recipient)
+                        .Where(recipient => !string.IsNullOrWhiteSpace(recipient))
+                        .Select(recipient => recipient!.Trim())
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
 
-                        queryInfo = await QueryExistingConsentsAsync(group.Key, log.RecipientType, log.Type, recipients);
-                        queryCache[cacheKey] = queryInfo;
-                    }
+                    var approvedRecipients = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var latestPendingByRecipient = new Dictionary<string, ConsentRequestLog>(StringComparer.OrdinalIgnoreCase);
 
-                    var skipReason = GetSkipReason(log, queryInfo);
-
-                    if (!string.IsNullOrEmpty(skipReason))
-                    {
-                        results.Add(new LogResult
-                        {
-                            Id = log.Id,
-                            CompanyCode = group.Key,
-                            Status = "Skipped",
-                            Messages = new Dictionary<string, string>
-                            {
-                                { "Skip", skipReason }
-                            }
-                        });
-
-                        responseUpdates.Add(new ConsentResponseUpdate
-                        {
-                            Id = log.Id,
-                            LogId = log.LogId ?? 0,
-                            IsSuccess = false,
-                            TransactionId = null,
-                            CreationDate = null,
-                            BatchError = skipReason,
-                            IsOverdue = true
-                        });
-
-                        Interlocked.Increment(ref failedCount);
-                        continue;
-                    }
-
-                    try
+                    foreach (var pending in consentGroup)
                     {
                         var pendingRecipient = pending.Recipient?.Trim();
-                        if (string.IsNullOrWhiteSpace(pendingRecipient))
-                        {
-                            continue;
-                        }
+                        if (string.IsNullOrWhiteSpace(pendingRecipient)) continue;
 
                         if (!latestPendingByRecipient.ContainsKey(pendingRecipient))
-                        {
                             latestPendingByRecipient[pendingRecipient] = pending;
-                        }
                     }
 
-                    // ON durumlu kayıtlar için IYS'deki son onayları sorguluyoruz.
                     if (consentGroup.Any(log => string.Equals(log.Status?.Trim(), "ON", StringComparison.OrdinalIgnoreCase)))
                     {
                         var queryInfo = await GetApprovedConsentEntriesAsync(
@@ -179,31 +126,30 @@ public class SendConsentToIysService
                             recipients);
 
                         if (queryInfo.Messages.Count > 0)
-                        {
                             response.AddMessage(queryInfo.Messages);
-                        }
 
                         foreach (var entry in queryInfo.Entries)
                         {
+                            var trimmedRecipient = entry?.Recipient?.Trim();
+                            if (string.IsNullOrWhiteSpace(trimmedRecipient)) continue;
 
-                            Interlocked.Increment(ref successCount);
-                            var normalizedRecipient = NormalizeRecipient(log.Recipient);
-                            if (!string.IsNullOrWhiteSpace(normalizedRecipient))
+                            approvedRecipients.Add(trimmedRecipient);
+
+                            if (!string.IsNullOrWhiteSpace(entry.Reason))
                             {
-                                queryInfo.Recipients.Add(normalizedRecipient);
+                                response.AddMessage(
+                                    $"query.reason.{companyCode}.{trimmedRecipient}",
+                                    entry.Reason!.Trim());
                             }
                         }
                     }
 
                     foreach (var log in consentGroup)
                     {
-                        // Gönderimden önce iş kurallarını uyguluyoruz.
                         ConsentRequestLog? latestPending = null;
                         var trimmedRecipient = log.Recipient?.Trim();
                         if (!string.IsNullOrWhiteSpace(trimmedRecipient))
-                        {
                             latestPendingByRecipient.TryGetValue(trimmedRecipient, out latestPending);
-                        }
 
                         if (ShouldSkipConsent(log, approvedRecipients, latestPending, out var skipReason))
                         {
@@ -212,10 +158,10 @@ public class SendConsentToIysService
                             {
                                 Id = log.Id,
                                 CompanyCode = companyCode,
-                                Status = "Skipped",
+                                Status = "Atlandı",
                                 Messages = new Dictionary<string, string>
                                 {
-                                    { "SkipReason", skipReason }
+                                    { "Neden", skipReason }
                                 }
                             });
                             continue;
@@ -223,7 +169,6 @@ public class SendConsentToIysService
 
                         try
                         {
-                            // IYS servis çağrısında kullanılacak isteği hazırlıyoruz.
                             var request = new AddConsentRequest
                             {
                                 IysCode = log.IysCode,
@@ -240,22 +185,18 @@ public class SendConsentToIysService
                                 }
                             };
 
-                            var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>("consents/{companyCode}/addConsent", request.Consent);
+                            var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>(
+                                $"consents/{companyCode}/addConsent", request.Consent);
 
                             addResponse.Id = log.Id;
 
                             var update = CreateConsentResponseUpdate(addResponse, out var addMessage);
-                            if (update != null)
-                            {
-                                responseUpdates.Add(update);
-                            }
+                            if (update != null) responseUpdates.Add(update);
 
                             if (addMessage.HasValue)
-                            {
                                 response.AddMessage(addMessage.Value.Key, addMessage.Value.Value);
-                            }
 
-                            if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
+                            if (addResponse.IsSuccessful() && addResponse.HttpStatusCode is >= 200 and < 300)
                             {
                                 Interlocked.Increment(ref successCount);
                             }
@@ -267,65 +208,59 @@ public class SendConsentToIysService
                                     CompanyCode = companyCode,
                                     Messages = new Dictionary<string, string>
                                     {
-                                        { "Add Error", BuildErrorMessage(addResponse) }
+                                        { "Ekleme Hatası", BuildErrorMessage(addResponse) }
                                     }
                                 });
                                 Interlocked.Increment(ref failedCount);
                             }
-
                         }
                         catch (Exception ex)
                         {
-                            results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
+                            results.Add(new LogResult
+                            {
+                                Id = log.Id,
+                                CompanyCode = companyCode,
+                                Messages = new Dictionary<string, string> { { "Hata", ex.Message } }
+                            });
                             Interlocked.Increment(ref failedCount);
-                            _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
+                            _logger.LogError(ex, "SingleConsentAddService servisinde hata: log ID {Id}", log.Id);
                             response.Error();
                         }
                     }
-
-                    queryCache[cacheKey] = queryInfo;
                 }
             }
-
-
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Fatal error in SingleConsentAddService");
-            results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Failed", Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
-            response.Error("SINGLE_CONSENT_ADD_FATAL", "Service failed with an unexpected exception.");
+            _logger.LogError(ex, "SingleConsentAddService gene hata");
+            results.Add(new LogResult { Id = 0, CompanyCode = "", Status = "Hata", Messages = new Dictionary<string, string> { { "Hata", ex.Message } } });
+            response.Error("SingleConsentAddService", "Beklenmeyen hata");
         }
 
         var updatesToPersist = responseUpdates.ToList();
-
-        if (updatesToPersist.Any())
+        if (updatesToPersist.Count > 0)
         {
-            foreach (var update in updatesToPersist)
-            {
-                ApplyConsentResponseBusinessRules(update);
-            }
             try
             {
                 await _dbService.UpdateConsentResponses(updatesToPersist);
             }
             catch (Exception ex)
             {
-
-                _logger.LogError(ex, "Failed to update consent responses after processing consents.");
+                _logger.LogError(ex, "Kayıt durum güncellenirken hata");
+                response.AddMessage("Veritabanı", ex.Message);
+                response.Error();
             }
         }
 
         foreach (var result in results)
-        {
             response.AddMessage(result.GetMessages());
-        }
+
         response.Data = new ScheduledJobStatistics
         {
             SuccessCount = successCount,
             FailedCount = failedCount
         };
 
-        // Tüm toplu mesajları tek seferde logluyoruz.
         if (response.Messages is { Count: > 0 })
         {
             foreach (var message in response.Messages)
@@ -337,153 +272,12 @@ public class SendConsentToIysService
         return response;
     }
 
-
-    private static string BuildRecipientTypeCacheKey(ConsentRequestLog log)
-    {
-        var recipientType = log.RecipientType?.Trim().ToUpperInvariant() ?? string.Empty;
-        var type = log.Type?.Trim().ToUpperInvariant() ?? string.Empty;
-
-        return $"{recipientType}|{type}";
-    }
-
-    private async Task<QueryMultipleConsentCache> QueryExistingConsentsAsync(
-        string companyCode,
-        string? recipientType,
-        string? consentType,
-        IReadOnlyCollection<string> recipients)
-    {
-        if (string.IsNullOrWhiteSpace(companyCode)
-            || string.IsNullOrWhiteSpace(recipientType)
-            || string.IsNullOrWhiteSpace(consentType)
-            || recipients == null
-            || recipients.Count == 0)
-        {
-            return CreateEmptyQueryResult();
-        }
-
-        try
-        {
-            var request = new RecipientKeyWithList
-            {
-                RecipientType = recipientType,
-                Type = consentType,
-                Recipients = recipients
-                    .Where(r => !string.IsNullOrWhiteSpace(r))
-                    .Select(r => r.Trim())
-                    .ToList()
-            };
-
-            var response = await _client.PostJsonAsync<RecipientKeyWithList, MultipleQueryConsentResult>(
-                $"consents/{companyCode}/queryMultipleConsent",
-                request);
-
-            if (response.IsSuccessful() && response.HttpStatusCode >= 200 && response.HttpStatusCode < 300)
-            {
-                var recipientsFromResponse = (response.Data?.List ?? new List<string>())
-                    .Select(NormalizeRecipient)
-                    .Where(r => !string.IsNullOrWhiteSpace(r))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                return new QueryMultipleConsentCache(true, recipientsFromResponse);
-            }
-
-            _logger.LogWarning(
-                "queryMultipleConsent failed for company {CompanyCode} ({RecipientType}/{Type}) with status {Status}",
-                companyCode,
-                recipientType,
-                consentType,
-                response.HttpStatusCode);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Exception while querying existing consents for company {CompanyCode} ({RecipientType}/{Type})",
-                companyCode,
-                recipientType,
-                consentType);
-        }
-
-        return CreateEmptyQueryResult();
-    }
-
-    private static QueryMultipleConsentCache CreateEmptyQueryResult()
-        => new(false, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-
-    private static string? NormalizeRecipient(string? recipient)
-        => string.IsNullOrWhiteSpace(recipient) ? null : recipient.Trim();
-
-    private static string? GetSkipReason(ConsentRequestLog log, QueryMultipleConsentCache queryInfo)
-    {
-        if (IsConsentOlderThanThreshold(log.ConsentDate, out var dateReason))
-        {
-            return dateReason;
-        }
-
-        if (!queryInfo.Success)
-        {
-            return null;
-        }
-
-        var normalizedRecipient = NormalizeRecipient(log.Recipient);
-        var existsInList = !string.IsNullOrWhiteSpace(normalizedRecipient)
-            && queryInfo.Recipients.Contains(normalizedRecipient!);
-
-        var status = log.Status?.Trim();
-
-        if (IsApprovalStatus(status) && existsInList)
-        {
-            return "Rıza zaten IYS listesinde mevcut.";
-        }
-
-        if (IsRejectionStatus(status) && !existsInList)
-        {
-            return "IYS listesinde olmayan rıza için ret gönderilemez.";
-        }
-
-        return null;
-    }
-
-    private static bool IsConsentOlderThanThreshold(string? consentDate, out string? reason)
-    {
-        reason = null;
-
-        if (string.IsNullOrWhiteSpace(consentDate))
-        {
-            return false;
-        }
-
-        if (DateTimeOffset.TryParse(
-                consentDate,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-                out var parsedDate))
-        {
-            if (parsedDate < DateTimeOffset.UtcNow.AddDays(-ConsentFreshnessDays))
-            {
-                reason = "Rıza tarihi 3 günden eski.";
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsApprovalStatus(string? status)
-        => !string.IsNullOrWhiteSpace(status) && ApprovalStatuses.Contains(status.Trim());
-
-    private static bool IsRejectionStatus(string? status)
-        => !string.IsNullOrWhiteSpace(status) && RejectionStatuses.Contains(status.Trim());
-
-    private ConsentResponseUpdate? CreateConsentResponseUpdate(ResponseBase<AddConsentResult> response)
+    private ConsentResponseUpdate? CreateConsentResponseUpdate(
+        ResponseBase<AddConsentResult> response,
+        out KeyValuePair<string, string>? responseMessage)
     {
         responseMessage = null;
-
-        if (response == null)
-        {
-            return null;
-        }
+        if (response == null) return null;
 
         var errorCodeList = response.OriginalError?.Errors?
             .Select(x => x.Code)
@@ -495,30 +289,18 @@ public class SendConsentToIysService
 
         var errors = errorCodeList.Count > 0 ? string.Join(",", errorCodeList) : "Mevcut olmayan";
 
-        if (response.HttpStatusCode == 200)
+        if (isConsentOverdue)
         {
-            responseMessage = new KeyValuePair<string, string>(
-                $"add.success.{response.Id}",
-                $"Log {response.Id} için IYS gönderimi başarıyla tamamlandı (HTTP {response.HttpStatusCode}).");
-        }
-        else if (isConsentOverdue)
-        {
-            responseMessage = new KeyValuePair<string, string>(
-                $"add.overdue.{response.Id}",
-                $"Log {response.Id} için IYS yanıtı gecikmeli veya mükerrer: {errors}.");
+            responseMessage = new($"overdue.{response.Id}", $"Log {response.Id} için IYS yanıtı gecikmeli veya mükerrer: {errors}.");
         }
         else
         {
-            responseMessage = new KeyValuePair<string, string>(
-                $"add.error.{response.Id}",
-                $"Log {response.Id} için IYS gönderimi başarısız: {BuildErrorMessage(response)}");
+            responseMessage = new($"error.{response.Id}", $"Log {response.Id} için IYS gönderimi başarısız: {BuildErrorMessage(response)}");
         }
 
         var serializedError = response.OriginalError == null
             ? null
-            : JsonConvert.SerializeObject(
-                response.OriginalError,
-                Formatting.None,
+            : JsonConvert.SerializeObject(response.OriginalError, Formatting.None,
                 new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore });
 
         return new ConsentResponseUpdate
@@ -533,28 +315,205 @@ public class SendConsentToIysService
         };
     }
 
-
-    private static void ApplyConsentResponseBusinessRules(ConsentResponseUpdate update)
+    private bool ShouldSkipConsent(
+        ConsentRequestLog log,
+        ISet<string> approvedRecipients,
+        ConsentRequestLog? latestPending,
+        out string reason)
     {
-        if (update == null)
+        reason = string.Empty;
+        if (log == null) return false;
+
+        var recipient = log.Recipient?.Trim();
+        var status = log.Status?.Trim();
+
+        if (string.IsNullOrWhiteSpace(recipient) || string.IsNullOrWhiteSpace(status))
+            return false;
+
+        approvedRecipients ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (latestPending != null && latestPending.Id != log.Id)
         {
-            return;
+            reason = $"ESKİ BEKLEYEN KAYIT: Alıcı {recipient} için daha yeni bir bekleyen izin kaydı var (Log ID {latestPending.Id}).";
+            return true;
         }
 
-        if (update.IsOverdue)
+        if (string.Equals(status, "ON", StringComparison.OrdinalIgnoreCase)
+            && approvedRecipients.Contains(recipient))
         {
-            update.IsSuccess = false;
+            reason = $"ZATEN ONAYLI: Alıcı {recipient} zaten IYS üzerinde onaylı.";
+            return true;
         }
 
-        if (update.IsSuccess)
+        if (string.Equals(status, "RET", StringComparison.OrdinalIgnoreCase)
+            && !approvedRecipients.Contains(recipient))
         {
-            update.IsOverdue = false;
-            update.BatchError = null;
+            reason = $"RET DURUMU GEÇERSİZ: Alıcı {recipient} IYS tarafından onaylı olarak dönmedi.";
+            return true;
         }
-        else if (string.IsNullOrWhiteSpace(update.BatchError))
+
+        var logDate = ParseConsentDate(log.ConsentDate);
+        if (logDate.HasValue && logDate.Value < DateTime.UtcNow.AddDays(-3))
         {
-            update.BatchError = "Unknown error";
+            reason = $"EKSİK TARİH: Bekleyen izin tarihi {logDate:O}, 3 günden daha eski.";
+            return true;
         }
+
+
+        return false;
+    }
+
+    private static DateTime? ParseConsentDate(string? consentDate)
+    {
+        if (string.IsNullOrWhiteSpace(consentDate)) return null;
+
+        var trimmed = consentDate.Trim();
+        var formats = new[]
+        {
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss.fff",
+            "yyyy-MM-ddTHH:mm:ss",
+            "yyyy-MM-ddTHH:mm:ss.fff",
+            "dd.MM.yyyy HH:mm:ss"
+        };
+
+        if (DateTime.TryParseExact(trimmed, formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsed))
+            return parsed;
+
+        if (DateTime.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out parsed))
+            return parsed;
+
+        if (DateTime.TryParse(trimmed, CultureInfo.CurrentCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out parsed))
+            return parsed;
+
+        return null;
+    }
+
+    private async Task<QueryMultipleConsentInfo> GetApprovedConsentEntriesAsync(
+        string companyCode,
+        string recipientType,
+        string? consentType,
+        IReadOnlyCollection<string> recipients)
+    {
+        var info = new QueryMultipleConsentInfo();
+
+        if (string.IsNullOrWhiteSpace(companyCode) || string.IsNullOrWhiteSpace(recipientType) || recipients.Count == 0)
+            return info;
+
+        var recipientList = recipients
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Select(r => r.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (recipientList.Count == 0) return info;
+
+        var request = new RecipientKeyWithList
+        {
+            RecipientType = recipientType,
+            Type = string.IsNullOrWhiteSpace(consentType) ? null : consentType,
+            Recipients = recipientList
+        };
+
+        try
+        {
+            var response = await _client.PostJsonAsync<RecipientKeyWithList, QueryMultipleConsentEnvelope>(
+                $"consents/{companyCode}/queryMultipleConsent", request);
+
+            if (response?.Data?.List is JArray array)
+            {
+                foreach (var token in array)
+                {
+                    switch (token.Type)
+                    {
+                        case JTokenType.String:
+                            var recipient = token.Value<string>()?.Trim();
+                            if (!string.IsNullOrWhiteSpace(recipient))
+                                info.Entries.Add(new MultipleQueryConsentEntry { Recipient = recipient!, Status = "ON" });
+                            break;
+
+                        case JTokenType.Object:
+                            var entry = token.ToObject<MultipleQueryConsentEntry>();
+                            if (entry != null && !string.IsNullOrWhiteSpace(entry.Recipient))
+                            {
+                                entry.Recipient = entry.Recipient.Trim();
+                                entry.Status ??= "ON";
+                                info.Entries.Add(entry);
+                            }
+                            break;
+                    }
+                }
+            }
+
+            if (response != null)
+            {
+                if (response.Messages is { Count: > 0 })
+                {
+                    foreach (var kv in response.Messages)
+                        if (!info.Messages.ContainsKey(kv.Key)) info.Messages[kv.Key] = kv.Value;
+                }
+
+                if (!response.IsSuccessful())
+                    info.Messages[$"query.error.{companyCode}"] = BuildErrorMessage(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            info.Messages[$"query.exception.{companyCode}"] = ex.Message;
+        }
+
+        return info;
+    }
+
+    private static ConsentResponseUpdate CreateOverdueUpdate(ConsentRequestLog log, string message) =>
+        new()
+        {
+            Id = log.Id,
+            LogId = log.LogId ?? 0,
+            IsSuccess = false,
+            TransactionId = null,
+            CreationDate = null,
+            BatchError = message,
+            IsOverdue = true
+        };
+
+    private sealed class QueryMultipleConsentInfo
+    {
+        public List<MultipleQueryConsentEntry> Entries { get; } = new();
+        public Dictionary<string, string> Messages { get; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class QueryMultipleConsentEnvelope
+    {
+        [JsonProperty("requestId")] public string? RequestId { get; set; }
+        [JsonProperty("list")] public JToken? List { get; set; }
+    }
+
+    private sealed class MultipleQueryConsentEntry
+    {
+        [JsonProperty("recipient")] public string Recipient { get; set; } = string.Empty;
+        [JsonProperty("status")] public string? Status { get; set; }
+        [JsonProperty("reason")] public string? Reason { get; set; }
+    }
+
+    private sealed record ConsentGroupKey(string RecipientType, string Type);
+
+    private sealed class ConsentGroupKeyComparer : IEqualityComparer<ConsentGroupKey>
+    {
+        public static ConsentGroupKeyComparer Instance { get; } = new();
+
+        public bool Equals(ConsentGroupKey? x, ConsentGroupKey? y)
+        {
+            if (ReferenceEquals(x, y)) return true;
+            if (x is null || y is null) return false;
+
+            return string.Equals(x.RecipientType, y.RecipientType, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.Type, y.Type, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public int GetHashCode(ConsentGroupKey obj) =>
+            HashCode.Combine(obj.RecipientType?.ToUpperInvariant() ?? string.Empty,
+                             obj.Type?.ToUpperInvariant() ?? string.Empty);
     }
 
     private static string BuildErrorMessage<T>(ResponseBase<T> response)
@@ -562,14 +521,10 @@ public class SendConsentToIysService
         var parts = new List<string>();
 
         if (response.Messages is { Count: > 0 })
-        {
             parts.AddRange(response.Messages.Select(kv => $"{kv.Key}: {kv.Value}"));
-        }
 
         if (!string.IsNullOrWhiteSpace(response.OriginalError?.Message))
-        {
             parts.Add($"Message: {response.OriginalError.Message}");
-        }
 
         if (response.OriginalError?.Errors != null && response.OriginalError.Errors.Length > 0)
         {
@@ -577,14 +532,7 @@ public class SendConsentToIysService
                 .Where(e => !string.IsNullOrWhiteSpace(e.Code) || !string.IsNullOrWhiteSpace(e.Message))
                 .Select(e => string.IsNullOrWhiteSpace(e.Code)
                     ? e.Message ?? string.Empty
-                    : string.IsNullOrWhiteSpace(e.Message)
-                        ? e.Code
-                        : $"{e.Code}: {e.Message}"));
-        }
-
-        if (parts.Count == 0)
-        {
-            parts.Add($"HTTP {response.HttpStatusCode}");
+                    : string.IsNullOrWhiteSpace(e.Message) ? e.Code : $"{e.Code}: {e.Message}"));
         }
 
         return string.Join(" | ", parts);
