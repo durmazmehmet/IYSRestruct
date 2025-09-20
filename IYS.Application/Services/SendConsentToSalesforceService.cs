@@ -93,7 +93,8 @@ namespace IYS.Application.Services
                             : addConsentResult.OriginalError?.Message
                                 ?? addConsentMessages;
 
-                        if (addConsentResult.IsSuccessful())
+
+                        if (addConsentResult.IsSuccessful() && addConsentResult?.Data?.WsStatus?.Equals("ERROR") == false)
                         {
                             foreach (var consent in consentsInGroup)
                             {
