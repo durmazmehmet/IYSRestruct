@@ -354,12 +354,12 @@ public class SendConsentToIysService
 
         if (IsApprovalStatus(status) && existsInList)
         {
-            return "IYS'de olan onay rıza içingönderim yapılmadı.";
+            return "IYS'de zaten onaylı rıza.";
         }
 
         if (IsRejectionStatus(status) && !existsInList)
         {
-            return "IYS'de olmayan rıza için ret gönderilmedi.";
+            return "IYS'de olmayan/ret rıza.";
         }
 
         return null;

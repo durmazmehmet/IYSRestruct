@@ -75,16 +75,23 @@ namespace IYS.Application.Services
                             }).ToList()
                         };
 
-                        var addConsentResult = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("salesforce/AddConsent", new SfConsentAddRequest { Request = request });
+
+                        var sfRequest = new SfConsentAddRequest { Request = request };
+
+                        var sfRequestString = System.Text.Json.JsonSerializer.Serialize(sfRequest);
+
+                        var addConsentResult = await _client.PostJsonAsync<SfConsentAddRequest, SfConsentAddResponse>("salesforce/AddConsent", sfRequest);
+
+                        var addConsentMessages = (addConsentResult.Messages != null && addConsentResult.Messages.Count > 0
+                                    ? string.Join(" | ", addConsentResult.Messages.Select(kv => $"{kv.Key}:{kv.Value}")) : string.Empty);
+
 
                         var wsDescription = addConsentResult.Data?.WsDescription;
                         var successMessage = string.IsNullOrWhiteSpace(wsDescription) ? "Success" : wsDescription;
                         var failureMessage = !string.IsNullOrWhiteSpace(wsDescription)
                             ? wsDescription
                             : addConsentResult.OriginalError?.Message
-                                ?? (addConsentResult.Messages != null && addConsentResult.Messages.Count > 0
-                                    ? string.Join(" | ", addConsentResult.Messages.Select(kv => $"{kv.Key}:{kv.Value}"))
-                                    : "Unknown error");
+                                ?? addConsentMessages;
 
                         if (addConsentResult.IsSuccessful())
                         {
@@ -105,7 +112,7 @@ namespace IYS.Application.Services
                                     Id = consent.Id,
                                     CompanyCode = companyCode,
                                     Status = "Success",
-                                    Messages = new Dictionary<string, string> { { "Success", successMessage } }
+                                    Messages = new Dictionary<string, string> { { "Success", successMessage } },
                                 });
                             }
                         }

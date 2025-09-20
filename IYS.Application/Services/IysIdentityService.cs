@@ -42,7 +42,7 @@ namespace IYS.Application.Services
             {
                 Username = _config.GetValue<string>($"{iysCode}:Username"),
                 Password = _config.GetValue<string>($"{iysCode}:Password"),
-                Granttype = "password"
+                GrantType = "password"
             };
 
             var client = new RestClient(_config.GetValue<string>("BaseUrl"));
@@ -74,7 +74,7 @@ namespace IYS.Application.Services
             var body = new RefreshTokenRequest
             {
                 RefreshToken = oldToken.RefreshToken,
-                Granttype = "refresh_token"
+                GrantType = "refresh_token"
             };
 
             request.AddStringBody(JsonConvert.SerializeObject(body), DataFormat.Json);
