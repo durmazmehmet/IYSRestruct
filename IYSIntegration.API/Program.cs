@@ -17,13 +17,15 @@ internal class Program
         builder.Services.AddScoped<IIysHelper, IysHelper>();
 
         builder.Services.AddScoped<IDbService, DbService>();
-        builder.Services.AddScoped<IysProxy>(provider =>
+        builder.Services.AddScoped<IIysProxy>(provider =>
         {
             var config = provider.GetRequiredService<IConfiguration>();
             var url = config.GetValue<string>("BaseIysProxyUrl");
             var auth = config.GetValue<string>("BaseIysProxyAuth");
             return new IysProxy(url, auth);
         });
+        builder.Services.AddScoped<IysProxy>(provider =>
+            (IysProxy)provider.GetRequiredService<IIysProxy>());
         builder.Services.AddScoped<SendConsentToIysService>();
         builder.Services.AddScoped<PullConsentFromIysService>();
         builder.Services.AddScoped<PullConsentLookupService>();
