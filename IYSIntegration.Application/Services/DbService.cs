@@ -11,7 +11,9 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
 using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 namespace IYSIntegration.Application.Services
 {
     public class DbService : IDbService
@@ -219,6 +221,68 @@ namespace IYSIntegration.Application.Services
                 await connection.CloseAsync();
 
                 return result;
+            }
+        }
+
+        public async Task<Dictionary<string, ConsentStateInfo>> GetLatestConsentStatesAsync(
+            string companyCode,
+            string recipientType,
+            string? type,
+            IEnumerable<string> recipients)
+        {
+            if (string.IsNullOrWhiteSpace(companyCode)
+                || recipients == null)
+            {
+                return new Dictionary<string, ConsentStateInfo>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var recipientList = recipients
+                .Where(recipient => !string.IsNullOrWhiteSpace(recipient))
+                .Select(recipient => recipient.Trim())
+                .Where(recipient => !string.IsNullOrWhiteSpace(recipient))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (recipientList.Count == 0)
+            {
+                return new Dictionary<string, ConsentStateInfo>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var normalizedCompanyCode = companyCode.Trim();
+            var normalizedType = string.IsNullOrWhiteSpace(type) ? string.Empty : type.Trim();
+            var normalizedRecipientType = string.IsNullOrWhiteSpace(recipientType) ? string.Empty : recipientType.Trim();
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var rows = await connection.QueryAsync<ConsentStateInfo>(
+                    QueryStrings.GetLatestConsentStates,
+                    new
+                    {
+                        CompanyCode = normalizedCompanyCode,
+                        RecipientType = normalizedRecipientType,
+                        Type = normalizedType,
+                        Recipients = recipientList
+                    });
+
+                await connection.CloseAsync();
+
+                var states = new Dictionary<string, ConsentStateInfo>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var row in rows)
+                {
+                    if (row == null || string.IsNullOrWhiteSpace(row.Recipient))
+                    {
+                        continue;
+                    }
+
+                    row.Recipient = row.Recipient.Trim();
+                    row.HasStoredHistory = true;
+                    states[row.Recipient] = row;
+                }
+
+                return states;
             }
         }
 

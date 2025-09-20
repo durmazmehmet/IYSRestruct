@@ -1,3 +1,4 @@
+using System;
 using IYSIntegration.Application.Services.Interface;
 using IYSIntegration.Application.Services.Models.Base;
 using IYSIntegration.Application.Services.Models.Request;
@@ -6,9 +7,13 @@ using IYSIntegration.Application.Services.Models.Response.Schedule;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+
 
 namespace IYSIntegration.Application.Services;
 
@@ -59,10 +64,9 @@ public class SendConsentToIysService
         int failedCount = 0;
         int successCount = 0;
 
-        _logger.LogInformation("SingleConsentAddService started at {Time}", DateTimeOffset.Now);
-
         try
         {
+            // Bekleyen izin kayıtlarını çekip şirket bazında gruplayacağız.
             var pendingConsents = await _dbService.GetPendingConsents(rowCount);
             var groupedConsents = new Dictionary<string, List<ConsentRequestLog>>(StringComparer.OrdinalIgnoreCase);
 
@@ -100,6 +104,7 @@ public class SendConsentToIysService
 
             foreach (var group in groupedConsents)
             {
+
                 var queryCache = new Dictionary<string, QueryMultipleConsentCache>();
 
                 foreach (var log in group.Value)
@@ -152,34 +157,35 @@ public class SendConsentToIysService
 
                     try
                     {
-                        var request = new AddConsentRequest
+                        var pendingRecipient = pending.Recipient?.Trim();
+                        if (string.IsNullOrWhiteSpace(pendingRecipient))
                         {
-                            IysCode = log.IysCode,
-                            BrandCode = log.BrandCode,
-                            CompanyCode = group.Key,
-                            Consent = new Consent
-                            {
-                                ConsentDate = log.ConsentDate,
-                                Recipient = log.Recipient,
-                                RecipientType = log.RecipientType,
-                                Source = log.Source,
-                                Status = log.Status,
-                                Type = log.Type
-                            }
-                        };
-
-                        var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{group.Key}/addConsent", request.Consent);
-
-                        addResponse.Id = log.Id;
-
-                        var update = CreateConsentResponseUpdate(addResponse);
-                        if (update != null)
-                        {
-                            responseUpdates.Add(update);
+                            continue;
                         }
 
-                        if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
+                        if (!latestPendingByRecipient.ContainsKey(pendingRecipient))
                         {
+                            latestPendingByRecipient[pendingRecipient] = pending;
+                        }
+                    }
+
+                    // ON durumlu kayıtlar için IYS'deki son onayları sorguluyoruz.
+                    if (consentGroup.Any(log => string.Equals(log.Status?.Trim(), "ON", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var queryInfo = await GetApprovedConsentEntriesAsync(
+                            companyCode,
+                            recipientType,
+                            string.IsNullOrWhiteSpace(consentType) ? null : consentType,
+                            recipients);
+
+                        if (queryInfo.Messages.Count > 0)
+                        {
+                            response.AddMessage(queryInfo.Messages);
+                        }
+
+                        foreach (var entry in queryInfo.Entries)
+                        {
+
                             Interlocked.Increment(ref successCount);
                             var normalizedRecipient = NormalizeRecipient(log.Recipient);
                             if (!string.IsNullOrWhiteSpace(normalizedRecipient))
@@ -187,32 +193,100 @@ public class SendConsentToIysService
                                 queryInfo.Recipients.Add(normalizedRecipient);
                             }
                         }
-                        else
+                    }
+
+                    foreach (var log in consentGroup)
+                    {
+                        // Gönderimden önce iş kurallarını uyguluyoruz.
+                        ConsentRequestLog? latestPending = null;
+                        var trimmedRecipient = log.Recipient?.Trim();
+                        if (!string.IsNullOrWhiteSpace(trimmedRecipient))
                         {
+                            latestPendingByRecipient.TryGetValue(trimmedRecipient, out latestPending);
+                        }
+
+                        if (ShouldSkipConsent(log, approvedRecipients, latestPending, out var skipReason))
+                        {
+                            responseUpdates.Add(CreateOverdueUpdate(log, skipReason));
                             results.Add(new LogResult
                             {
                                 Id = log.Id,
-                                CompanyCode = group.Key,
+                                CompanyCode = companyCode,
+                                Status = "Skipped",
                                 Messages = new Dictionary<string, string>
                                 {
-                                    { "Add Error", BuildErrorMessage(addResponse) }
+                                    { "SkipReason", skipReason }
                                 }
                             });
-                            Interlocked.Increment(ref failedCount);
+                            continue;
                         }
 
-                    }
-                    catch (Exception ex)
-                    {
-                        results.Add(new LogResult { Id = log.Id, CompanyCode = group.Key, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
-                        Interlocked.Increment(ref failedCount);
-                        _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
-                        response.Error();
+                        try
+                        {
+                            // IYS servis çağrısında kullanılacak isteği hazırlıyoruz.
+                            var request = new AddConsentRequest
+                            {
+                                IysCode = log.IysCode,
+                                BrandCode = log.BrandCode,
+                                CompanyCode = companyCode,
+                                Consent = new Consent
+                                {
+                                    ConsentDate = log.ConsentDate,
+                                    Recipient = log.Recipient,
+                                    RecipientType = log.RecipientType,
+                                    Source = log.Source,
+                                    Status = log.Status,
+                                    Type = log.Type
+                                }
+                            };
+
+                            var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>("consents/{companyCode}/addConsent", request.Consent);
+
+                            addResponse.Id = log.Id;
+
+                            var update = CreateConsentResponseUpdate(addResponse, out var addMessage);
+                            if (update != null)
+                            {
+                                responseUpdates.Add(update);
+                            }
+
+                            if (addMessage.HasValue)
+                            {
+                                response.AddMessage(addMessage.Value.Key, addMessage.Value.Value);
+                            }
+
+                            if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
+                            {
+                                Interlocked.Increment(ref successCount);
+                            }
+                            else
+                            {
+                                results.Add(new LogResult
+                                {
+                                    Id = log.Id,
+                                    CompanyCode = companyCode,
+                                    Messages = new Dictionary<string, string>
+                                    {
+                                        { "Add Error", BuildErrorMessage(addResponse) }
+                                    }
+                                });
+                                Interlocked.Increment(ref failedCount);
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            results.Add(new LogResult { Id = log.Id, CompanyCode = companyCode, Messages = new Dictionary<string, string> { { "Exception", ex.Message } } });
+                            Interlocked.Increment(ref failedCount);
+                            _logger.LogError(ex, "Exception in SingleConsentAddService for log ID {Id}", log.Id);
+                            response.Error();
+                        }
                     }
 
                     queryCache[cacheKey] = queryInfo;
                 }
             }
+
 
         }
         catch (Exception ex)
@@ -223,19 +297,20 @@ public class SendConsentToIysService
         }
 
         var updatesToPersist = responseUpdates.ToList();
+
         if (updatesToPersist.Any())
         {
             foreach (var update in updatesToPersist)
             {
                 ApplyConsentResponseBusinessRules(update);
             }
-
             try
             {
                 await _dbService.UpdateConsentResponses(updatesToPersist);
             }
             catch (Exception ex)
             {
+
                 _logger.LogError(ex, "Failed to update consent responses after processing consents.");
             }
         }
@@ -249,8 +324,19 @@ public class SendConsentToIysService
             SuccessCount = successCount,
             FailedCount = failedCount
         };
+
+        // Tüm toplu mesajları tek seferde logluyoruz.
+        if (response.Messages is { Count: > 0 })
+        {
+            foreach (var message in response.Messages)
+            {
+                _logger.LogInformation("SingleConsentWorker mesaj {Key}: {Value}", message.Key, message.Value);
+            }
+        }
+
         return response;
     }
+
 
     private static string BuildRecipientTypeCacheKey(ConsentRequestLog log)
     {
@@ -392,6 +478,8 @@ public class SendConsentToIysService
 
     private ConsentResponseUpdate? CreateConsentResponseUpdate(ResponseBase<AddConsentResult> response)
     {
+        responseMessage = null;
+
         if (response == null)
         {
             return null;
@@ -409,15 +497,21 @@ public class SendConsentToIysService
 
         if (response.HttpStatusCode == 200)
         {
-            _logger.LogInformation("SingleConsentWorker ID {Id} ve {Status} statu olarak alındı", response.Id, response.HttpStatusCode);
+            responseMessage = new KeyValuePair<string, string>(
+                $"add.success.{response.Id}",
+                $"Log {response.Id} için IYS gönderimi başarıyla tamamlandı (HTTP {response.HttpStatusCode}).");
         }
         else if (isConsentOverdue)
         {
-            _logger.LogWarning("SingleConsentWorker ID {Id} ve IYS geciken/mükerrer {Errors} olarak alındı", response.Id, errors);
+            responseMessage = new KeyValuePair<string, string>(
+                $"add.overdue.{response.Id}",
+                $"Log {response.Id} için IYS yanıtı gecikmeli veya mükerrer: {errors}.");
         }
         else
         {
-            _logger.LogError("SingleConsentWorker ID {Id} ve {Status} statu kodu ve {Errors} IYS hataları ile alınamadı", response.Id, response.HttpStatusCode, errors);
+            responseMessage = new KeyValuePair<string, string>(
+                $"add.error.{response.Id}",
+                $"Log {response.Id} için IYS gönderimi başarısız: {BuildErrorMessage(response)}");
         }
 
         var serializedError = response.OriginalError == null
@@ -438,6 +532,7 @@ public class SendConsentToIysService
             IsOverdue = isConsentOverdue
         };
     }
+
 
     private static void ApplyConsentResponseBusinessRules(ConsentResponseUpdate update)
     {
