@@ -1,0 +1,13 @@
+﻿using Newtonsoft.Json;
+
+namespace IYS.Application.Services.Models.Response.Brand
+{
+    public class Stats
+    {
+        [JsonProperty("consents")]
+        public Consents Consents { get; set; }
+
+        [JsonProperty("retailers")]
+        public Retailers Retailers { get; set; }
+    }
+}
