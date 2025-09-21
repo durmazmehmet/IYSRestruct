@@ -165,4 +165,31 @@ public class ConsentsController : ControllerBase
 
         return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
+
+    /// <summary>
+    /// Çoklu izin ekleme isteği sorgulama
+    /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/request/{requestId}"
+    /// </summary>
+    /// <param name="companyCode"></param>
+    /// <param name="requestId"></param>
+    /// <returns></returns>
+    [HttpGet("queryMultipleConsentRequest/{requestId}")]
+    public async Task<ActionResult<ResponseBase<MultipleConsentRequestStatusResult>>> QueryMultipleConsentRequest(
+        [FromRoute] string companyCode,
+        [FromRoute] string requestId)
+    {
+        var consentParams = _iysHelper.GetIysCode(companyCode);
+
+        var iysRequest = new IysRequest<DummyRequest>
+        {
+            IysCode = consentParams.IysCode,
+            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{requestId}",
+            Action = "Query Multiple Consent Request",
+            Method = RestSharp.Method.Get
+        };
+
+        var result = await _clientHelper.Execute<MultipleConsentRequestStatusResult, DummyRequest>(iysRequest);
+
+        return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
+    }
 }
