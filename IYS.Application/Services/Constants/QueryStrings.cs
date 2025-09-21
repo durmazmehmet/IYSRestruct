@@ -129,9 +129,10 @@
 
         public static string UpdateConsentRequestFromCommon = @"
             UPDATE SfdcMasterData.dbo.IYSConsentRequest
-            SET IsSuccess = @IsSuccess,
-                LogId = @LogId,
-                UpdateDate = GETDATE(),
+                                SET BatchId = @BatchId,
+                                        IsSuccess = @IsSuccess,
+                                        LogId = @LogId,
+                                        UpdateDate = GETDATE(),
                 IsProcessed = 1,
                 TransactionId = @TransactionId,
                 CreationDate = @CreationDate
@@ -266,12 +267,64 @@
             ORDER BY cr.Id DESC;
             ";
 
+        public static string GetPendingMultipleConsents = @"
+            SELECT TOP (@RowCount)
+                cr.Id,
+                cr.CompanyCode,
+                cr.SalesforceId,
+                cr.IysCode,
+                cr.BrandCode,
+                CONVERT(varchar(19), cr.ConsentDate, 20) AS ConsentDate,
+                cr.[Source],
+                cr.Recipient,
+                cr.RecipientType,
+                cr.Status,
+                cr.[Type],
+                cr.BatchId,
+                CONVERT(varchar(19), cr.CreateDate, 20) AS CreateDate
+            FROM dbo.IYSConsentRequest cr WITH (NOLOCK)
+            WHERE ISNULL(cr.IsProcessed, 0) = 0
+              AND ISNULL(cr.IsOverdue, 0) = 0
+            ORDER BY cr.CreateDate ASC, cr.Id ASC;";
+
+        public static string GetPendingBatchIds = @"
+            SELECT DISTINCT TOP (@MaxBatchCount)
+                cr.BatchId
+            FROM dbo.IYSConsentRequest cr WITH (NOLOCK)
+            WHERE ISNULL(cr.IsProcessed, 0) = 1
+              AND cr.BatchId IS NOT NULL
+              AND cr.BatchId > 0
+              AND (cr.IsSuccess IS NULL OR cr.IsSuccess = 0)
+              AND ISNULL(cr.UpdateDate, cr.CreateDate) <= DATEADD(SECOND, -@MinimumAgeSeconds, GETDATE())
+            ORDER BY cr.BatchId;";
+
+        public static string GetConsentsByBatchId = @"
+            SELECT
+                cr.Id,
+                cr.CompanyCode,
+                cr.SalesforceId,
+                cr.IysCode,
+                cr.BrandCode,
+                CONVERT(varchar(19), cr.ConsentDate, 20) AS ConsentDate,
+                cr.[Source],
+                cr.Recipient,
+                cr.RecipientType,
+                cr.Status,
+                cr.[Type],
+                cr.BatchId,
+                cr.LogId,
+                CONVERT(varchar(19), cr.CreateDate, 20) AS CreateDate
+            FROM dbo.IYSConsentRequest cr WITH (NOLOCK)
+            WHERE cr.BatchId = @BatchId
+            ORDER BY cr.Id ASC;";
+
         public static string UpdateConsentRequest = @"
 			IF EXISTS (SELECT * FROM dbo.IYSConsentRequest (nolock) WHERE Id = @Id)
 			BEGIN
 				UPDATE dbo.IYSConsentRequest
-				SET IsSuccess = @IsSuccess,
-					LogId = @LogId,    
+                                SET BatchId = @BatchId,
+                                        IsSuccess = @IsSuccess,
+                                        LogId = @LogId,
 					UpdateDate = GETDATE(),
 					IsProcessed = 1,
 					TransactionId = @TransactionId,

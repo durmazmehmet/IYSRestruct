@@ -9,5 +9,6 @@ namespace IYS.Application.Services.Models.Response.Schedule
         public string? CreationDate { get; set; }
         public string? BatchError { get; set; }
         public bool IsOverdue { get; set; }
+        public long? BatchId { get; set; }
     }
 }

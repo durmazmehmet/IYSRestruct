@@ -296,6 +296,7 @@ namespace IYS.Application.Services
                     {
                         response.Id,
                         response.LogId,
+                        BatchId = (long?)null,
                         IsSuccess = response.IsSuccessful() ? 1 : 0,
                         response.Data?.TransactionId,
                         response.Data?.CreationDate
@@ -353,6 +354,73 @@ namespace IYS.Application.Services
 
         }
 
+        public async Task<List<ConsentRequestLog>> GetPendingMultipleConsentsAsync(int rowCount)
+        {
+            if (rowCount <= 0)
+            {
+                return new List<ConsentRequestLog>();
+            }
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var result = (await connection.QueryAsync<ConsentRequestLog>(
+                    QueryStrings.GetPendingMultipleConsents,
+                    new { RowCount = rowCount }))
+                    .ToList();
+
+                await connection.CloseAsync();
+
+                return result;
+            }
+        }
+
+        public async Task<List<long>> GetPendingBatchIdsAsync(int maxBatchCount, TimeSpan minimumAge)
+        {
+            if (maxBatchCount <= 0)
+            {
+                return new List<long>();
+            }
+
+            var minimumAgeSeconds = (int)Math.Max(0, Math.Floor(minimumAge.TotalSeconds));
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var result = (await connection.QueryAsync<long>(
+                    QueryStrings.GetPendingBatchIds,
+                    new
+                    {
+                        MaxBatchCount = maxBatchCount,
+                        MinimumAgeSeconds = minimumAgeSeconds
+                    }))
+                    .ToList();
+
+                await connection.CloseAsync();
+
+                return result;
+            }
+        }
+
+        public async Task<List<ConsentRequestLog>> GetConsentsByBatchIdAsync(long batchId)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var result = (await connection.QueryAsync<ConsentRequestLog>(
+                    QueryStrings.GetConsentsByBatchId,
+                    new { BatchId = batchId }))
+                    .ToList();
+
+                await connection.CloseAsync();
+
+                return result;
+            }
+        }
+
         public async Task UpdateConsentResponses(IEnumerable<ConsentResponseUpdate> responses)
         {
             if (responses == null)
@@ -381,6 +449,7 @@ namespace IYS.Application.Services
                                 {
                                     response.Id,
                                     response.LogId,
+                                    response.BatchId,
                                     IsSuccess = response.IsSuccess ? 1 : 0,
                                     response.TransactionId,
                                     response.CreationDate,

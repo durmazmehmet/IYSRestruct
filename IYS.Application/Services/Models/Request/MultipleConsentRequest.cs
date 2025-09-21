@@ -6,7 +6,7 @@ namespace IYS.Application.Services.Models.Request
     {
         public string? CompanyCode { get; set; }
         public string? CompanyName { get; set; }
-        public int BatchId { get; set; }
+        public long? BatchId { get; set; }
         public bool ForBatch { get; set; }
         public List<Consent> Consents { get; set; }
 

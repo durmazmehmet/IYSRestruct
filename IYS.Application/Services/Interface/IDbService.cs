@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using IYS.Application.Services.Models.Base;
 using IYS.Application.Services.Models.Identity;
@@ -25,6 +26,9 @@ namespace IYS.Application.Services.Interface
         Task<ConsentRequestLog?> GetConsentRequestById(long id);
         Task<ConsentResultLog> GetConsentRequest(string id);
         Task<List<ConsentRequestLog>> GetPendingConsents(int rowCount);
+        Task<List<ConsentRequestLog>> GetPendingMultipleConsentsAsync(int rowCount);
+        Task<List<long>> GetPendingBatchIdsAsync(int maxBatchCount, TimeSpan minimumAge);
+        Task<List<ConsentRequestLog>> GetConsentsByBatchIdAsync(long batchId);
         Task UpdateConsentResponses(IEnumerable<ConsentResponseUpdate> responses);
         Task<PullRequestLog> GetPullRequestLog(string companyCode);
         Task UpdatePullRequestLog(PullRequestLog log);
