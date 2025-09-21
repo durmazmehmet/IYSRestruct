@@ -282,17 +282,10 @@ public sealed class SendMultipleConsentToIysService
         return response;
     }
 
-    public async Task<ResponseBase<ScheduledJobStatistics>> QueryPendingBatchesAsync(int batchCount)
+    public async Task<ResponseBase<ScheduledJobStatistics>> QueryPendingBatchesAsync(int batchCount = 1)
     {
         var response = new ResponseBase<ScheduledJobStatistics>();
         response.Success();
-
-        if (batchCount <= 0)
-        {
-            response.AddMessage("Info", "Sorgulanacak batch sayısı belirtilmedi.");
-            response.Data = new ScheduledJobStatistics { SuccessCount = 0, FailedCount = 0 };
-            return response;
-        }
 
         try
         {
@@ -576,24 +569,18 @@ public sealed class SendMultipleConsentToIysService
         return sendResponse;
     }
 
-    public async Task<ResponseBase<MultipleConsentRequestStatusResult>> QueryStatusFromRequestAsync(MultipleConsentRequest request)
+    public async Task<ResponseBase<MultipleConsentRequestStatusResult>> QueryStatusFromRequestAsync(string companyCode, long batchId = 0)
     {
         var response = new ResponseBase<MultipleConsentRequestStatusResult>();
         response.Success();
 
-        if (request == null)
-        {
-            response.Error("REQUEST_REQUIRED", "Geçerli bir istek gönderilmelidir.");
-            return response;
-        }
 
-        if (request.BatchId is null || request.BatchId <= 0)
+        if (batchId <= 0)
         {
             response.Error("BATCH_ID_REQUIRED", "Sorgulamak için geçerli bir BatchId belirtilmelidir.");
             return response;
         }
 
-        var companyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.IysCode) ?? request.CompanyCode;
         if (string.IsNullOrWhiteSpace(companyCode))
         {
             response.Error("COMPANY_REQUIRED", "İşlem için geçerli bir şirket kodu belirtilmelidir.");
@@ -601,7 +588,7 @@ public sealed class SendMultipleConsentToIysService
         }
 
         return await _client.GetAsync<MultipleConsentRequestStatusResult>(
-            $"consents/{companyCode}/queryMultipleConsentRequest/{request.BatchId}");
+            $"consents/{companyCode}/queryMultipleConsentRequest/{batchId}");
     }
 
     private static List<ConsentBatch> BuildBatches(
