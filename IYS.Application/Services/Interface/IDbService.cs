@@ -13,29 +13,17 @@ namespace IYS.Application.Services.Interface
     {
         Task<int> InsertLog<TRequest>(IysRequest<TRequest> request);
         Task UpdateLog(RestResponse response, int id);
-        Task<int> InsertConsentRequest(AddConsentRequest request);
-        Task<bool> PullConsentExists(string companyCode, string recipient, string? type = null);
-        Task<bool> SuccessfulConsentRequestExists(string companyCode, string recipient, string? type = null);
-        Task<List<string>> GetExistingConsentRecipients(string companyCode, string? type, IEnumerable<string> recipients);
-        Task<Dictionary<string, ConsentStateInfo>> GetLatestConsentStatesAsync(
-            string companyCode,
-            string recipientType,
-            string? type,
-            IEnumerable<string> recipients);
+        Task<int> InsertConsentRequest(AddConsentRequest request);        
         Task UpdateConsentResponseFromResponse(ResponseBase<AddConsentResult> response);
         Task<ConsentRequestLog?> GetConsentRequestById(long id);
         Task<ConsentResultLog> GetConsentRequest(string id);
         Task<List<ConsentRequestLog>> GetPendingConsents(int rowCount);
-        Task<List<ConsentRequestLog>> GetPendingMultipleConsentsAsync(int rowCount);
-        Task<List<long>> GetPendingBatchIdsAsync(int maxBatchCount, TimeSpan minimumAge);
-        Task<List<ConsentRequestLog>> GetConsentsByBatchIdAsync(long batchId);
         Task UpdateConsentResponses(IEnumerable<ConsentResponseUpdate> responses);
         Task<PullRequestLog> GetPullRequestLog(string companyCode);
         Task UpdatePullRequestLog(PullRequestLog log);
         Task UpdateJustRequestDateOfPullRequestLog(PullRequestLog log);
         Task InsertPullConsent(AddConsentRequest request);
         Task<List<Consent>> GetPullConsentRequests(bool isProcessed, int rowCount);
-        Task UpdatePullConsentStatuses(string companyCode, string recipientType, string type, IEnumerable<string> recipients, string status);
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
         Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);

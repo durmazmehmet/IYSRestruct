@@ -162,16 +162,16 @@ public class ConsentsController : ControllerBase
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
-        var iysRequest = new IysRequest<List<Consent>>
+        var iysRequest = new IysRequest<List<IysBaseConsent>>
         {
             IysCode = consentParams.IysCode,
             Url = $"{_baseUrl}{_versions.AddMultipleConsent}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/request",
             Body = consent,
-            Action = "Add Consent",
+            Action = "Send Multiple Consent Request",
             Method = RestSharp.Method.Post
         };
 
-        var result = await _clientHelper.Execute<MultipleConsentResult, List<Consent>>(iysRequest);
+        var result = await _clientHelper.Execute<MultipleConsentResult, List<IysBaseConsent>>(iysRequest);
 
         return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
