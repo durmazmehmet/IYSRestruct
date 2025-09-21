@@ -112,6 +112,7 @@ public class ConsentsController : ControllerBase
     }
 
     /// <summary>
+    /// IYS'den değişen izinleri çekme
     /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/changes?queryParams"
     /// </summary>
     /// <param name="companyCode"></param>
@@ -146,6 +147,7 @@ public class ConsentsController : ControllerBase
 
     /// <summary>
     /// IYS çoklu izin gönderme
+    /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/request"
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="consent"></param>
@@ -173,7 +175,7 @@ public class ConsentsController : ControllerBase
 
     /// <summary>
     /// Çoklu izin ekleme isteği sorgulama
-    /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/request/{requestId}"
+    /// "{_baseUrl}/v2/sps/{IysCode}/brands/{BrandCode}/consents/request/{requestId}"
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="requestId"></param>
