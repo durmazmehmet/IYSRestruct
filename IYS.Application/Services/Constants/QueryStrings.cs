@@ -461,7 +461,8 @@
 			    convert(varchar, CreateDate, 120) as CreateDate
 			FROM dbo.IYSConsentRequest (nolock)
                 WHERE IsSuccess = 0
-                AND CreateDate between (@CreateDate -1) AND @CreateDate
+                AND CreateDate >= CAST(@CreateDate AS datetime)
+                AND CreateDate <  DATEADD(DAY, 1, CAST(@CreateDate AS datetime))
                 ORDER BY CreateDate ASC;
 		";
 

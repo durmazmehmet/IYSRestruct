@@ -143,7 +143,7 @@ public class SendConsentToIysService
                         {
                             Id = log.Id,
                             LogId = log.LogId ?? 0,
-                            IsSuccess = false,
+                            IsSuccess = true,
                             TransactionId = null,
                             CreationDate = null,
                             BatchError = skipReason,

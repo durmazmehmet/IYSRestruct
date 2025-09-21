@@ -1,11 +1,16 @@
-using IYS.Application.Services.Interface;
+﻿using IYS.Application.Services.Interface;
 using IYS.Application.Services.Models.Base;
+using IYS.Application.Services.Models.Request;
 using IYS.Application.Services.Models.Response.Schedule;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System.Drawing;
+using System.Net;
+using System.Text;
+using System.Xml.Linq;
 
 namespace IYS.Application.Services
 {
@@ -13,12 +18,16 @@ namespace IYS.Application.Services
     {
         private readonly ILogger<ErrorReportingService> _logger;
         private readonly IDbService _dbService;
+        private readonly IConfiguration _configuration;
+        private readonly IIysProxy _client;
         private string SmallDateFormat => "yyyy.MM.dd";
 
-        public ErrorReportingService(ILogger<ErrorReportingService> logger, IDbService dbHelper)
+        public ErrorReportingService(ILogger<ErrorReportingService> logger, IDbService dbHelper, IConfiguration configuration, IIysProxy client)
         {
             _logger = logger;
             _dbService = dbHelper;
+            _configuration = configuration;
+            _client = client;
         }
 
         public async Task<ResponseBase<string>> GetErrorsExcelBase64Async(DateTime? date = null)
@@ -36,9 +45,11 @@ namespace IYS.Application.Services
                 {
                     using (var excelPackage = new ExcelPackage())
                     {
-                        var queryDate = (date ?? DateTime.Today).ToString(SmallDateFormat);
-                        excelPackage.Workbook.Properties.Title = $"IYS Consent Errors: {queryDate}";
-                        var excelWorksheet = excelPackage.Workbook.Worksheets.Add("Errors");
+                        var dateString =  date.HasValue ? date.Value.ToString(SmallDateFormat) : DateTime.Today.AddDays(-1).ToString(SmallDateFormat);
+                        excelPackage.Workbook.Properties.Title = $"IYS Consent Errors: {dateString}";
+                        excelPackage.Workbook.Worksheets.Add("Errors");
+                        var excelWorksheet = excelPackage.Workbook.Worksheets[0];
+                        excelWorksheet.Name = "Errors";
 
                         int rowIndex = 1;
                         int columnIndex = 1;
@@ -50,6 +61,7 @@ namespace IYS.Application.Services
                             fill.BackgroundColor.SetColor(Color.LightGray);
                             columnIndex++;
                         } while (columnIndex != 12);
+
 
                         columnIndex = 1;
                         excelWorksheet.Cells[1, columnIndex++].Value = "Id";
@@ -76,7 +88,7 @@ namespace IYS.Application.Services
                             {
                                 var index = user.Recipient.LastIndexOf("@");
                                 if (index >= 2)
-                                    excelWorksheet.Cells[i + 2, columnIndex++].Value = user.Recipient.Substring(0, 2) + new string('*', index - 2) + user.Recipient.Substring(index);
+                                    excelWorksheet.Cells[i + 2, columnIndex++].Value = user.Recipient.Substring(0, 2) + new String('*', index - 2) + user.Recipient.Substring(index);
                             }
                             else
                             {
@@ -93,12 +105,44 @@ namespace IYS.Application.Services
                             excelWorksheet.Cells[i + 2, columnIndex++].Value = user.BatchError;
                         }
                         excelWorksheet.Cells.AutoFitColumns();
+                        var baseLogPath = _configuration.GetValue<string>("LogPath");
 
-                        var bytes = excelPackage.GetAsByteArray();
-                        response.Success(Convert.ToBase64String(bytes));
+                        var filePath = Path.Combine(baseLogPath, "IYS_Consent_Error_" + dateString + ".xlsx");
+
+                        var fileInfo = new FileInfo(filePath);
+                        excelPackage.SaveAs(fileInfo);
+
+                        var content = File.ReadAllBytes(filePath);
+
+                        var fileName = $"IYS_Consent_Error_{dateString}.xlsx";
+
+
+                        var soapXml = BuildSoapEnvelope(fileName, Convert.ToBase64String(content), dateString);
+
+                        using var client = new HttpClient();
+                        var request = new HttpRequestMessage(HttpMethod.Post,
+                            $"{_configuration.GetValue<string>("IYSErrorMail:Url")}/Services/NotificationService.svc");
+                        request.Headers.Add("SOAPAction", "\"http://tempuri.org/INotificationService/InsertMailNotificationsNoToken\"");
+                        request.Content = new StringContent(soapXml, Encoding.UTF8, "text/xml");
+
+                        var bresponse = await client.SendAsync(request);
+                        var result = await bresponse.Content.ReadAsStringAsync();
+
+                        if (bresponse.IsSuccessStatusCode)
+                        {
+                            var doc = XDocument.Parse(result);
+                            XNamespace respNs = "http://schemas.datacontract.org/2004/07/SmartDMS.NotificationService.Model.Response";
+                            var notifId = doc.Descendants(respNs + "NotificationId").FirstOrDefault()?.Value;     
+                            response.Data = $"Notification Id:{notifId ?? "Mail Failed"}";
+                            response.Status = ServiceResponseStatuses.Success;
+                        }
+                        else
+                        {
+                            throw new Exception($"IYS Error API failed with status {bresponse.StatusCode}: {result}");
+                        }
                     }
+
                 }
-                response.Success(string.Empty);
             }
             catch (Exception ex)
             {
@@ -109,6 +153,48 @@ namespace IYS.Application.Services
 
             return response;
         }
+
+        private string BuildSoapEnvelope(string fileName, string base64Content, string fileDate)
+        {
+            var subject = _configuration.GetValue<string>("IYSErrorMail:Subject");
+            var to = _configuration.GetValue<string>("IYSErrorMail:To");
+            var from = _configuration.GetValue<string>("IYSErrorMail:From");
+            var fromDisplayName = _configuration.GetValue<string>("IYSErrorMail:FromDisplayName");
+
+            return $@"
+<soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" xmlns:tem=""http://tempuri.org/"" xmlns:smar=""http://schemas.datacontract.org/2004/07/SmartDMS.NotificationService.Model.Request"" xmlns:arr=""http://schemas.microsoft.com/2003/10/Serialization/Arrays"">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <tem:InsertMailNotificationsNoToken>
+         <tem:request>
+            <smar:MailNotificationRequest>
+               <smar:ApplicationName>IYS</smar:ApplicationName>
+               <smar:Attachments>
+                  <smar:AttachmentRequest>
+                     <smar:Contents>{base64Content}</smar:Contents>
+                     <smar:FileName>{fileName}</smar:FileName>
+                  </smar:AttachmentRequest>
+               </smar:Attachments>
+               <smar:From>{from}</smar:From>
+               <smar:FromDisplayName>{fromDisplayName}</smar:FromDisplayName>
+               <smar:TemplateBodyParameters>
+                  <arr:KeyValueOfstringstring>
+                     <arr:Key>Today</arr:Key>
+                     <arr:Value>{fileDate}</arr:Value>
+                  </arr:KeyValueOfstringstring>
+               </smar:TemplateBodyParameters>
+               <smar:TemplateId>3189</smar:TemplateId>
+               <smar:Subject>{subject}</smar:Subject>
+               <smar:To>{to}</smar:To>
+            </smar:MailNotificationRequest>
+         </tem:request>
+      </tem:InsertMailNotificationsNoToken>
+   </soapenv:Body>
+</soapenv:Envelope>";
+
+
+        }
+
 
         public async Task<ResponseBase<List<Consent>>> GetErrorsJsonAsync(DateTime? date = null)
         {
