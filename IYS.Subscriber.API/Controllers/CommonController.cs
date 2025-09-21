@@ -17,6 +17,8 @@ namespace IYS.Subscriber.API.Controllers
         private readonly IIysProxy _client;
         private readonly IIysHelper _iysHelper;
         private readonly ErrorReportingService _sendConsentErrorService;
+        private static readonly string[] QueryRecipientTypes = new[] { "BIREYSEL", "TACIR" };
+        private static readonly string[] QueryConsentTypes = new[] { "ARAMA", "MESAJ", "EPOSTA" };
         public CommonController(
             IDbService dbHelper,
             IIysProxy iysClient,
@@ -224,6 +226,141 @@ namespace IYS.Subscriber.API.Controllers
         [HttpPost]
         public async Task<ResponseBase<MultipleQueryConsentResult>> QueryMultipleConsent([FromBody] QueryMutipleConsentRequest request)
             => await _client.PostJsonAsync<RecipientKeyWithList, MultipleQueryConsentResult>($"consents/{request.CompanyCode}/queryMultipleConsent", request.RecipientKeyWithList);
+
+        /// <summary>
+        /// IYSConsentRequest kaydındaki bilgileri kullanarak queryConsent çağrısı yapar.
+        /// </summary>
+        /// <param name="id">IYSConsentRequest tablosundaki kayıt numarası.</param>
+        /// <returns></returns>
+        [HttpGet("queryConsentByRequestId/{id:long}")]
+        public async Task<ResponseBase<QueryConsentResult>> QueryConsentByRequestId(long id)
+        {
+            var response = new ResponseBase<QueryConsentResult>();
+
+            if (id <= 0)
+            {
+                response.Error("INVALID_ID", "Geçerli bir izin isteği numarası belirtilmelidir.");
+                return response;
+            }
+
+            var consentRequest = await _dbService.GetConsentRequestById(id);
+
+            if (consentRequest is null)
+            {
+                response.Error("NOT_FOUND", $"Belirtilen kimliğe sahip IYSConsentRequest kaydı bulunamadı. (Id: {id})");
+                return response;
+            }
+
+            var companyCode = _iysHelper.ResolveCompanyCode(consentRequest.CompanyCode, consentRequest.IysCode) ?? consentRequest.CompanyCode;
+
+            if (string.IsNullOrWhiteSpace(companyCode))
+            {
+                response.Error("COMPANY_NOT_FOUND", "Kayıt için geçerli bir şirket kodu bulunamadı.");
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(consentRequest.Recipient))
+            {
+                response.Error("RECIPIENT_NOT_FOUND", "Kayıtta sorgulanacak alıcı bilgisi bulunamadı.");
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(consentRequest.RecipientType))
+            {
+                response.Error("RECIPIENT_TYPE_NOT_FOUND", "Kayıtta sorgulanacak alıcı tipi bilgisi bulunamadı.");
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(consentRequest.Type))
+            {
+                response.Error("TYPE_NOT_FOUND", "Kayıtta sorgulanacak izin tipi bilgisi bulunamadı.");
+                return response;
+            }
+
+            var queryResponse = await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{companyCode}/queryConsent", new RecipientKey
+            {
+                Recipient = consentRequest.Recipient,
+                RecipientType = consentRequest.RecipientType,
+                Type = consentRequest.Type
+            });
+
+            queryResponse.Id = consentRequest.Id;
+
+            return queryResponse;
+        }
+
+        /// <summary>
+        /// Belirtilen alıcı için tüm şirket kodları ve izin tipleri kombinasyonlarıyla queryConsent çağrısı yapar.
+        /// </summary>
+        /// <param name="recipient">E-posta adresi veya telefon numarası.</param>
+        /// <returns></returns>
+        [HttpGet("queryConsentByRecipient")]
+        public async Task<ResponseBase<List<QueryConsentAggregationItem>>> QueryConsentByRecipient([FromQuery] string recipient)
+        {
+            var response = new ResponseBase<List<QueryConsentAggregationItem>>();
+
+            if (string.IsNullOrWhiteSpace(recipient))
+            {
+                response.Error("RECIPIENT_REQUIRED", "Sorgulanacak alıcı bilgisi zorunludur.");
+                return response;
+            }
+
+            var normalizedRecipient = recipient.Trim();
+
+            var companyCodes = _iysHelper.GetAllCompanyCodes()
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .Select(code => _iysHelper.ResolveCompanyCode(code, 0) ?? code.Trim())
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (companyCodes.Count == 0)
+            {
+                response.Error("COMPANY_CODES_NOT_FOUND", "Sorgulanacak şirket kodu bulunamadı.");
+                return response;
+            }
+
+            var aggregatedResults = new List<QueryConsentAggregationItem>(companyCodes.Count * QueryRecipientTypes.Length * QueryConsentTypes.Length);
+
+            foreach (var companyCode in companyCodes)
+            {
+                foreach (var recipientType in QueryRecipientTypes)
+                {
+                    foreach (var type in QueryConsentTypes)
+                    {
+                        ResponseBase<QueryConsentResult> queryResult;
+
+                        try
+                        {
+                            queryResult = await _client.PostJsonAsync<RecipientKey, QueryConsentResult>($"consents/{companyCode}/queryConsent", new RecipientKey
+                            {
+                                Recipient = normalizedRecipient,
+                                RecipientType = recipientType,
+                                Type = type
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            queryResult = new ResponseBase<QueryConsentResult>();
+                            queryResult.Error("QUERY_CONSENT_FAILED", ex.Message);
+                        }
+
+                        aggregatedResults.Add(new QueryConsentAggregationItem
+                        {
+                            CompanyCode = companyCode,
+                            RecipientType = recipientType,
+                            Type = type,
+                            Response = queryResult
+                        });
+                    }
+                }
+            }
+
+            response.Success(aggregatedResults);
+            response.AddMessage("CombinationCount", aggregatedResults.Count.ToString());
+
+            return response;
+        }
 
         /// <summary>
         /// IYSConsentRequest ve IYSCallLog sorgulanır

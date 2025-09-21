@@ -149,6 +149,21 @@
             LEFT JOIN IYSCallLog cl WITH (NOLOCK) ON cr.LogId = cl.Id
             WHERE cr.Recipient LIKE '%' + @recipient + '%'";
 
+        public static string GetConsentRequestById = @"
+            SELECT TOP 1
+                cr.CompanyCode,
+                cr.Id,
+                cr.IysCode,
+                cr.BrandCode,
+                CONVERT(varchar(19), cr.ConsentDate, 20) AS ConsentDate,
+                cr.[Source],
+                cr.Recipient,
+                cr.RecipientType,
+                cr.Status,
+                cr.[Type]
+            FROM dbo.IYSConsentRequest cr WITH (NOLOCK)
+            WHERE cr.Id = @Id;";
+
         public static string CheckPullConsent = @"
             SELECT CASE WHEN EXISTS (
                 SELECT 1 FROM SfdcMasterData.dbo.IysPullConsent (NOLOCK)

@@ -304,6 +304,25 @@ namespace IYS.Application.Services
             }
         }
 
+        public async Task<ConsentRequestLog?> GetConsentRequestById(long id)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var result = await connection.QuerySingleOrDefaultAsync<ConsentRequestLog>(
+                    QueryStrings.GetConsentRequestById,
+                    new
+                    {
+                        Id = id
+                    });
+
+                await connection.CloseAsync();
+
+                return result;
+            }
+        }
+
         public async Task<ConsentResultLog> GetConsentRequest(string recipient)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))

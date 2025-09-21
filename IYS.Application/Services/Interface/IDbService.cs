@@ -22,6 +22,7 @@ namespace IYS.Application.Services.Interface
             string? type,
             IEnumerable<string> recipients);
         Task UpdateConsentResponseFromResponse(ResponseBase<AddConsentResult> response);
+        Task<ConsentRequestLog?> GetConsentRequestById(long id);
         Task<ConsentResultLog> GetConsentRequest(string id);
         Task<List<ConsentRequestLog>> GetPendingConsents(int rowCount);
         Task UpdateConsentResponses(IEnumerable<ConsentResponseUpdate> responses);
