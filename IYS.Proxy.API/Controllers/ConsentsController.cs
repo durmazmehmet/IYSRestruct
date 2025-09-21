@@ -144,7 +144,12 @@ public class ConsentsController : ControllerBase
         return StatusCode(result.HttpStatusCode == 0 ? 500 : result.HttpStatusCode, result);
     }
 
-
+    /// <summary>
+    /// IYS çoklu izin gönderme
+    /// </summary>
+    /// <param name="companyCode"></param>
+    /// <param name="consent"></param>
+    /// <returns></returns>
     [HttpPost("addMultipleConsent")]
     public async Task<ActionResult<ResponseBase<MultipleConsentResult>>> AddMultipleConsent(
         [FromRoute] string companyCode,
@@ -183,7 +188,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{requestId}",
+            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{requestId}",
             Action = "Query Multiple Consent Request",
             Method = RestSharp.Method.Get
         };
