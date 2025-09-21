@@ -10,7 +10,6 @@ namespace IYS.Publisher.API.Controllers
     public class ScheduledController : ControllerBase
     {
         private readonly SendConsentToIysService _singleConsentAddService;
-        private readonly SendMultipleConsentToIysService _multipleConsentService;
         private readonly PullConsentFromIysService _pullConsentService;
         private readonly PullConsentLookupService _pullConsentLookupService;
         private readonly SendConsentToSalesforceService _sfConsentService;
@@ -18,7 +17,6 @@ namespace IYS.Publisher.API.Controllers
 
         public ScheduledController(
                                    SendConsentToIysService singleConsentAddService,
-                                   SendMultipleConsentToIysService multipleConsentService,
                                    PullConsentFromIysService pullConsentService,
                                    PullConsentLookupService pullConsentLookupService,
                                    SendConsentToSalesforceService sfConsentService,
@@ -27,7 +25,6 @@ namespace IYS.Publisher.API.Controllers
                                    )
         {
             _singleConsentAddService = singleConsentAddService;
-            _multipleConsentService = multipleConsentService;
             _pullConsentService = pullConsentService;
             _pullConsentLookupService = pullConsentLookupService;
             _sfConsentService = sfConsentService;
@@ -44,54 +41,6 @@ namespace IYS.Publisher.API.Controllers
         {
 
             var result = await _singleConsentAddService.RunAsync(batchSize);
-            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
-        }
-
-        /// <summary>
-        /// IysConsentRequest tablosundaki kayıtları çoklu ekleme servisi ile IYS'ye gönderir.
-        /// </summary>
-        /// <param name="batchSize">Gönderilecek batch sayısı.</param>
-        /// <returns></returns>
-        [HttpGet("pushMultipleConsentsToIys")]
-        public async Task<IActionResult> PushMultipleConsents([FromQuery] int batchSize)
-        {
-            var result = await _multipleConsentService.SendPendingBatchesAsync(batchSize);
-            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
-        }
-
-        /// <summary>
-        /// Çoklu ekleme isteklerinin durumunu sorgular ve sonuçlarını günceller.
-        /// </summary>
-        /// <param name="batchSize">Sorgulanacak batch sayısı.</param>
-        /// <returns></returns>
-        [HttpGet("queryMultipleConsentBatches")]
-        public async Task<IActionResult> QueryMultipleConsentBatches([FromQuery] int batchSize)
-        {
-            var result = await _multipleConsentService.QueryPendingBatchesAsync(batchSize);
-            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
-        }
-
-        /// <summary>
-        /// Dışarıdan gelen çoklu rıza isteğini doğrudan IYS'ye iletir.
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        [HttpPost("sendMultipleConsents")]
-        public async Task<IActionResult> SendMultipleConsents([FromBody] MultipleConsentRequest request)
-        {
-            var result = await _multipleConsentService.SendFromRequestAsync(request);
-            return StatusCode(result.IsSuccessful() ? 200 : 500, result);
-        }
-
-        /// <summary>
-        /// Çoklu ekleme isteğinin durumunu sorgular.
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        [HttpPost("queryMultipleConsentStatus")]
-        public async Task<IActionResult> QueryMultipleConsentStatus([FromBody] MultipleConsentRequest request)
-        {
-            var result = await _multipleConsentService.QueryStatusFromRequestAsync(request);
             return StatusCode(result.IsSuccessful() ? 200 : 500, result);
         }
 
