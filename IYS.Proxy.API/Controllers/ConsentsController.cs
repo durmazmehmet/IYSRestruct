@@ -158,7 +158,7 @@ public class ConsentsController : ControllerBase
     [HttpPost("sendMultipleConsent")]
     public async Task<ActionResult<ResponseBase<MultipleConsentResult>>> SendMultipleConsent(
         [FromRoute] string companyCode,
-        [FromBody] List<Consent> consent)
+        [FromBody] List<IysBaseConsent> consent)
     {
         var consentParams = _iysHelper.GetIysCode(companyCode);
 
