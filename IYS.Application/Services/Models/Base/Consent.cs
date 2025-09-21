@@ -45,7 +45,7 @@ namespace IYS.Application.Services.Models.Base
         public string? SalesforceId { get; set; }
 
         [JsonIgnore]
-        public int? BatchId { get; set; }
+        public long? BatchId { get; set; }
 
         [JsonIgnore]
         public int? Index { get; set; }

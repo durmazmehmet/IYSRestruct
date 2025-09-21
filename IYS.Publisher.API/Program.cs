@@ -23,6 +23,7 @@ internal class Program
             return new IysProxy(url, auth);
         });
         builder.Services.AddScoped<SendConsentToIysService>();
+        builder.Services.AddScoped<SendMultipleConsentToIysService>();
         builder.Services.AddScoped<PullConsentFromIysService>();
         builder.Services.AddScoped<PullConsentLookupService>();
         builder.Services.AddScoped<SendConsentToSalesforceService>();
