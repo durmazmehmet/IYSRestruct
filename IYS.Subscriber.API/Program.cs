@@ -1,9 +1,9 @@
 ﻿using IYS.Application.Middleware.Exceptions;
 using IYS.Application.Middleware.LoggingService;
+using IYS.Application.Middleware.LoggingService.Loggers;
 using IYS.Application.Services;
 using IYS.Application.Services.Interface;
 using IYS.Subscriber.API.Helpers;
-using IYS.Application.Middleware.LoggingService.Loggers;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 

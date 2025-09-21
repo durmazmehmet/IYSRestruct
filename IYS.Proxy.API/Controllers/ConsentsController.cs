@@ -3,6 +3,7 @@ using IYS.Application.Services.Models.Base;
 using IYS.Application.Services.Models.Request;
 using IYS.Application.Services.Models.Response.Consent;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace IYS.Proxy.API.Controllers;
 
@@ -14,18 +15,20 @@ public class ConsentsController : ControllerBase
     private readonly IIysRestClientService _clientHelper;
     private readonly IIysHelper _iysHelper;
     private readonly string _baseUrl;
+    private readonly Versions _versions;
 
-    public ConsentsController(IConfiguration config, IIysRestClientService clientHelper, IIysHelper iysHelper)
+    public ConsentsController(IConfiguration config, IIysRestClientService clientHelper, IIysHelper iysHelper, IOptions<Versions> options)
     {
         _config = config;
         _clientHelper = clientHelper;
         _baseUrl = _config.GetValue<string>("BaseUrl");
+        _versions = options.Value;
         _iysHelper = iysHelper;
     }
 
     /// <summary>
     /// Tekli izin ekleme
-    /// "{_baseUrl}/v2/sps/{IysCode}/brands/{BrandCode}/consents"
+    /// "{_baseUrl}/{version}/sps/{IysCode}/brands/{BrandCode}/consents"
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="consent"></param>
@@ -40,7 +43,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<Consent>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents",
+            Url = $"{_baseUrl}{_versions.AddConsent}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents",
             Body = consent,
             Action = "Add Consent",
             Method = RestSharp.Method.Post
@@ -55,7 +58,7 @@ public class ConsentsController : ControllerBase
     /// Tekli izin sorgulama 
     /// Bu metot, bir IP adresinden saatte en fazla 100 istek yapabilir.
     /// Çoklu versiyonu kullanmanız tavsiye edilir
-    /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/status"
+    /// "{_baseUrl}/{version}/sps/{IysCode}/brands/{BrandCode}/consents/status"
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="recipientKey"></param>
@@ -70,7 +73,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<RecipientKey>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/status",
+            Url = $"{_baseUrl}{_versions.QueryConsent}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/status",
             Body = recipientKey,
             Action = "Query Consent",
             Method = RestSharp.Method.Post
@@ -85,7 +88,7 @@ public class ConsentsController : ControllerBase
     /// <summary>
     /// Çoklu izin sorgulama 
     /// Bu metot, aynı anda en fazla 1000 adet iletişim adresinin izin durumunun sorgulanmasını sağlar.
-    /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/status"
+    /// "{_baseUrl}/{version}/sps/{IysCode}/brands/{BrandCode}/consents/status"
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="recipientKeyWithList"></param>
@@ -100,7 +103,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<RecipientsRequestWrapper>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/{recipientKeyWithList.RecipientType}/status/{recipientKeyWithList.Type}",
+            Url = $"{_baseUrl}{_versions.QueryMultipleConsent}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/{recipientKeyWithList.RecipientType}/status/{recipientKeyWithList.Type}",
             Body = new RecipientsRequestWrapper { Recipients = recipientKeyWithList.Recipients },
             Action = "Query Consent",
             Method = RestSharp.Method.Post
@@ -113,7 +116,7 @@ public class ConsentsController : ControllerBase
 
     /// <summary>
     /// IYS'den değişen izinleri çekme
-    /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/changes?queryParams"
+    /// "{_baseUrl}/{version}/sps/{IysCode}/brands/{BrandCode}/consents/changes?queryParams"
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="after"></param>
@@ -136,7 +139,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/changes?" + string.Join("&", queryParams),
+            Url = $"{_baseUrl}{_versions.PullConsent}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/changes?" + string.Join("&", queryParams),
             Action = "Pull Consent"
         };
 
@@ -147,7 +150,7 @@ public class ConsentsController : ControllerBase
 
     /// <summary>
     /// IYS çoklu izin gönderme
-    /// "{_baseUrl}/sps/{IysCode}/brands/{BrandCode}/consents/request"
+    /// "{_baseUrl}/{version}/sps/{IysCode}/brands/{BrandCode}/consents/request"
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="consent"></param>
@@ -162,7 +165,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<List<Consent>>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/request",
+            Url = $"{_baseUrl}{_versions.AddMultipleConsent}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/request",
             Body = consent,
             Action = "Add Consent",
             Method = RestSharp.Method.Post
@@ -175,7 +178,7 @@ public class ConsentsController : ControllerBase
 
     /// <summary>
     /// Çoklu izin ekleme isteği sorgulama
-    /// "{_baseUrl}/v2/sps/{IysCode}/brands/{BrandCode}/consents/request/{requestId}"
+    /// "{_baseUrl}/{version}/sps/{IysCode}/brands/{BrandCode}/consents/request/{requestId}"
     /// </summary>
     /// <param name="companyCode"></param>
     /// <param name="requestId"></param>
@@ -190,7 +193,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<DummyRequest>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}/v2/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{requestId}",
+            Url = $"{_baseUrl}{_versions.QueryMultipleConsentRequest}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request/{requestId}",
             Action = "Query Multiple Consent Request",
             Method = RestSharp.Method.Get
         };

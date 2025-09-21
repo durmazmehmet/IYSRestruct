@@ -15,6 +15,7 @@ internal class Program
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        builder.Services.Configure<Versions>(builder.Configuration.GetSection("Versions"));
         builder.Services.AddSingleton<LoggerServiceBase>(_ => new GrayLogger());
         builder.Services.Configure<CacheSettings>(builder.Configuration.GetSection("CacheSettings"));
         builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>

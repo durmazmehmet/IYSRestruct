@@ -19,6 +19,7 @@ namespace IYS.Subscriber.API.Controllers
         private readonly ErrorReportingService _sendConsentErrorService;
         private static readonly string[] QueryRecipientTypes = new[] { "BIREYSEL", "TACIR" };
         private static readonly string[] QueryConsentTypes = new[] { "ARAMA", "MESAJ", "EPOSTA" };
+
         public CommonController(
             IDbService dbHelper,
             IIysProxy iysClient,
