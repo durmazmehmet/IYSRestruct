@@ -155,8 +155,8 @@ public class ConsentsController : ControllerBase
     /// <param name="companyCode"></param>
     /// <param name="consent"></param>
     /// <returns></returns>
-    [HttpPost("addMultipleConsent")]
-    public async Task<ActionResult<ResponseBase<MultipleConsentResult>>> AddMultipleConsent(
+    [HttpPost("sendMultipleConsent")]
+    public async Task<ActionResult<ResponseBase<MultipleConsentResult>>> SendMultipleConsent(
         [FromRoute] string companyCode,
         [FromBody] List<Consent> consent)
     {
@@ -183,8 +183,8 @@ public class ConsentsController : ControllerBase
     /// <param name="companyCode"></param>
     /// <param name="requestId"></param>
     /// <returns></returns>
-    [HttpGet("queryMultipleConsentRequest/{requestId}")]
-    public async Task<ActionResult<ResponseBase<MultipleConsentRequestStatusResult>>> QueryMultipleConsentRequest(
+    [HttpGet("querySendMultipleConsentRequest/{requestId}")]
+    public async Task<ActionResult<ResponseBase<MultipleConsentRequestStatusResult>>> QuerySendMultipleConsentRequest(
         [FromRoute] string companyCode,
         [FromRoute] string requestId)
     {
