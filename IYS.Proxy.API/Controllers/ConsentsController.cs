@@ -165,7 +165,7 @@ public class ConsentsController : ControllerBase
         var iysRequest = new IysRequest<List<IysBaseConsent>>
         {
             IysCode = consentParams.IysCode,
-            Url = $"{_baseUrl}{_versions.AddMultipleConsent}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/request",
+            Url = $"{_baseUrl}{_versions.AddMultipleConsent}/sps/{consentParams.IysCode}/brands/{consentParams.BrandCode}/consents/request",
             Body = consent,
             Action = "Send Multiple Consent Request",
             Method = RestSharp.Method.Post
