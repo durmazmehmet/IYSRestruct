@@ -82,7 +82,7 @@ namespace IYS.Application.Services
                             var user = errorConsents[i];
                             excelWorksheet.Cells[i + 2, columnIndex++].Value = user.Id;
                             excelWorksheet.Cells[i + 2, columnIndex++].Value = user.SalesforceId;
-                            excelWorksheet.Cells[i + 2, columnIndex++].Value = user.CreateDate?.ToString("yyyy-MM-dd HH:mm:ss");
+                            excelWorksheet.Cells[i + 2, columnIndex++].Value = user.CreateDate;
                             excelWorksheet.Cells[i + 2, columnIndex++].Value = user.CompanyCode;
                             if (user.Type == "EPOSTA")
                             {
@@ -196,15 +196,15 @@ namespace IYS.Application.Services
         }
 
 
-        public async Task<ResponseBase<List<Consent>>> GetErrorsJsonAsync(DateTime? date = null)
+        public async Task<ResponseBase<List<ConsentErrorModel>>> GetErrorsJsonAsync(DateTime? date = null)
         {
-            var response = new ResponseBase<List<Consent>>();
+            var response = new ResponseBase<List<ConsentErrorModel>>();
             response.Success();
 
             try
             {
                 _logger.LogInformation("SendConsentErrorService.GetErrorsJsonAsync running at: {time}", DateTimeOffset.Now);
-                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date) ?? new List<Consent>();
+                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date) ?? new List<ConsentErrorModel>();
                 PopulateBatchErrors(errorConsents);
                 response.Success(errorConsents);
             }
@@ -226,7 +226,7 @@ namespace IYS.Application.Services
             try
             {
                 _logger.LogInformation("SendConsentErrorService.GetErrorReportStatsAsync running at: {time}", DateTimeOffset.Now);
-                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date) ?? new List<Consent>();
+                var errorConsents = await _dbService.GetIYSConsentRequestErrors(date) ?? new List<ConsentErrorModel>();
                 PopulateBatchErrors(errorConsents);
 
                 var stats = errorConsents
@@ -270,13 +270,11 @@ namespace IYS.Application.Services
 
                 var createDates = errorConsents
                     .Select(consent => consent.CreateDate)
-                    .Where(value => value.HasValue)
-                    .Select(value => value.Value)
                     .OrderBy(value => value)
                     .ToList();
 
-                DateTime? dataRangeStart = null;
-                DateTime? dataRangeEnd = null;
+                string dataRangeStart = null;
+                string dataRangeEnd = null;
 
                 if (createDates.Count > 0)
                 {
@@ -303,7 +301,7 @@ namespace IYS.Application.Services
             return response;
         }
 
-        private void PopulateBatchErrors(IEnumerable<Consent> consents)
+        private void PopulateBatchErrors(IEnumerable<ConsentErrorModel> consents)
         {
             foreach (var consent in consents)
             {

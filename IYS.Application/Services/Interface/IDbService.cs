@@ -25,7 +25,7 @@ namespace IYS.Application.Services.Interface
         Task InsertPullConsent(AddConsentRequest request);
         Task<List<Consent>> GetPullConsentRequests(bool isProcessed, int rowCount);
         Task UpdateSfConsentResponse(SfConsentResult consentResult);
-        Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null);
+        Task<List<ConsentErrorModel>> GetIYSConsentRequestErrors(DateTime? date = null);
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);
         Task<List<PullConsentSummary>> GetPullConsentsAsync(DateTime startDate, string recipientType, IEnumerable<string> companyCodes);
         Task InsertTokenLogAsync(TokenLogEntry tokenLogEntry);

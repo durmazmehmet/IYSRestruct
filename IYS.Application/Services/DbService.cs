@@ -483,21 +483,23 @@ namespace IYS.Application.Services
             }
         }
 
-        public async Task<List<Consent>> GetIYSConsentRequestErrors(DateTime? date = null)
+        public async Task<List<ConsentErrorModel>> GetIYSConsentRequestErrors(DateTime? date = null)
         {
             using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
             {
                 connection.Open();
 
-                var result = (await connection.QueryAsync<Consent>(QueryStrings.GetIYSConsentRequestErrors,
+                var result = await connection.QueryAsync<ConsentErrorModel>(QueryStrings.GetIYSConsentRequestErrors,
                     new
                     {
                         CreateDate = date ?? DateTime.Today
-                    })).ToList();
+                    });
 
                 connection.Close();
 
-                return result;
+                var response = result.ToList();
+
+                return response;
             }
         }
 
