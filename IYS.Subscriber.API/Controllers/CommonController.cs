@@ -45,7 +45,6 @@ namespace IYS.Subscriber.API.Controllers
             request.CompanyCode = _iysHelper.ResolveCompanyCode(request.CompanyCode, request.IysCode);
 
             var response = new ResponseBase<AddConsentResult>();
-            var forceSend = _iysHelper.IsForceSendEnabled();
 
             if (request.Consent == null)
             {
@@ -74,7 +73,7 @@ namespace IYS.Subscriber.API.Controllers
                 return response;
             }
 
-            if (forceSend)
+            if (request.IsForceSend)
             {
                 var sendResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", request.Consent);
                 sendResponse.Id = queuedId;
@@ -102,7 +101,6 @@ namespace IYS.Subscriber.API.Controllers
 
             var requestCount = request.Consents.Count;
             var response = new ResponseBase<MultipleConsentResult>();
-            var forceSend = _iysHelper.IsForceSendEnabled();
 
             if ((request.IysCode == 0 || request.BrandCode == 0) && !string.IsNullOrWhiteSpace(request.CompanyCode))
             {
@@ -111,9 +109,7 @@ namespace IYS.Subscriber.API.Controllers
                 request.BrandCode = consentParams.BrandCode;
             }
 
-            var successCount = 0;
             var queuedCount = 0;
-            var hasError = false;
 
             for (var i = 0; i < request.Consents.Count; i++)
             {
@@ -121,12 +117,7 @@ namespace IYS.Subscriber.API.Controllers
 
                 if (consent == null)
                 {
-                    if (!hasError)
-                    {
-                        response.Error();
-                        hasError = true;
-                    }
-
+                    response.Error();                 
                     response.AddMessage($"Error_{i + 1}", "Consent bilgisi zorunludur.");
                     continue;
                 }
@@ -156,54 +147,14 @@ namespace IYS.Subscriber.API.Controllers
 
                 if (result > 0)
                 {
-                    if (forceSend)
-                    {
-                        var addResponse = await _client.PostJsonAsync<Consent, AddConsentResult>($"consents/{request.CompanyCode}/addConsent", consent);
-                        addResponse.Id = result;
-                        await _dbService.UpdateConsentResponseFromResponse(addResponse);
-
-                        if (addResponse.IsSuccessful() && addResponse.HttpStatusCode >= 200 && addResponse.HttpStatusCode < 300)
-                        {
-                            successCount++;
-                            continue;
-                        }
-
-                        if (!hasError)
-                        {
-                            response.Error();
-                            hasError = true;
-                        }
-
-                        response.AddMessage($"Error_{i + 1}", _iysHelper.BuildAddConsentErrorMessage(addResponse));
-                        continue;
-                    }
-
                     queuedCount++;
                     continue;
-                }
-
-                if (!hasError)
-                {
-                    response.Error();
-                    hasError = true;
                 }
 
                 response.AddMessage($"Error_{i + 1}", "İzin isteği sıraya alınamadı.");
             }
 
-            if (forceSend)
-            {
-                response.AddMessage("Success", $"{successCount}/{requestCount} kayıt başarı ile gönderildi");
-            }
-            else
-            {
-                response.AddMessage("Success", $"{queuedCount}/{requestCount} kayıt başarı ile sıraya alındı");
-            }
-
-            if (!hasError)
-            {
-                response.Success();
-            }
+            response.AddMessage("Success", $"{queuedCount}/{requestCount} kayıt başarı ile sıraya alındı");
 
             return response;
         }

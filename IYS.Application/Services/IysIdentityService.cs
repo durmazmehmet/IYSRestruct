@@ -1,8 +1,7 @@
 using IYS.Application.Services.Interface;
-using IYS.Application.Services.Models.Response.Identity;
 using IYS.Application.Services.Models.Identity;
+using IYS.Application.Services.Models.Response.Identity;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
@@ -14,8 +13,8 @@ namespace IYS.Application.Services
     {
         private readonly ICacheService _cacheService;
         private readonly IConfiguration _config;
-        private readonly IServiceScopeFactory _scopeFactory;
         private readonly IIysHelper _iysHelper;
+        private readonly IDbService _dbService;
         private readonly ILogger<IysIdentityService> _logger;
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private readonly string _serverIdentifier;
@@ -26,13 +25,12 @@ namespace IYS.Application.Services
             ILogger<IysIdentityService> logger,
             ICacheService cacheService,
             IIysHelper iysHelper,
-            IServiceScopeFactory scopeFactory)
+            IDbService dbService)
         {
             _config = config;
             _logger = logger;
             _cacheService = cacheService;
-            _scopeFactory = scopeFactory;
-            _serverIdentifier = ResolveServerIdentifier();
+            _dbService = dbService;
             _iysHelper = iysHelper;
         }
 
@@ -163,9 +161,7 @@ namespace IYS.Application.Services
                     ServerIdentifier = _serverIdentifier
                 };
 
-                using var scope = _scopeFactory.CreateScope();
-                var dbService = scope.ServiceProvider.GetRequiredService<IDbService>();
-                await dbService.InsertTokenLogAsync(logEntry);
+                await _dbService.InsertTokenLogAsync(logEntry);
             }
             catch (Exception ex)
             {
@@ -192,22 +188,6 @@ namespace IYS.Application.Services
             var lastPart = trimmed.Substring(trimmed.Length - TokenMaskSegmentLength, TokenMaskSegmentLength);
 
             return string.Concat(firstPart, "***", lastPart);
-        }
-
-        private string ResolveServerIdentifier()
-        {
-            var configuredName = _config.GetValue<string>("ServerIdentifier");
-            if (!string.IsNullOrWhiteSpace(configuredName)) return configuredName.Trim();
-
-            try
-            {
-                var machineName = Environment.MachineName;
-                return string.IsNullOrWhiteSpace(machineName) ? "UNKNOWN" : machineName;
-            }
-            catch
-            {
-                return "UNKNOWN";
-            }
         }
     }
 }

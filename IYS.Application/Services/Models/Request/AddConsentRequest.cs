@@ -8,5 +8,6 @@ namespace IYS.Application.Services.Models.Request
         public string? SalesforceId { get; set; }
         public string? CompanyCode { get; set; }
         public string? CompanyName { get; set; }
+        public bool IsForceSend { get; set; } = false;
     }
 }

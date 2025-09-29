@@ -29,5 +29,7 @@ namespace IYS.Application.Services.Interface
         Task<T> UpdateLogFromResponseBase<T>(ResponseBase<T> response, int id);
         Task<List<PullConsentSummary>> GetPullConsentsAsync(DateTime startDate, string recipientType, IEnumerable<string> companyCodes);
         Task InsertTokenLogAsync(TokenLogEntry tokenLogEntry);
+        Task UpdateTokenResponseLog(TokenResponseLog log);
+        Task<string> GetTokenResponseLog(string CompanyCode);
     }
 }

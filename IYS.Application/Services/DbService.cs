@@ -291,7 +291,7 @@ namespace IYS.Application.Services
                 var result = (await connection.QueryAsync<PullRequestLog>(QueryStrings.GetPullRequestLog,
                     new
                     {
-                        CompanyCode = companyCode
+                        IysCode = companyCode
                     })).SingleOrDefault();
 
                 connection.Close();
@@ -314,6 +314,37 @@ namespace IYS.Application.Services
                         log.AfterId
                     });
                 connection.Close();
+            }
+        }
+
+        public async Task UpdateTokenResponseLog(TokenResponseLog log)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.ExecuteAsync(QueryStrings.UpdateTokenResponseLog,
+                    new
+                    {
+                        log.IysCode,
+                        log.TokenResponse
+                    });
+                connection.Close();
+            }
+        }
+
+        public async Task<string> GetTokenResponseLog(string IysCode)
+        {
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                connection.Open();
+                var result = await connection.QueryAsync<string>(QueryStrings.GetTokenResponseLog,
+                    new
+                    {
+                        IysCode
+                    });
+                connection.Close();
+
+                return result.FirstOrDefault() ?? string.Empty;
             }
         }
 

@@ -1,18 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using IYS.Application.Services.Interface;
+using IYS.Application.Services.Models.Base;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using StackExchange.Redis;
 
 
 namespace IYS.Application.Services
 {
-
-    public interface ICacheService
-    {
-        public Task<T> GetCachedDataAsync<T>(string cacheKey);
-        public Task SetCacheDataAsync<T>(string cacheKey, T data);
-        public Task<T> GetCachedHashDataAsync<T>(string hashKey, string Key);
-        public Task SetCacheHashDataAsync<T>(string hashKey, string Key, T data);
-    }
     public class CacheService : ICacheService
     {
         private readonly ILogger<CacheService> _logger;
@@ -22,6 +16,38 @@ namespace IYS.Application.Services
         {
             _logger = logger;
             _cache = redis.GetDatabase();
+        }
+
+        public ResponseBase<bool> CheckCache()
+        {
+            var response = new ResponseBase<bool>();
+
+            if (_cache == null)
+            {
+                response.AddMessage("Redis","Redis cache nesnesi null.");
+                response.Error();
+                return response;
+            }
+
+            var _multiplexer = _cache.Multiplexer;
+
+            if (!_multiplexer.IsConnected)
+            {
+                response.AddMessage("Redis", "Redis bağlantısı başarısız (IsConnected=false)");
+                response.Error();
+                return response;
+            }
+
+            var cacheStatus = _multiplexer.GetStatus();
+
+            if (!cacheStatus.Contains("ConnectedEstablished") || cacheStatus.Contains("slave") || cacheStatus.Contains("replica"))
+            {
+                response.AddMessage("Redis", "Redis bağlantısı sağlıksız veya slave.");
+                response.Error();
+                return response;
+            }
+
+            return response;
         }
 
         public async Task<T> GetCachedDataAsync<T>(string cacheKey)

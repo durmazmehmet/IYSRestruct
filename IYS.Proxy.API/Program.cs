@@ -1,13 +1,11 @@
 ﻿using IYS.Application.Middleware.Exceptions;
 using IYS.Application.Middleware.LoggingService;
+using IYS.Application.Middleware.LoggingService.Loggers;
 using IYS.Application.Services;
 using IYS.Application.Services.Interface;
 using IYS.Application.Services.Models.Base;
 using IYS.Proxy.API.Helpers;
-using IYS.Application.Middleware.LoggingService.Loggers;
-using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using StackExchange.Redis;
 using System.Reflection;
 
 internal class Program
@@ -15,20 +13,15 @@ internal class Program
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        builder.Services.AddMemoryCache();
         builder.Services.Configure<Versions>(builder.Configuration.GetSection("Versions"));
         builder.Services.AddSingleton<LoggerServiceBase>(_ => new GrayLogger());
-        builder.Services.Configure<CacheSettings>(builder.Configuration.GetSection("CacheSettings"));
-        builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-        {
-            var cacheSettings = sp.GetRequiredService<IOptions<CacheSettings>>().Value;
-            return ConnectionMultiplexer.Connect(cacheSettings.ConnectionString);
-        });
-        builder.Services.AddSingleton<ICacheService, CacheService>();
+        builder.Services.AddSingleton<ICacheService, HybridCacheService>();
+        builder.Services.AddSingleton<IDbService, DbService>();
+        builder.Services.AddSingleton<IIysHelper, IysHelper>();
         builder.Services.AddScoped<IIysIdentityService, IysIdentityService>();
         builder.Services.AddScoped<ISfIdentityService, SalesforceIdentityService>();
-        builder.Services.AddScoped<IIysHelper, IysHelper>();
         builder.Services.AddScoped<IIysRestClientService, IysRestClientService>();
-        builder.Services.AddScoped<IDbService, DbService>();
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
