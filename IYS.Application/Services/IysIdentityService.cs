@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RestSharp;
+using System;
 using System.Globalization;
 
 namespace IYS.Application.Services
@@ -36,6 +37,7 @@ namespace IYS.Application.Services
             _cacheService = cacheService;
             _dbService = dbService;
             _iysHelper = iysHelper;
+            _serverIdentifier = ResolveServerIdentifier();
         }
 
         private async Task<Token> GetNewToken(int iysCode)
@@ -284,6 +286,24 @@ namespace IYS.Application.Services
 
         private static string BuildRateLimitMessage(DateTime haltUntilUtc)
             => $"Saatte kabul edilen kimlik doğrulama istek limitine ulaşıldı. İşlemler {haltUntilUtc:O} UTC'ye kadar durduruldu.";
+
+        private static string ResolveServerIdentifier()
+        {
+            var machineName = Environment.MachineName;
+
+            if (!string.IsNullOrWhiteSpace(machineName))
+            {
+                return machineName;
+            }
+
+            var friendlyName = AppDomain.CurrentDomain.FriendlyName;
+            if (!string.IsNullOrWhiteSpace(friendlyName))
+            {
+                return friendlyName;
+            }
+
+            return "UnknownServer";
+        }
 
         private static IdentityErrorResponse? ParseIdentityError(string? content)
         {
