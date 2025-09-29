@@ -73,12 +73,34 @@ namespace IYS.Application.Services
                     tokenLogEntry.CompanyCode,
                     tokenLogEntry.AccessTokenMasked,
                     tokenLogEntry.RefreshTokenMasked,
-                    tokenLogEntry.TokenUpdateDateUtc,
+                    tokenLogEntry.TokenCreateDateUtc,
+                    tokenLogEntry.TokenRefreshDateUtc,
                     tokenLogEntry.Operation,
                     tokenLogEntry.ServerIdentifier
                 });
 
                 await connection.CloseAsync();
+            }
+        }
+
+        public async Task<DateTime?> GetLastTokenCreateDateUtcAsync(string companyCode)
+        {
+            if (string.IsNullOrWhiteSpace(companyCode))
+            {
+                throw new ArgumentException("Company code must be provided.", nameof(companyCode));
+            }
+
+            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
+            {
+                await connection.OpenAsync();
+
+                var lastCreateDate = await connection.QueryFirstOrDefaultAsync<DateTime?>(
+                    QueryStrings.GetLastTokenCreateDateUtc,
+                    new { CompanyCode = companyCode });
+
+                await connection.CloseAsync();
+
+                return lastCreateDate;
             }
         }
 

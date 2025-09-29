@@ -8,7 +8,8 @@
                     CompanyCode,
                     AccessTokenMasked,
                     RefreshTokenMasked,
-                    TokenUpdateDateUtc,
+                    TokenCreateDateUtc,
+                    TokenRefreshDateUtc,
                     Operation,
                     ServerIdentifier,
                     CreatedAtUtc
@@ -17,11 +18,20 @@
                 @CompanyCode,
                 @AccessTokenMasked,
                 @RefreshTokenMasked,
-                @TokenUpdateDateUtc,
-                @Operation, 
+                @TokenCreateDateUtc,
+                @TokenRefreshDateUtc,
+                @Operation,
                 @ServerIdentifier,
                 SYSUTCDATETIME()
                 );";
+
+        public static string GetLastTokenCreateDateUtc = @"
+            SELECT TOP (1)
+                TokenCreateDateUtc
+            FROM SfdcMasterData.dbo.IYSTokenLog WITH (NOLOCK)
+            WHERE CompanyCode = @CompanyCode
+                AND TokenCreateDateUtc IS NOT NULL
+            ORDER BY TokenCreateDateUtc DESC;";
 
         public static string InsertRequest = @"
             INSERT INTO SfdcMasterData.dbo.IYSCallLog
