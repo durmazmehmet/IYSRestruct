@@ -317,19 +317,21 @@ namespace IYS.Application.Services
             }
         }
 
-        public async Task UpdateTokenResponseLog(TokenResponseLog log)
+        public async Task<int> UpdateTokenResponseLog(TokenResponseLog log)
         {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.ExecuteAsync(QueryStrings.UpdateTokenResponseLog,
-                    new
-                    {
-                        log.IysCode,
-                        log.TokenResponse
-                    });
-                connection.Close();
-            }
+            await using var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData"));
+            await connection.OpenAsync();
+
+            var result = await connection.ExecuteAsync(QueryStrings.UpdateTokenResponseLog,
+                new
+                {
+                    log.IysCode,
+                    log.TokenResponse
+                });
+
+            await connection.CloseAsync();
+
+            return result;
         }
 
         public async Task<string> GetTokenResponseLog(string IysCode)
