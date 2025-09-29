@@ -1,4 +1,5 @@
-﻿using IYS.Application.Services.Interface;
+using IYS.Application.Services.Interface;
+using System;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -31,6 +32,7 @@ namespace IYS.Application.Services
 
             if (tokenEntity == null || string.IsNullOrWhiteSpace(tokenEntity.TokenResponse))
             {
+                await SetCachedHaltUntilAsync(cacheKey, tokenEntity?.HaltUntilUtc);
                 return default;
             }
 
@@ -41,10 +43,12 @@ namespace IYS.Application.Services
 
                 if (deserialized is null)
                 {
+                    await SetCachedHaltUntilAsync(cacheKey, tokenEntity.HaltUntilUtc);
                     return default;
                 }
 
                 _memoryCache.Set(cacheKey, deserialized, GetCacheEntryOptions());
+                await SetCachedHaltUntilAsync(cacheKey, tokenEntity.HaltUntilUtc);
 
                 return deserialized;
             }
@@ -67,6 +71,7 @@ namespace IYS.Application.Services
             var base64Data = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(serializedData));
 
             _memoryCache.Set(cacheKey, data, GetCacheEntryOptions());
+            await SetCachedHaltUntilAsync(cacheKey, null);
 
             var affectedRows = await _dbService.UpdateTokenResponseLog(new Models.Response.Schedule.TokenResponseLog
             {
@@ -92,6 +97,39 @@ namespace IYS.Application.Services
             return SetCacheDataAsync(ComposeKey(hashKey, key), data);
         }
 
+        public Task<DateTime?> GetCachedHaltUntilAsync(string cacheKey)
+        {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("Cache anahtarı boş olamaz.", nameof(cacheKey));
+            }
+
+            return Task.FromResult(_memoryCache.TryGetValue<DateTime?>(ComposeHaltKey(cacheKey), out var value)
+                ? value
+                : null);
+        }
+
+        public Task SetCachedHaltUntilAsync(string cacheKey, DateTime? haltUntilUtc)
+        {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("Cache anahtarı boş olamaz.", nameof(cacheKey));
+            }
+
+            var haltKey = ComposeHaltKey(cacheKey);
+
+            if (haltUntilUtc.HasValue)
+            {
+                _memoryCache.Set(haltKey, haltUntilUtc, GetCacheEntryOptions());
+            }
+            else
+            {
+                _memoryCache.Remove(haltKey);
+            }
+
+            return Task.CompletedTask;
+        }
+
         private MemoryCacheEntryOptions GetCacheEntryOptions()
         {
             return new MemoryCacheEntryOptions
@@ -109,5 +147,7 @@ namespace IYS.Application.Services
 
             return string.IsNullOrWhiteSpace(key) ? hashKey : $"{hashKey}:{key}";
         }
+
+        private static string ComposeHaltKey(string cacheKey) => string.Concat(cacheKey, ":halt");
     }
 }
