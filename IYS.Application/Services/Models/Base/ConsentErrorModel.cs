@@ -56,7 +56,8 @@ public class ConsentErrorModel
     [JsonProperty("isProcessed")]
     public bool? IsProcessed { get; set; }
 
-    [JsonProperty("batchError")]
+    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public string? BatchError { get; set; }
 
     [System.Text.Json.Serialization.JsonPropertyName("batchError")]
