@@ -3,6 +3,7 @@ using IYS.Application.Services.Models.Base;
 using IYS.Application.Services.Models.Response.Consent;
 using IYS.Application.Services.Models.Response.Schedule;
 using IYS.Application.Services.Models.Request;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -39,6 +40,10 @@ public class SendConsentToIysService
         "H178"
     };
 
+    private const string TokenRateLimitMessageKey = "TOKEN_RATE_LIMIT";
+    private const string HaltUntilMessageKey = "HALT_UNTIL_UTC";
+    private const string TokenRateLimitErrorCode = "H084";
+
     private sealed record QueryMultipleConsentCache(bool Success, HashSet<string> Recipients);
 
     public SendConsentToIysService(
@@ -62,6 +67,10 @@ public class SendConsentToIysService
         var responseUpdates = new ConcurrentBag<ConsentResponseUpdate>();
         int failedCount = 0;
         int successCount = 0;
+        bool rateLimitDetected = false;
+        DateTime? rateLimitHaltUntilUtc = null;
+        string? rateLimitCompany = null;
+        long? rateLimitConsentId = null;
 
         _logger.LogInformation("SingleConsentAddService started at {Time}", DateTimeOffset.Now);
 
@@ -108,6 +117,11 @@ public class SendConsentToIysService
 
                 foreach (var log in group.Value)
                 {
+                    if (rateLimitDetected)
+                    {
+                        break;
+                    }
+
                     var cacheKey = BuildRecipientTypeCacheKey(log);
 
                     if (!queryCache.TryGetValue(cacheKey, out var queryInfo))
@@ -176,6 +190,35 @@ public class SendConsentToIysService
 
                         addResponse.Id = log.Id;
 
+                        if (IsTokenRateLimit(addResponse, out var haltUntilUtc))
+                        {
+                            rateLimitDetected = true;
+                            rateLimitHaltUntilUtc = haltUntilUtc;
+                            rateLimitCompany = group.Key;
+                            rateLimitConsentId = log.Id;
+
+                            var rateLimitMessage = BuildRateLimitJobMessage(group.Key, log.Id, haltUntilUtc);
+
+                            results.Add(new LogResult
+                            {
+                                Id = log.Id,
+                                CompanyCode = group.Key,
+                                Status = "Deferred",
+                                Messages = new Dictionary<string, string>
+                                {
+                                    { TokenRateLimitMessageKey, rateLimitMessage }
+                                }
+                            });
+
+                            _logger.LogWarning(
+                                "IYS token oran limiti aşıldı. Şirket: {CompanyCode}, LogId: {LogId}, Bekleme sonu (UTC): {HaltUntil}",
+                                group.Key,
+                                log.Id,
+                                haltUntilUtc?.ToString("o") ?? "bilinmiyor");
+
+                            break;
+                        }
+
                         var update = CreateConsentResponseUpdate(addResponse);
                         if (update != null)
                         {
@@ -216,6 +259,11 @@ public class SendConsentToIysService
 
                     queryCache[cacheKey] = queryInfo;
                 }
+
+                if (rateLimitDetected)
+                {
+                    break;
+                }
             }
         }
         catch (Exception ex)
@@ -226,12 +274,12 @@ public class SendConsentToIysService
         }
 
         var updatesToPersist = responseUpdates.ToList();
-        if (updatesToPersist.Any())
-        {
-            foreach (var update in updatesToPersist)
+            if (updatesToPersist.Any())
             {
-                ApplyConsentResponseBusinessRules(update);
-            }
+                foreach (var update in updatesToPersist)
+                {
+                    ApplyConsentResponseBusinessRules(update);
+                }
 
             try
             {
@@ -240,6 +288,18 @@ public class SendConsentToIysService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "İşlem sonrası güncelleme yapılamadı.");
+            }
+        }
+
+        if (rateLimitDetected)
+        {
+            var rateLimitMessage = BuildRateLimitJobMessage(rateLimitCompany, rateLimitConsentId, rateLimitHaltUntilUtc);
+            response.Error(TokenRateLimitMessageKey, rateLimitMessage);
+            response.HttpStatusCode = StatusCodes.Status503ServiceUnavailable;
+
+            if (rateLimitHaltUntilUtc.HasValue)
+            {
+                response.AddMessage(HaltUntilMessageKey, rateLimitHaltUntilUtc.Value.ToString("o"));
             }
         }
 
@@ -490,5 +550,78 @@ public class SendConsentToIysService
         }
 
         return string.Join(" | ", parts);
+    }
+
+    private static bool IsTokenRateLimit(ResponseBase<AddConsentResult> response, out DateTime? haltUntilUtc)
+    {
+        haltUntilUtc = null;
+
+        if (response == null)
+        {
+            return false;
+        }
+
+        if (response.Messages != null && response.Messages.ContainsKey(TokenRateLimitMessageKey))
+        {
+            haltUntilUtc = ParseHaltUntil(response.Messages);
+            return true;
+        }
+
+        var errors = response.OriginalError?.Errors;
+        if (errors == null || errors.Length == 0)
+        {
+            return false;
+        }
+
+        var hasRateLimitCode = errors.Any(error =>
+            !string.IsNullOrWhiteSpace(error?.Code) &&
+            string.Equals(error.Code, TokenRateLimitErrorCode, StringComparison.OrdinalIgnoreCase));
+
+        if (hasRateLimitCode)
+        {
+            haltUntilUtc = ParseHaltUntil(response.Messages);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static DateTime? ParseHaltUntil(IDictionary<string, string>? messages)
+    {
+        if (messages != null && messages.TryGetValue(HaltUntilMessageKey, out var rawValue))
+        {
+            if (DateTime.TryParse(
+                    rawValue,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
+                    out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    private static string BuildRateLimitJobMessage(string? companyCode, long? consentId, DateTime? haltUntilUtc)
+    {
+        var segments = new List<string> { "Yeni token alınamadı ve işlemler geçici olarak duraklatıldı." };
+
+        if (!string.IsNullOrWhiteSpace(companyCode))
+        {
+            segments.Add($"Şirket: {companyCode}.");
+        }
+
+        if (consentId.HasValue && consentId.Value > 0)
+        {
+            segments.Add($"Kayıt Id: {consentId.Value}.");
+        }
+
+        if (haltUntilUtc.HasValue)
+        {
+            segments.Add($"Tekrar deneme zamanı (UTC): {haltUntilUtc.Value:O}.");
+        }
+
+        return string.Join(' ', segments);
     }
 }

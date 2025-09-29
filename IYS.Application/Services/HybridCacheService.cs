@@ -29,14 +29,14 @@ namespace IYS.Application.Services
 
             var tokenEntity = await _dbService.GetTokenResponseLog(cacheKey);
 
-            if (string.IsNullOrWhiteSpace(tokenEntity))
+            if (tokenEntity == null || string.IsNullOrWhiteSpace(tokenEntity.TokenResponse))
             {
                 return default;
             }
 
             try
             {
-                var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(tokenEntity));
+                var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(tokenEntity.TokenResponse));
                 var deserialized = JsonConvert.DeserializeObject<T>(json);
 
                 if (deserialized is null)
@@ -71,7 +71,8 @@ namespace IYS.Application.Services
             var affectedRows = await _dbService.UpdateTokenResponseLog(new Models.Response.Schedule.TokenResponseLog
             {
                 IysCode = cacheKey,
-                TokenResponse = base64Data
+                TokenResponse = base64Data,
+                HaltUntilUtc = null
             });
 
             if (affectedRows <= 0)

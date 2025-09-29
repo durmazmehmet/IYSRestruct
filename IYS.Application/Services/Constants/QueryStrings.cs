@@ -354,20 +354,37 @@
 		;";
 
         public static string UpdateTokenResponseLog = @"
-		 IF EXISTS (Select * from dbo.IysTokenResponseLog (NOLOCK) WHERE IysCode = @IysCode)		
-				UPDATE dbo.IysTokenResponseLog
-				SET TokenResponse = @TokenResponse,
-				UpdateDate = GETDATE()
-				WHERE IysCode = @IysCode
-		   ELSE 
-				INSERT INTO dbo.IysTokenResponseLog
-				(IysCode, TokenResponse, RequestDate)
-				VALUES(@IysCode, @TokenResponse, GETDATE());
+                 IF EXISTS (Select * from dbo.IysTokenResponseLog (NOLOCK) WHERE IysCode = @IysCode)
+                                UPDATE dbo.IysTokenResponseLog
+                                SET TokenResponse = @TokenResponse,
+                                HaltUntilUtc = @HaltUntilUtc,
+                                UpdateDate = GETDATE()
+                                WHERE IysCode = @IysCode
+                   ELSE
+                                INSERT INTO dbo.IysTokenResponseLog
+                                (IysCode, TokenResponse, RequestDate, HaltUntilUtc)
+                                VALUES(@IysCode, @TokenResponse, GETDATE(), @HaltUntilUtc);
 
-		;";
+                ;";
 
         public static string GetTokenResponseLog = @"
-		SELECT TOP 1 TokenResponse FROM dbo.IysTokenResponseLog (NOLOCK) WHERE IysCode = @IysCode;";
+                SELECT TOP 1 TokenResponse, HaltUntilUtc FROM dbo.IysTokenResponseLog (NOLOCK) WHERE IysCode = @IysCode;";
+
+        public static string UpsertTokenHaltUntil = @"
+                 IF EXISTS (Select * from dbo.IysTokenResponseLog (NOLOCK) WHERE IysCode = @IysCode)
+                                UPDATE dbo.IysTokenResponseLog
+                                SET HaltUntilUtc = @HaltUntilUtc,
+                                UpdateDate = GETDATE()
+                                WHERE IysCode = @IysCode
+                   ELSE
+                                INSERT INTO dbo.IysTokenResponseLog
+                                (IysCode, TokenResponse, RequestDate, HaltUntilUtc)
+                                VALUES(@IysCode, NULL, GETDATE(), @HaltUntilUtc);
+
+                ;";
+
+        public static string GetTokenHaltUntil = @"
+                SELECT TOP 1 HaltUntilUtc FROM dbo.IysTokenResponseLog (NOLOCK) WHERE IysCode = @IysCode;";
 
         public static string UpdateJustRequestDateOfPullRequestLog = @"
 		 IF EXISTS (Select * from dbo.IysPullRequestLog (NOLOCK) WHERE CompanyCode = @CompanyCode)		

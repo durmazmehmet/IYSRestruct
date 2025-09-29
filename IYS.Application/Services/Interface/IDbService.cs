@@ -30,6 +30,8 @@ namespace IYS.Application.Services.Interface
         Task<List<PullConsentSummary>> GetPullConsentsAsync(DateTime startDate, string recipientType, IEnumerable<string> companyCodes);
         Task InsertTokenLogAsync(TokenLogEntry tokenLogEntry);
         Task<int> UpdateTokenResponseLog(TokenResponseLog log);
-        Task<string> GetTokenResponseLog(string CompanyCode);
+        Task<TokenResponseLog?> GetTokenResponseLog(string cacheKey);
+        Task SetTokenHaltUntilAsync(string cacheKey, DateTime? haltUntilUtc);
+        Task<DateTime?> GetTokenHaltUntilAsync(string cacheKey);
     }
 }
