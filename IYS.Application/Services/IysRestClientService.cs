@@ -141,7 +141,7 @@ namespace IYS.Application.Services
                 Content = serialized,
                 ResponseStatus = ResponseStatus.Error,
                 ErrorMessage = exception.Message,
-                IsSuccessful = false
+                IsSuccessStatusCode = false
             };
 
             await _dbService.UpdateLog(restResponse, logId);
