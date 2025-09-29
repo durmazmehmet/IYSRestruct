@@ -175,14 +175,34 @@ namespace IYS.Application.Services
 
             try
             {
-                companyCode = _iysHelper.GetCompanyCode(iysCode) ?? iysCode.ToString(CultureInfo.InvariantCulture);
+                var resolvedCompanyCode = _iysHelper.GetCompanyCode(iysCode) ?? iysCode.ToString(CultureInfo.InvariantCulture);
+                companyCode = resolvedCompanyCode;
+
+                var now = DateTime.UtcNow;
+                var isRefreshOperation = string.Equals(operation, "Refresh", StringComparison.OrdinalIgnoreCase);
+                var isNewOperation = string.Equals(operation, "New", StringComparison.OrdinalIgnoreCase);
+
+                var tokenCreateDateUtc = now;
+                DateTime? tokenRefreshDateUtc = null;
+
+                if (isRefreshOperation)
+                {
+                    var lastCreateDate = await _dbService.GetLastTokenCreateDateUtcAsync(resolvedCompanyCode);
+                    tokenCreateDateUtc = lastCreateDate ?? now;
+                    tokenRefreshDateUtc = now;
+                }
+                else if (!isNewOperation)
+                {
+                    tokenRefreshDateUtc = now;
+                }
 
                 var logEntry = new TokenLogEntry
                 {
-                    CompanyCode = companyCode,
+                    CompanyCode = resolvedCompanyCode,
                     AccessTokenMasked = MaskToken(token.AccessToken),
                     RefreshTokenMasked = MaskToken(token.RefreshToken),
-                    TokenUpdateDateUtc = DateTime.UtcNow,
+                    TokenCreateDateUtc = tokenCreateDateUtc,
+                    TokenRefreshDateUtc = tokenRefreshDateUtc,
                     Operation = operation,
                     ServerIdentifier = _serverIdentifier
                 };
