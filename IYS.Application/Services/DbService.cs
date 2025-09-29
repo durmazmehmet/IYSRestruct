@@ -326,7 +326,8 @@ namespace IYS.Application.Services
                 new
                 {
                     log.IysCode,
-                    log.TokenResponse
+                    log.TokenResponse,
+                    log.HaltUntilUtc
                 });
 
             await connection.CloseAsync();
@@ -334,20 +335,53 @@ namespace IYS.Application.Services
             return result;
         }
 
-        public async Task<string> GetTokenResponseLog(string IysCode)
+        public async Task<TokenResponseLog?> GetTokenResponseLog(string cacheKey)
         {
-            using (var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData")))
-            {
-                connection.Open();
-                var result = await connection.QueryAsync<string>(QueryStrings.GetTokenResponseLog,
-                    new
-                    {
-                        IysCode
-                    });
-                connection.Close();
+            await using var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData"));
+            await connection.OpenAsync();
 
-                return result.FirstOrDefault() ?? string.Empty;
-            }
+            var result = await connection.QueryFirstOrDefaultAsync<TokenResponseLog>(
+                QueryStrings.GetTokenResponseLog,
+                new
+                {
+                    IysCode = cacheKey
+                });
+
+            await connection.CloseAsync();
+
+            return result;
+        }
+
+        public async Task SetTokenHaltUntilAsync(string cacheKey, DateTime? haltUntilUtc)
+        {
+            await using var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData"));
+            await connection.OpenAsync();
+
+            await connection.ExecuteAsync(QueryStrings.UpsertTokenHaltUntil,
+                new
+                {
+                    IysCode = cacheKey,
+                    HaltUntilUtc = haltUntilUtc
+                });
+
+            await connection.CloseAsync();
+        }
+
+        public async Task<DateTime?> GetTokenHaltUntilAsync(string cacheKey)
+        {
+            await using var connection = new SqlConnection(_configuration.GetValue<string>("ConnectionStrings:SfdcMasterData"));
+            await connection.OpenAsync();
+
+            var result = await connection.QueryFirstOrDefaultAsync<DateTime?>(
+                QueryStrings.GetTokenHaltUntil,
+                new
+                {
+                    IysCode = cacheKey
+                });
+
+            await connection.CloseAsync();
+
+            return result;
         }
 
         public async Task UpdateJustRequestDateOfPullRequestLog(PullRequestLog log)

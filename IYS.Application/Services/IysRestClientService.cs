@@ -1,4 +1,5 @@
 ﻿using IYS.Application.Middleware.LoggingService;
+using IYS.Application.Services.Exceptions;
 using IYS.Application.Services.Interface;
 using IYS.Application.Services.Models.Base;
 using IYS.Application.Services.Models.Error;
@@ -7,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using RestSharp;
 using RestSharp.Authenticators;
 using System.Net;
+using Microsoft.AspNetCore.Http;
 
 namespace IYS.Application.Services
 {
@@ -33,64 +35,116 @@ namespace IYS.Application.Services
                 LogId = logId
             };
 
-            var token = await _identityManager.GetToken(iysRequest.IysCode, false);
-
-            var httpResponse = await GetReponse(iysRequest, token.AccessToken);
-
-            if ((int)httpResponse.StatusCode == 401 || (int)httpResponse.StatusCode == 403)
+            try
             {
-                token = await _identityManager.GetToken(iysRequest.IysCode, true);
+                var token = await _identityManager.GetToken(iysRequest.IysCode, false);
 
-                httpResponse = await GetReponse(iysRequest, token.AccessToken);
-            }
+                var httpResponse = await GetReponse(iysRequest, token.AccessToken);
 
-            await _dbService.UpdateLog(httpResponse, logId);
-
-            response.SendDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
-            response.HttpStatusCode = (int)httpResponse.StatusCode;
-
-            if (httpResponse.IsSuccessful)
-            {
-                response.Success(JsonConvert.DeserializeObject<TResponse>(httpResponse.Content));
-            }
-            else
-            {
-                response.AddMessage("Url:", iysRequest.Url);
-                try
+                if ((int)httpResponse.StatusCode == 401 || (int)httpResponse.StatusCode == 403)
                 {
-                    var error = JsonConvert.DeserializeObject<GenericError>(httpResponse.Content);
-                    response.OriginalError = error;
-                    if (error == null)
+                    token = await _identityManager.GetToken(iysRequest.IysCode, true);
+
+                    httpResponse = await GetReponse(iysRequest, token.AccessToken);
+                }
+
+                await _dbService.UpdateLog(httpResponse, logId);
+
+                response.SendDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                response.HttpStatusCode = (int)httpResponse.StatusCode;
+
+                if (httpResponse.IsSuccessful)
+                {
+                    response.Success(JsonConvert.DeserializeObject<TResponse>(httpResponse.Content));
+                }
+                else
+                {
+                    response.AddMessage("Url:", iysRequest.Url);
+                    try
                     {
-                        loggerService.Error($"Unexpected error occured: {httpResponse.Content}");
-                        response.AddMessage("Error", "Unexpected error");
-                    }
-                    else if (!string.IsNullOrEmpty(error.Message))
-                    {
-                        loggerService.Error($"{error.Status}, {error.Message}");
-                        response.AddMessage(error.Status.ToString(), error.Message);
-                    }
-                    else
-                    {
-                        if (error.Errors?.Length > 0)
+                        var error = JsonConvert.DeserializeObject<GenericError>(httpResponse.Content);
+                        response.OriginalError = error;
+                        if (error == null)
                         {
-                            foreach (var detail in error.Errors)
+                            loggerService.Error($"Unexpected error occured: {httpResponse.Content}");
+                            response.AddMessage("Error", "Unexpected error");
+                        }
+                        else if (!string.IsNullOrEmpty(error.Message))
+                        {
+                            loggerService.Error($"{error.Status}, {error.Message}");
+                            response.AddMessage(error.Status.ToString(), error.Message);
+                        }
+                        else
+                        {
+                            if (error.Errors?.Length > 0)
                             {
-                                response.AddMessage(detail.Code, detail.Message);
+                                foreach (var detail in error.Errors)
+                                {
+                                    response.AddMessage(detail.Code, detail.Message);
+                                }
                             }
                         }
-                    }
 
+                    }
+                    catch (Exception ex)
+                    {
+                        loggerService.Error($"Unexpected error occured. {ex.Message}");
+                        response.Error(response.HttpStatusCode.ToString(), httpResponse.Content);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    loggerService.Error($"Unexpected error occured. {ex.Message}");
-                    response.Error(response.HttpStatusCode.ToString(), httpResponse.Content);
-                }
+
+                return response;
+            }
+            catch (TokenRateLimitException rateLimitException)
+            {
+                await HandleTokenRateLimitAsync(rateLimitException, response, logId);
+                return response;
+            }
+        }
+
+        private async Task HandleTokenRateLimitAsync<TResponse>(TokenRateLimitException exception, ResponseBase<TResponse> response, int logId)
+        {
+            response.Error("TOKEN_RATE_LIMIT", exception.Message);
+            response.SendDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            response.HttpStatusCode = StatusCodes.Status503ServiceUnavailable;
+
+            if (exception.HaltUntilUtc.HasValue)
+            {
+                response.AddMessage("HALT_UNTIL_UTC", exception.HaltUntilUtc.Value.ToString("o"));
             }
 
-            return response;
+            response.OriginalError = new GenericError
+            {
+                Message = exception.Message,
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Errors = new[]
+                {
+                    new ErrorDetails
+                    {
+                        Code = exception.ErrorCode,
+                        Message = exception.Message
+                    }
+                }
+            };
+
+            var serialized = JsonConvert.SerializeObject(new
+            {
+                code = exception.ErrorCode,
+                message = exception.Message,
+                haltUntilUtc = exception.HaltUntilUtc?.ToString("o")
+            });
+
+            var restResponse = new RestResponse
+            {
+                StatusCode = HttpStatusCode.ServiceUnavailable,
+                Content = serialized,
+                ResponseStatus = ResponseStatus.Error,
+                ErrorMessage = exception.Message,
+                IsSuccessful = false
+            };
+
+            await _dbService.UpdateLog(restResponse, logId);
         }
 
         private async Task<RestResponse> GetReponse<TRequest>(IysRequest<TRequest> iysRequest, string accessToken)
