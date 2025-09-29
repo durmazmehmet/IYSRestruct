@@ -204,7 +204,17 @@ namespace IYS.Application.Services
         private async Task EnsureRateLimitNotActiveAsync(int iysCode)
         {
             var cacheKey = ComposeTokenCacheKey(iysCode);
-            var haltUntil = await _dbService.GetTokenHaltUntilAsync(cacheKey);
+            var haltUntil = await _cacheService.GetCachedHaltUntilAsync(cacheKey);
+
+            if (!haltUntil.HasValue)
+            {
+                haltUntil = await _dbService.GetTokenHaltUntilAsync(cacheKey);
+
+                if (haltUntil.HasValue)
+                {
+                    await _cacheService.SetCachedHaltUntilAsync(cacheKey, haltUntil);
+                }
+            }
 
             if (haltUntil.HasValue)
             {
@@ -220,6 +230,7 @@ namespace IYS.Application.Services
                 }
 
                 await _dbService.SetTokenHaltUntilAsync(cacheKey, null);
+                await _cacheService.SetCachedHaltUntilAsync(cacheKey, null);
             }
         }
 
@@ -228,6 +239,7 @@ namespace IYS.Application.Services
             var haltUntil = DateTime.UtcNow.Add(RateLimitDuration);
             var cacheKey = ComposeTokenCacheKey(iysCode);
             await _dbService.SetTokenHaltUntilAsync(cacheKey, haltUntil);
+            await _cacheService.SetCachedHaltUntilAsync(cacheKey, haltUntil);
 
             var message = !string.IsNullOrWhiteSpace(error?.Message)
                 ? error!.Message!

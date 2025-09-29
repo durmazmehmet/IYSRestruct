@@ -1,4 +1,5 @@
-﻿using IYS.Application.Services.Interface;
+using System;
+using IYS.Application.Services.Interface;
 using IYS.Application.Services.Models.Base;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -91,5 +92,44 @@ namespace IYS.Application.Services
             _logger.LogInformation($"Cache'den veri alındı: {hashKey} {Key}");
             return JsonConvert.DeserializeObject<T>(cachedResponse)!;
         }
+
+        public async Task<DateTime?> GetCachedHaltUntilAsync(string cacheKey)
+        {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("Cache anahtarı boş olamaz.", nameof(cacheKey));
+            }
+
+            var haltKey = ComposeHaltKey(cacheKey);
+            var value = await _cache.StringGetAsync(haltKey);
+
+            if (!value.HasValue)
+            {
+                return null;
+            }
+
+            return JsonConvert.DeserializeObject<DateTime?>(value);
+        }
+
+        public async Task SetCachedHaltUntilAsync(string cacheKey, DateTime? haltUntilUtc)
+        {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("Cache anahtarı boş olamaz.", nameof(cacheKey));
+            }
+
+            var haltKey = ComposeHaltKey(cacheKey);
+
+            if (haltUntilUtc.HasValue)
+            {
+                var serialized = JsonConvert.SerializeObject(haltUntilUtc.Value);
+                await _cache.StringSetAsync(haltKey, serialized);
+                return;
+            }
+
+            await _cache.KeyDeleteAsync(haltKey);
+        }
+
+        private static string ComposeHaltKey(string cacheKey) => string.Concat(cacheKey, ":halt");
     }
 }
