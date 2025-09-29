@@ -273,7 +273,7 @@
             FROM dbo.IYSConsentRequest cr WITH (NOLOCK)
             WHERE ISNULL(cr.IsProcessed, 0) = 0
               AND ISNULL(cr.IsOverdue, 0) = 0
-              --AND ISNULL(cr.IsPulled, 1) = 0
+              AND 
             ORDER BY cr.Id DESC;
             ";
 
@@ -503,7 +503,10 @@
 				BatchError,
 			    convert(varchar, CreateDate, 120) as CreateDate
 			FROM dbo.IYSConsentRequest (nolock)
-                WHERE IsSuccess = 0
+                WHERE 
+                ISNULL(LogId, 0) != 0 
+                AND ISNULL(IsProcessed, 0) = 1
+                AND ISNULL(IsOverdue, 0) = 1
                 AND CreateDate >= CAST(@CreateDate AS datetime)
                 AND CreateDate <  DATEADD(DAY, 1, CAST(@CreateDate AS datetime))
                 ORDER BY CreateDate ASC;
