@@ -1,17 +1,27 @@
 ﻿using IYS.Application.Services.Interface;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace IYS.Application.Services
 {
-    public class HybridCacheService(IMemoryCache memoryCache, IDbService dbService) : ICacheService
+    public class HybridCacheService(
+        IMemoryCache memoryCache,
+        IDbService dbService,
+        ILogger<HybridCacheService> logger) : ICacheService
     {
         private readonly IMemoryCache _memoryCache = memoryCache;
         private readonly IDbService _dbService = dbService;
+        private readonly ILogger<HybridCacheService> _logger = logger;
         private readonly int _memoryCacheDurationMinutes = 60;
 
         public async Task<T> GetCachedDataAsync<T>(string cacheKey)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("Cache anahtarı boş olamaz.", nameof(cacheKey));
+            }
+
             if (_memoryCache.TryGetValue(cacheKey, out T cachedValue))
             {
                 return cachedValue;
@@ -19,44 +29,84 @@ namespace IYS.Application.Services
 
             var tokenEntity = await _dbService.GetTokenResponseLog(cacheKey);
 
-            if (string.IsNullOrEmpty(tokenEntity))
+            if (string.IsNullOrWhiteSpace(tokenEntity))
             {
                 return default;
             }
 
-            // Base64 decode
-            var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(tokenEntity));
-            var deserialized = JsonConvert.DeserializeObject<T>(json);
+            try
+            {
+                var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(tokenEntity));
+                var deserialized = JsonConvert.DeserializeObject<T>(json);
 
-            _memoryCache.Set(cacheKey, deserialized, TimeSpan.FromMinutes(_memoryCacheDurationMinutes));
+                if (deserialized is null)
+                {
+                    return default;
+                }
 
-            return deserialized;
+                _memoryCache.Set(cacheKey, deserialized, GetCacheEntryOptions());
+
+                return deserialized;
+            }
+            catch (FormatException formatException)
+            {
+                _logger.LogWarning(formatException, "{CacheKey} için veritabanındaki veri base64 formatında çözümlenemedi.", cacheKey);
+                return default;
+            }
         }
 
 
         public async Task SetCacheDataAsync<T>(string cacheKey, T data)
         {
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("Cache anahtarı boş olamaz.", nameof(cacheKey));
+            }
+
             var serializedData = JsonConvert.SerializeObject(data);
             var base64Data = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(serializedData));
 
-            _memoryCache.Set(cacheKey, data, TimeSpan.FromMinutes(_memoryCacheDurationMinutes));
+            _memoryCache.Set(cacheKey, data, GetCacheEntryOptions());
 
-            await _dbService.UpdateTokenResponseLog(new Models.Response.Schedule.TokenResponseLog
+            var affectedRows = await _dbService.UpdateTokenResponseLog(new Models.Response.Schedule.TokenResponseLog
             {
                 IysCode = cacheKey,
                 TokenResponse = base64Data
             });
+
+            if (affectedRows <= 0)
+            {
+                _logger.LogWarning("{CacheKey} anahtarı için token veritabanına kaydedilemedi.", cacheKey);
+            }
         }
 
 
         public Task<T> GetCachedHashDataAsync<T>(string hashKey, string key)
         {
-            return GetCachedDataAsync<T>(key);
+            return GetCachedDataAsync<T>(ComposeKey(hashKey, key));
         }
 
         public Task SetCacheHashDataAsync<T>(string hashKey, string key, T data)
         {
-            return SetCacheDataAsync(key, data);
+            return SetCacheDataAsync(ComposeKey(hashKey, key), data);
+        }
+
+        private MemoryCacheEntryOptions GetCacheEntryOptions()
+        {
+            return new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_memoryCacheDurationMinutes)
+            };
+        }
+
+        private static string ComposeKey(string hashKey, string key)
+        {
+            if (string.IsNullOrWhiteSpace(hashKey))
+            {
+                return key;
+            }
+
+            return string.IsNullOrWhiteSpace(key) ? hashKey : $"{hashKey}:{key}";
         }
     }
 }
