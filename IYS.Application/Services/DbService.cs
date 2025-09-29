@@ -291,7 +291,7 @@ namespace IYS.Application.Services
                 var result = (await connection.QueryAsync<PullRequestLog>(QueryStrings.GetPullRequestLog,
                     new
                     {
-                        IysCode = companyCode
+                        CompanyCode = companyCode
                     })).SingleOrDefault();
 
                 connection.Close();
